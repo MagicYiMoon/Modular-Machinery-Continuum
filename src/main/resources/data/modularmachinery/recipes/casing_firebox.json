@@ -1,0 +1,23 @@
+{
+    "result": {
+        "nbt": "{BlockStateTag:{casing:\"firebox\"}}",
+        "item": "modularmachinery:blockcasing",
+        "count": 2
+    },
+    "pattern": [
+        "rfr",
+        "c c",
+        "rir"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "r": { "tag": "forge:dusts/redstone" },
+        "i": { "tag": "forge:ingots/iron" },
+        "c": {
+            "item": "modularmachinery:blockcasing"
+        },
+        "f": {
+            "item": "minecraft:flint"
+        }
+    }
+}

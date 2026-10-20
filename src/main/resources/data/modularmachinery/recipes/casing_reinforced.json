@@ -1,0 +1,21 @@
+{
+    "result": {
+        "nbt": "{BlockStateTag:{casing:\"reinforced\"}}",
+        "item": "modularmachinery:blockcasing",
+        "count": 4
+    },
+    "pattern": [
+        "oco",
+        "c c",
+        "oco"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "o": {
+            "item": "minecraft:obsidian"
+        },
+        "c": {
+            "item": "modularmachinery:blockcasing"
+        }
+    }
+}

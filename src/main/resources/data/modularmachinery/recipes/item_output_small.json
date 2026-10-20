@@ -1,0 +1,26 @@
+{
+    "result": {
+        "nbt": "{BlockStateTag:{size:\"small\"}}",
+        "item": "modularmachinery:blockoutputbus"
+    },
+    "pattern": [
+        "cmc",
+        "mbm",
+        " h "
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "c": {
+            "item": "minecraft:chest"
+        },
+        "h": {
+            "item": "minecraft:hopper"
+        },
+        "m": {
+            "item": "modularmachinery:itemmodularium"
+        },
+        "b": {
+            "item": "modularmachinery:blockoutputbus"
+        }
+    }
+}

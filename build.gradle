@@ -1,0 +1,324 @@
+plugins {
+    // Pinned to 6.0.54 (the MDK writes [6.0,6.2)); keep versions.js in sync when bumping.
+    id 'net.minecraftforge.gradle' version '6.0.54'
+    // MixinGradle: wires the Mixin annotation processor to ForgeGradle's mappings,
+    // emits the refmap and sets the MixinConfigs manifest attribute. Without it the
+    // Mixin AP cannot resolve SRG names and fails with
+    // "Unable to locate obfuscation mapping for @Inject target".
+    id 'org.spongepowered.mixin' version '0.7.38'
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+}
+
+version = mod_version
+group = mod_group_id
+// Keep the internal mod id stable for worlds/configs, while publishing the rebuilt artifact under
+// the Continuum release name requested for this port.
+archivesBaseName = 'modularmachinerycontinuum'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+// ---------------------------------------------------------------------------
+// Mixin on Forge 1.20.1
+//   * Forge 47.x bundles org.spongepowered:mixin:0.8.5 itself (MinecraftForge
+//     1.20.1 build.gradle: MIXIN_VERSION = '0.8.5'), so no runtime mixin
+//     dependency is declared.
+//   * Configs are announced via the "MixinConfigs" jar manifest attribute.
+//     Forge's 1.20.1 mods.toml schema has NO [[mixins]] block -- that is
+//     NeoForge-only syntax. Verified against the 1.20.1 mods.toml docs and
+//     against Embeddium 20.1/forge, which sets attributes["MixinConfigs"].
+//   * Upstream 2.3.2 bootstrapped Mixin from a coremod
+//     (FMLCorePlugin: github.kasuminova.mmce.mixin.MMCEEarlyMixinLoader, an
+//     IFMLLoadingPlugin -- removed in 1.20.1) and a late loader implementing
+//     zone.rong.mixinbooter.ILateMixinLoader (a third-party mod that is not a
+//     dependency here). Both are deleted; FML applies Mixin for every mod on
+//     1.20.1, so no coremod is needed or wanted.
+//
+//   nae2 is dropped (not in the kept-integration set: JEI/CT/AE2/Mekanism/TOP).
+//   The JEI and AE2 configs are re-introduced with the ported mixin sets.
+// ---------------------------------------------------------------------------
+def mixinConfigs = [
+    'mixins.mmce_minecraft.json',
+]
+
+mixin {
+    add sourceSets.main, 'mixins.mmce.refmap.json'
+    config 'mixins.mmce_minecraft.json'
+}
+
+repositories {
+    // Fixed community Astral build and Extra Utilities runtime for optional integration verification.
+    // These are external mods; never include them in jarJar/the released MM jar.
+    flatDir { dirs 'libs/optional' }
+    mavenCentral()
+    maven {
+        // sponge-mixin (Mixin annotation processor) is published only here.
+        name = 'FabricMC'
+        url = 'https://maven.fabricmc.net/'
+    }
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com/'
+    }
+    maven {
+        name = 'ModMaven'
+        url = 'https://modmaven.dev/'
+    }
+    maven {
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com/'
+    }
+    // Modrinth's maven (PLAN section 406). Added for GuideME, which AE2 REQUIRES and which is on neither
+    // CurseMaven nor modmaven. The `content` filter keeps this repo from being consulted for anything else,
+    // so a future dependency cannot silently start resolving from here.
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
+    }
+    maven {
+        // Official GeckoLib Forge artifacts. GeckoLib 4.8.4 is the 1.20.1 source
+        // release supplied with this port's integration work.
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+    }
+}
+
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
+    copyIdeResources = true
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            arg '-mixin.config=mixins.mmce_minecraft.json'
+        }
+        server {
+            workingDirectory project.file(project.findProperty('selfTestRunDir') ?: 'run')
+            // Enables the in-world machine self-test; see MachineSelfTest.
+            if (project.hasProperty('selfTest')) {
+                jvmArgs '-Dmodularmachinery.selfTest=true'
+                // Automated checks must exit after saving, without an AWT server window keeping the JVM alive.
+                arg '--nogui'
+            }
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            arg '-mixin.config=mixins.mmce_minecraft.json'
+        }
+        gameTestServer {
+            workingDirectory project.file('run')
+        }
+        data {
+            workingDirectory project.file('run')
+            args '--mod', mod_id, '--all'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+        }
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // GeckoLib is bundled into the released MMCE jar through ForgeGradle's
+    // Jar-in-Jar task. Its own jar already bundles mclib, so no second copy of
+    // that library is declared here. The normal implementation dependency keeps
+    // GeckoLib available to the compile and dev-run classpaths.
+    def geckolib = fg.deobf("software.bernie.geckolib:geckolib-forge-1.20.1:${geckolib_version}")
+    implementation geckolib
+    jarJar(implementation geckolib) {
+        jarJar.ranged(it, "[${geckolib_version},)")
+    }
+
+    // --- Optional integrations -------------------------------------------------------------
+    // compileOnly, never implementation: every integration here is a SOFT dependency. The mod must
+    // load and run with none of them present, so their plugin classes are never referenced from code
+    // Forge touches unconditionally -- they are loaded only by the other mod.
+    //
+    // JEI is consumed as the FULL artifact, not the -api one. Verified by inspecting the jars rather
+    // than by trusting the artifact name: jei-1.20.1-forge-api-15.62.0.216.jar is 3.2 KB and contains
+    // only ForgeTypes and two package-info classes -- the complete-jei API interfaces (IModPlugin,
+    // IRecipeCategory, IRecipeLayoutBuilder) are NOT in it, while jei-1.20.1-forge is 2.2 MB and has
+    // them. Compiling against the -api artifact produces "cannot find symbol" for every JEI type.
+    compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
+
+    // The One Probe. Note this integration has NO 1.16 reference to port from -- it exists in the
+    // 1.12.2 original (ModIntegrationTOP) but is absent from the 1.16 branch entirely -- so it is
+    // written against TOP's own 1.20 API rather than adapted from an existing implementation.
+    compileOnly fg.deobf("curse.maven:the-one-probe-${top_project}:${top_file}")
+
+    // CraftTweaker. Like TOP, there is no usable reference: the 1.16 branch's crafttweaker package is
+    // still 1.12.2 code (it imports crafttweaker.CraftTweakerAPI, stanhebben.zenscript.* and
+    // mekanism.api.gas.*), and CraftTweaker 14 renamed the whole ZenScript surface to ZenCode. Every
+    // annotation and type below is therefore read from this jar rather than adapted from the branch.
+    compileOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-1.20.1:${crafttweaker_version}")
+
+    // Applied Energistics 2. Available on modmaven.dev -- blamejared's mirror does not carry it.
+    // Unlike TOP, AE2 DOES have 1.12.2 upstream code to work from (Mods, ItemBlockMEMachineComponent,
+    // BlocksMM, TileMultiblockMachineController all reference appeng), but the 1.16 branch dropped it,
+    // so the 1.20.1 API still has to be read from the jar.
+    compileOnly fg.deobf("appeng:appliedenergistics2-forge:${ae2_version}")
+
+    // Mekanism. Also on modmaven.dev -- like AE2 and unlike JEI/CraftTweaker, which are on blamejared.
+    // The two mavens split the integration set roughly in half, which is worth knowing before adding a
+    // sixth.
+    compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}")
+
+    // Applied Mekanistics supplies AE2's chemical keys/cells; AE2 alone has no gas storage channel.
+    compileOnly fg.deobf("maven.modrinth:applied-mekanistics:${appmek_version}")
+    compileOnly fg.deobf("maven.modrinth:botania:${botania_version}")
+    compileOnly fg.deobf("maven.modrinth:blood-magic:${bloodmagic_version}")
+    compileOnly fg.deobf("maven.modrinth:natures-aura:${naturesaura_version}")
+    compileOnly fg.deobf("task.optional:astralsorcery:${astral_community_version}")
+    if (project.hasProperty('withAstralIntegration')) {
+        runtimeOnly fg.deobf("task.optional:astralsorcery:${astral_community_version}")
+    }
+    if (project.hasProperty('withRainbowIntegration')) {
+        runtimeOnly fg.deobf("task.optional:extrautilitiesrebirth:${rainbow_community_version}")
+    }
+    if (project.hasProperty('withAuraIntegration')) {
+        runtimeOnly fg.deobf("maven.modrinth:natures-aura:${naturesaura_version}")
+        runtimeOnly fg.deobf("maven.modrinth:patchouli:${patchouli_version}")
+    }
+    if (project.hasProperty('withBloodMagicIntegration')) {
+        runtimeOnly fg.deobf("maven.modrinth:blood-magic:${bloodmagic_version}")
+        runtimeOnly fg.deobf("maven.modrinth:patchouli:${patchouli_version}")
+    }
+    if (project.hasProperty('withMagicIntegration')) {
+        runtimeOnly fg.deobf("maven.modrinth:botania:${botania_version}")
+        runtimeOnly fg.deobf("maven.modrinth:patchouli:${patchouli_version}")
+        runtimeOnly fg.deobf("maven.modrinth:curios:${curios_version}")
+    }
+    if (project.hasProperty('withGasIntegration')) {
+        runtimeOnly fg.deobf("maven.modrinth:applied-mekanistics:${appmek_version}")
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // THE SAME FIVE AS RUNTIME DEPENDENCIES, BEHIND A FLAG (PLAN section 405).
+    //
+    // Every integration above is `compileOnly`, which makes "it compiles" actively misleading: the API
+    // is on the compile classpath and deliberately NOT on the runtime one, so nothing that actually
+    // LOADS those classes is exercised by a plain build or a plain run.
+    //
+    // That is exactly how the AE2 block-entity registration reached the dev server in section 404 and
+    // died there with NoClassDefFoundError, while `gradlew build` was perfectly happy.
+    //
+    // TWO CONFIGURATIONS, BECAUSE THEY PROVE DIFFERENT THINGS:
+    //
+    //   gradlew runServer                     standalone -- the mod must LOAD AND RUN with none of these
+    //                                         installed. That is the contract of an optional integration,
+    //                                         and it is the configuration that caught section 404.
+    //   gradlew runServer -PwithIntegrations  integrated -- the mod runs WITH the mods present, which is
+    //                                         the only way to exercise the code paths that talk to them.
+    //
+    // Neither alone is enough. Standalone alone never runs the integration code; integrated alone hides
+    // every class-not-found failure, which is the failure a player without the mod would hit.
+    // ---------------------------------------------------------------------------------------------
+    if (project.hasProperty('withIntegrations')) {
+        runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
+        runtimeOnly fg.deobf("curse.maven:the-one-probe-${top_project}:${top_file}")
+        runtimeOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-1.20.1:${crafttweaker_version}")
+        runtimeOnly fg.deobf("appeng:appliedenergistics2-forge:${ae2_version}")
+        runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}")
+        // GuideME, and it is not optional: AE2 15.4.11 declares a MANDATORY dependency on guideme
+        // [20.1.7,20.2.0), and without it Forge's own ModSorter refuses to start the game. Found by running the
+        // integrated configuration (PLAN section 405.2) -- the compileOnly build, the standalone run and the
+        // whole self-test are all blind to it, because none of them loads an AE2 class.
+        runtimeOnly fg.deobf("maven.modrinth:guideme:${guideme_version}")
+    }
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+}
+
+// mods.toml / pack.mcmeta placeholders are expanded by processResources below.
+// loader_version_range MUST be listed: mods.toml references it, and omitting it makes
+// processResources fail outright with "Missing property (loader_version_range)".
+def replaceProperties = [
+    minecraft_version: minecraft_version,
+    minecraft_version_range: minecraft_version_range,
+    forge_version: forge_version,
+    forge_version_range: forge_version_range,
+    loader_version_range: loader_version_range,
+    mod_id: mod_id,
+    mod_name: mod_name,
+    mod_license: mod_license,
+    mod_version: mod_version,
+    mod_authors: mod_authors,
+    mod_description: mod_description,
+    geckolib_version: geckolib_version,
+]
+
+processResources {
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties
+    }
+}
+
+// MixinGradle writes the generated refmap to build/tmp/compileJava/ and its addMixinsToJar task
+// puts it into the released jar, but nothing places it on the *dev* classpath. Mixin looks the
+// refmap up as a classpath resource next to the mixin config, so without this the dev run logs
+// "Reference map 'mixins.mmce.refmap.json' could not be read". That warning is cosmetic in dev
+// (the mixin still applies -- verified), but keeping the refmap present means the dev and
+// production name-resolution paths are identical, which matters once real mixins land in later
+// phases. The jar is left to MixinGradle.
+def refmapName = 'mixins.mmce.refmap.json'
+def refmapGenerated = layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json')
+
+tasks.register('copyRefmapToResources', Copy) {
+    description = 'Puts the generated Mixin refmap on the dev classpath next to the mixin config.'
+    dependsOn 'compileJava'
+    from refmapGenerated
+    into layout.buildDirectory.dir('resources/main')
+    rename { refmapName }
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+processResources.finalizedBy 'copyRefmapToResources'
+// jar consumes build/resources/main, so the ordering must be declared explicitly. compileTestJava
+// reads the same output (the test runtime classpath includes main resources).
+jar.mustRunAfter 'copyRefmapToResources'
+compileTestJava.mustRunAfter 'copyRefmapToResources'
+// ForgeGradle's Jar-in-Jar task also consumes build/resources/main. Gradle 8
+// rejects the implicit ordering here, so keep the generated refmap in place
+// before either the ordinary jar or the embedded-dependency jar is assembled.
+tasks.named('jarJar') {
+    dependsOn 'copyRefmapToResources'
+}
+
+jar {
+    // MixinGradle's addMixinsToJar contributes the refmap, and our copyRefmapToResources places
+    // the same file under build/resources/main for the dev classpath -- so it arrives twice. The
+    // contents are identical; keep the first and ignore the repeat instead of failing the build.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes([
+            "Specification-Title"     : mod_name,
+            "Specification-Vendor"    : mod_authors,
+            "Specification-Version"   : "1",
+            "Implementation-Title"    : mod_name,
+            "Implementation-Version"  : project.version,
+            "Implementation-Vendor"   : mod_authors,
+        ])
+    }
+    finalizedBy 'reobfJar'
+}
+
+// Opt-in real GL regression. Creates an invisible GLFW context and uses the production ghost
+// RenderType adapter; this is separate from server checks and is never included in the mod jar.
+tasks.register('checkProjectionRenderState', JavaExec) {
+    group = 'verification'
+    description = 'Checks projection blend pixels, depth preservation and render-state cleanup offscreen.'
+    dependsOn 'testClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'hellfirepvp.modularmachinery.client.preview.WorldProjectionRenderStateChecks'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}

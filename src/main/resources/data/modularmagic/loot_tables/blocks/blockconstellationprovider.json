@@ -1,0 +1,4 @@
+{
+    "type": "minecraft:block",
+    "pools": [{"rolls": 1.0, "entries": [{"type": "minecraft:item", "name": "modularmagic:blockconstellationprovider"}], "conditions": [{"condition": "minecraft:survives_explosion"}]}]
+}

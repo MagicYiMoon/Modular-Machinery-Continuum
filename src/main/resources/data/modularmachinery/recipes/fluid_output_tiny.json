@@ -1,0 +1,22 @@
+{
+    "result": {
+        "item": "modularmachinery:blockfluidoutputhatch"
+    },
+    "pattern": [
+        "c",
+        "m",
+        "h"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "c": {
+            "item": "minecraft:bucket"
+        },
+        "h": {
+            "item": "minecraft:hopper"
+        },
+        "m": {
+            "item": "modularmachinery:blockcasing"
+        }
+    }
+}

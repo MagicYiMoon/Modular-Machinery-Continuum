@@ -1,0 +1,13 @@
+# Merge this section into the existing config/modularmachinery-common.toml.
+# Replace existing values under [energyhatch.size]; do not duplicate the section.
+# This fragment changes buffer capacity for both ordinary FE input/output hatches.
+# It is not a replacement for the complete configuration file.
+[energyhatch.size]
+    tiny = 1000
+    small = 10000
+    normal = 100000
+    reinforced = 1000000
+    big = 10000000
+    huge = 100000000
+    ludicrous = 1000000000
+    ultimate = 2147483647

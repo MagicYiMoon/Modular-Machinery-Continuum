@@ -1,0 +1,4 @@
+{
+    "type": "minecraft:block",
+    "pools": [{"rolls": 1.0, "entries": [{"type": "minecraft:item", "name": "modularmachinery:blockenergyinputhatch"}], "conditions": [{"condition": "minecraft:survives_explosion"}], "functions": [{"function": "minecraft:copy_state", "block": "modularmachinery:blockenergyinputhatch", "properties": ["size"]}]}]
+}

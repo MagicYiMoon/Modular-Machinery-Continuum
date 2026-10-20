@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "type=normal": { "model":"modularmachinery:block/blockparallelcontroller_normal" },
+    "type=reinforced": { "model":"modularmachinery:block/blockparallelcontroller_reinforced" },
+    "type=elite": { "model":"modularmachinery:block/blockparallelcontroller_elite" },
+    "type=super": { "model":"modularmachinery:block/blockparallelcontroller_super" },
+    "type=ultimate": { "model":"modularmachinery:block/blockparallelcontroller_ultimate" }
+  }
+}

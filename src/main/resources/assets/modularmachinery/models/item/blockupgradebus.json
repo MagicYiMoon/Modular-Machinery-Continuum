@@ -1,0 +1,10 @@
+{
+    "parent": "modularmachinery:block/blockupgradebus_normal",
+    "overrides": [
+        { "predicate": { "modularmachinery:tier_normal": 1.0 }, "model": "modularmachinery:item/blockupgradebus_normal" },
+        { "predicate": { "modularmachinery:tier_reinforced": 1.0 }, "model": "modularmachinery:item/blockupgradebus_reinforced" },
+        { "predicate": { "modularmachinery:tier_elite": 1.0 }, "model": "modularmachinery:item/blockupgradebus_elite" },
+        { "predicate": { "modularmachinery:tier_super": 1.0 }, "model": "modularmachinery:item/blockupgradebus_super" },
+        { "predicate": { "modularmachinery:tier_ultimate": 1.0 }, "model": "modularmachinery:item/blockupgradebus_ultimate" }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "parent": "modularmachinery:block/blockinputbus_normal",
+    "overrides": [
+        { "predicate": { "modularmachinery:tier_tiny": 1.0 }, "model": "modularmachinery:item/blockinputbus_tiny" },
+        { "predicate": { "modularmachinery:tier_small": 1.0 }, "model": "modularmachinery:item/blockinputbus_small" },
+        { "predicate": { "modularmachinery:tier_normal": 1.0 }, "model": "modularmachinery:item/blockinputbus_normal" },
+        { "predicate": { "modularmachinery:tier_reinforced": 1.0 }, "model": "modularmachinery:item/blockinputbus_reinforced" },
+        { "predicate": { "modularmachinery:tier_big": 1.0 }, "model": "modularmachinery:item/blockinputbus_big" },
+        { "predicate": { "modularmachinery:tier_huge": 1.0 }, "model": "modularmachinery:item/blockinputbus_huge" },
+        { "predicate": { "modularmachinery:tier_ludicrous": 1.0 }, "model": "modularmachinery:item/blockinputbus_ludicrous" }
+    ]
+}

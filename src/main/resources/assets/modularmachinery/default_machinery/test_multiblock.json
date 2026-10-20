@@ -1,0 +1,44 @@
+{
+    "registryname": "test_multiblock",
+    "localizedname": "§eTest Multiblock",
+    "requires-blueprint": true,
+    "color": "FFFFFF",
+
+    "_comment": [
+        "A machine whose only purpose is to be EASY TO BUILD, so that structure formation can be",
+        "tested in a few seconds rather than by assembling an alloy furnace.",
+        "",
+        "Layout, all offsets relative to the controller at (0,0,0):",
+        "",
+        "  y = 1      [energy hatch] [input bus] [output bus]     at (-1,1,0) (0,1,0) (1,1,0)",
+        "",
+        "The two bus positions name the interchangeable groups casings_item_input and",
+        "casings_item_output (machinery/variables/casings.var.json), so every tier of the bus,",
+        "the matching ME bus and the ME pattern provider all satisfy the same position.",
+        "",
+        "  y = 0      C C C            C = modularmachinery:blockcasing",
+        "             C * C            * = the CONTROLLER (not listed -- it is the origin)",
+        "             C C C",
+        "",
+        "So: a 3x3 floor of nine casings with the controller in the middle, and three components",
+        "sitting on the three middle cells of the row behind it.",
+        "",
+        "To use it: place the controller, run /modularmachinery bind test_multiblock while looking",
+        "at it, then /modularmachinery check to see what the matcher is missing."
+    ],
+
+    "parts": [
+        { "x": -1, "y": 0, "z": -1, "elements": [ "modularmachinery:blockcasing" ] },
+        { "x":  0, "y": 0, "z": -1, "elements": [ "modularmachinery:blockcasing" ] },
+        { "x":  1, "y": 0, "z": -1, "elements": [ "modularmachinery:blockcasing" ] },
+        { "x": -1, "y": 0, "z":  0, "elements": [ "modularmachinery:blockcasing" ] },
+        { "x":  1, "y": 0, "z":  0, "elements": [ "modularmachinery:blockcasing" ] },
+        { "x": -1, "y": 0, "z":  1, "elements": [ "modularmachinery:blockcasing" ] },
+        { "x":  0, "y": 0, "z":  1, "elements": [ "modularmachinery:blockcasing" ] },
+        { "x":  1, "y": 0, "z":  1, "elements": [ "modularmachinery:blockcasing" ] },
+
+        { "x": -1, "y": 1, "z": 0, "elements": [ "modularmachinery:blockenergyinputhatch" ] },
+        { "x":  0, "y": 1, "z": 0, "elements": "casings_item_input" },
+        { "x":  1, "y": 1, "z": 0, "elements": "casings_item_output" }
+    ]
+}

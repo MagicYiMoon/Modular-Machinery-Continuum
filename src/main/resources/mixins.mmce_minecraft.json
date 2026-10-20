@@ -1,0 +1,18 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "hellfirepvp.modularmachinery.mixin.minecraft",
+    "compatibilityLevel": "JAVA_16",
+    "refmap": "mixins.mmce.refmap.json",
+    "mixins": [
+        "MixinCraftTweakerReload"
+    ],
+    "client": [
+        "MixinMinecraft",
+        "MixinLevel",
+        "MixinLevelChunk"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

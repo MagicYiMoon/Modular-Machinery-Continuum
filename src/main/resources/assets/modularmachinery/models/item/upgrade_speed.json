@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "modularmachinery:block/overlay_upgrade_bus_normal"
+  }
+}

@@ -1,0 +1,26 @@
+{
+    "result": {
+        "nbt": "{BlockStateTag:{size:\"small\"}}",
+        "item": "modularmachinery:blockfluidinputhatch"
+    },
+    "pattern": [
+        " h ",
+        "mbm",
+        "cmc"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "c": {
+            "item": "minecraft:bucket"
+        },
+        "h": {
+            "item": "minecraft:hopper"
+        },
+        "m": {
+            "item": "modularmachinery:itemmodularium"
+        },
+        "b": {
+            "item": "modularmachinery:blockfluidinputhatch"
+        }
+    }
+}

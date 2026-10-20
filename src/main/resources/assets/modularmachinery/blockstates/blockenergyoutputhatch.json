@@ -1,0 +1,12 @@
+{
+    "variants": {
+        "size=tiny":       { "model":"modularmachinery:block/blockenergyoutputhatch_tiny" },
+        "size=small":      { "model":"modularmachinery:block/blockenergyoutputhatch_small" },
+        "size=normal":     { "model":"modularmachinery:block/blockenergyoutputhatch_normal" },
+        "size=reinforced": { "model":"modularmachinery:block/blockenergyoutputhatch_reinforced" },
+        "size=big":        { "model":"modularmachinery:block/blockenergyoutputhatch_big" },
+        "size=huge":       { "model":"modularmachinery:block/blockenergyoutputhatch_huge" },
+        "size=ludicrous":  { "model":"modularmachinery:block/blockenergyoutputhatch_ludicrous" },
+        "size=ultimate":   { "model":"modularmachinery:block/blockenergyoutputhatch_ultimate" }
+    }
+}

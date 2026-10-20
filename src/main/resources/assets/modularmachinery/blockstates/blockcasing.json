@@ -1,0 +1,10 @@
+{
+    "variants": {
+        "casing=plain": { "model": "modularmachinery:block/blockcasing_plain" },
+        "casing=vent": { "model": "modularmachinery:block/blockcasing_vent" },
+        "casing=firebox": { "model": "modularmachinery:block/blockcasing_firebox" },
+        "casing=gearbox": { "model": "modularmachinery:block/blockcasing_gearbox" },
+        "casing=reinforced": { "model": "modularmachinery:block/blockcasing_reinforced" },
+        "casing=circuitry": { "model": "modularmachinery:block/blockcasing_circuitry" }
+    }
+}

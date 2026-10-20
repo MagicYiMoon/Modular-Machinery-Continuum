@@ -1,0 +1,22 @@
+{
+    "result": {
+        "nbt": "{BlockStateTag:{size:\"small\"}}",
+        "item": "modularmachinery:blockenergyoutputhatch"
+    },
+    "pattern": [
+        "drd",
+        "rmr",
+        "ded"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "r": { "tag": "forge:storage_blocks/redstone" },
+        "e": {
+            "item": "minecraft:repeater"
+        },
+        "d": { "tag": "forge:dusts/redstone" },
+        "m": {
+            "item": "modularmachinery:blockenergyoutputhatch"
+        }
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "parent": "modularmachinery:block/blockparallelcontroller_normal",
+    "overrides": [
+        { "predicate": { "modularmachinery:tier_normal": 1.0 }, "model": "modularmachinery:item/blockparallelcontroller_normal" },
+        { "predicate": { "modularmachinery:tier_reinforced": 1.0 }, "model": "modularmachinery:item/blockparallelcontroller_reinforced" },
+        { "predicate": { "modularmachinery:tier_elite": 1.0 }, "model": "modularmachinery:item/blockparallelcontroller_elite" },
+        { "predicate": { "modularmachinery:tier_super": 1.0 }, "model": "modularmachinery:item/blockparallelcontroller_super" },
+        { "predicate": { "modularmachinery:tier_ultimate": 1.0 }, "model": "modularmachinery:item/blockparallelcontroller_ultimate" }
+    ]
+}

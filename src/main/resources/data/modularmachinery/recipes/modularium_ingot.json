@@ -1,0 +1,18 @@
+{
+    "result": {
+        "item": "modularmachinery:itemmodularium",
+        "count": 5
+    },
+    "pattern": [
+        "gig",
+        "iri",
+        "ror"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "r": { "tag": "forge:dusts/redstone" },
+        "g": { "tag": "forge:ingots/gold" },
+        "i": { "tag": "forge:ingots/iron" },
+        "o": { "tag": "forge:dusts/glowstone" }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "parent": "modularmachinery:block/blockcasing_plain",
+    "overrides": [
+        { "predicate": { "modularmachinery:tier_plain": 1.0 }, "model": "modularmachinery:item/blockcasing_plain" },
+        { "predicate": { "modularmachinery:tier_vent": 1.0 }, "model": "modularmachinery:item/blockcasing_vent" },
+        { "predicate": { "modularmachinery:tier_firebox": 1.0 }, "model": "modularmachinery:item/blockcasing_firebox" },
+        { "predicate": { "modularmachinery:tier_gearbox": 1.0 }, "model": "modularmachinery:item/blockcasing_gearbox" },
+        { "predicate": { "modularmachinery:tier_reinforced": 1.0 }, "model": "modularmachinery:item/blockcasing_reinforced" },
+        { "predicate": { "modularmachinery:tier_circuitry": 1.0 }, "model": "modularmachinery:item/blockcasing_circuitry" }
+    ]
+}

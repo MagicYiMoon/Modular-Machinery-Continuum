@@ -1,0 +1,19 @@
+{
+    "result": {
+        "item": "modularmachinery:blockcontroller"
+    },
+    "pattern": [
+        " d ",
+        "rmr",
+        "grg"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "r": { "tag": "forge:storage_blocks/redstone" },
+        "d": { "tag": "forge:gems/diamond" },
+        "g": { "tag": "forge:ingots/gold" },
+        "m": {
+            "item": "modularmachinery:blockcasing"
+        }
+    }
+}

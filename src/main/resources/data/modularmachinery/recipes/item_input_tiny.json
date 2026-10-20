@@ -1,0 +1,22 @@
+{
+    "result": {
+        "item": "modularmachinery:blockinputbus"
+    },
+    "pattern": [
+        "h",
+        "m",
+        "c"
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "c": {
+            "item": "minecraft:chest"
+        },
+        "h": {
+            "item": "minecraft:hopper"
+        },
+        "m": {
+            "item": "modularmachinery:blockcasing"
+        }
+    }
+}

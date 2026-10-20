@@ -1,0 +1,188 @@
+{
+    "registryname": "iron_centrifuge",
+    "localizedname": "Iron Reinforced Centrifuge",
+
+    "smart-interface-types": [
+        {
+            "type": "mode",
+            "default-value": 1,
+            "value-info": "%.0f",
+            "not-equal-message": "Wrong mode: the number in this machine's smart interface is not the one this recipe needs / \u6a21\u5f0f\u4e0d\u7b26\uff1a\u673a\u5668\u667a\u80fd\u63a5\u53e3\u4e0a\u7684\u6570\u5b57\u4e0d\u662f\u8fd9\u6761\u914d\u65b9\u8981\u7684"
+        }
+    ],
+
+    "parts": [
+        {
+            "x": -1,
+            "y": -1,
+            "z": 0,
+            "elements": "casings_all"
+        },
+        {
+            "x": 0,
+            "y": -1,
+            "z": 0,
+            "elements": [
+                "modularmachinery:blockcasing",
+                "modularmachinery:blockinputbus",
+                "modularmachinery:blockenergyinputhatch",
+                "modularmachinery:blockfluidinputhatch",
+                "modularmachinery:blockoutputbus",
+                "modularmachinery:blockenergyoutputhatch",
+                "modularmachinery:blockfluidoutputhatch",
+                "modularmachinery:blocksmartinterface"
+            ]
+        },
+        {
+            "x": 1,
+            "y": -1,
+            "z": 0,
+            "elements": "casings_all"
+        },
+
+        {
+            "x": -1,
+            "y": -1,
+            "z": 1,
+            "elements": "casings_all"
+        },
+
+        {
+            "x": 0,
+            "y": -1,
+            "z": 1,
+            "elements": "casings_all"
+        },
+        {
+            "x": 1,
+            "y": -1,
+            "z": 1,
+            "elements": "casings_all"
+        },
+
+        {
+            "x": -1,
+            "y": -1,
+            "z": 2,
+            "elements": "casings_all"
+        },
+        {
+            "x": 0,
+            "y": -1,
+            "z": 2,
+            "elements": "casings_all"
+        },
+        {
+            "x": 1,
+            "y": -1,
+            "z": 2,
+            "elements": "casings_all"
+        },
+        {
+            "x": 0,
+            "y": 1,
+            "z": 2,
+            "elements": "minecraft:iron_block"
+        },
+        {
+            "x": 0,
+            "y": 1,
+            "z": 0,
+            "elements": "minecraft:iron_block"
+        },
+        {
+            "x": -1,
+            "y": 1,
+            "z": 1,
+            "elements": "minecraft:iron_block"
+        },
+        {
+            "x": 1,
+            "y": 1,
+            "z": 1,
+            "elements": "minecraft:iron_block"
+        },
+        {
+            "x": 1,
+            "y": 1,
+            "z": 2,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": -1,
+            "y": 1,
+            "z": 2,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": 1,
+            "y": 1,
+            "z": 0,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": -1,
+            "y": 1,
+            "z": 0,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": 0,
+            "y": 1,
+            "z": 1,
+            "elements": "minecraft:glass"
+        },
+
+
+
+        {
+            "x": 0,
+            "y": 0,
+            "z": 2,
+            "elements": "minecraft:iron_block"
+        },
+        {
+            "x": -1,
+            "y": 0,
+            "z": 1,
+            "elements": "minecraft:iron_block"
+        },
+        {
+            "x": 1,
+            "y": 0,
+            "z": 1,
+            "elements": "minecraft:iron_block"
+        },
+        {
+            "x": 1,
+            "y": 0,
+            "z": 2,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": -1,
+            "y": 0,
+            "z": 2,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": 1,
+            "y": 0,
+            "z": 0,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": -1,
+            "y": 0,
+            "z": 0,
+            "elements": "minecraft:iron_bars"
+        },
+        {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "elements": "minecraft:water"
+        }
+
+    ]
+}

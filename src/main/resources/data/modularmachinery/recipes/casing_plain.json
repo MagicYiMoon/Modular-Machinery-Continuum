@@ -1,0 +1,18 @@
+{
+    "result": {
+        "item": "modularmachinery:blockcasing",
+        "count": 2
+    },
+    "pattern": [
+        " m ",
+        "mrm",
+        " m "
+    ],
+    "type": "minecraft:crafting_shaped",
+    "key": {
+        "r": { "tag": "forge:storage_blocks/redstone" },
+        "m": {
+            "item": "modularmachinery:itemmodularium"
+        }
+    }
+}
