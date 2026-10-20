@@ -1062,6 +1062,8 @@ checks.add(new Check("every registered block has a loot table",
         hellfirepvp.modularmachinery.common.registry.RegistryItems.blueprintVariants()
                 .forEach(stack -> declared.add(stack.getItem()));
 
+        hellfirepvp.modularmachinery.common.registry.DedicatedControllers.entries()
+                .forEach(entry -> declared.add(entry.item().get()));
         StringBuilder undeclared = new StringBuilder();
         int itemsSeen = 0;
         for (net.minecraft.world.item.Item item

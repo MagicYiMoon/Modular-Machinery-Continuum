@@ -109,7 +109,8 @@ public final class ModularmachineryNetwork {
     // Version 28 preserves and edits catalyst tooltip strings (including source blank lines).
     // Version 29 applies JSON batch exemptions and adds the independent requirement-batch editor.
     // Version 31 splits the energy-hatch menu's int values into two short words per logical field.
-    private static final String PROTOCOL = "31";
+    // MMC 1.1 adds controller settings to the editor envelope.
+    private static final String PROTOCOL = "32";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(Modularmachinery.MODID, "main"),

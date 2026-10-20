@@ -32,7 +32,7 @@ public final class BlueprintMaterials {
     }
 
     private static boolean isController(ItemStack stack) {
-        return stack.is(RegistryBlocks.blockController.get().asItem())
-                || stack.is(RegistryBlocks.blockFactoryController.get().asItem());
+        return stack.getItem() instanceof net.minecraft.world.item.BlockItem item
+                && item.getBlock() instanceof hellfirepvp.modularmachinery.common.block.BlockController;
     }
 }

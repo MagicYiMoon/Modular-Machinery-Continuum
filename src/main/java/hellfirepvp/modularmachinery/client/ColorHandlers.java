@@ -46,17 +46,8 @@ import java.util.List;
  * per block against {@code RegisterColorHandlersEvent.Block}" — and <b>nothing implements it and nothing
  * registers it</b>. The explanation was written and the registration was not.
  *
- * <h2>What it returns</h2>
- *
- * <p>White, which is what leaves a texture untinted: the models are authored in their real colours and the tint
- * index is upstream's hook for machine colouring rather than a colour it applies by default. Returning
- * {@code -1} would mean "no tint" but also disables the index entirely, so a later coloured block could not
- * take it over. <b>0xFFFFFF is the honest answer for a block that has a tint slot and no colour yet.</b>
- *
- * <h2>Dist safety</h2>
- *
- * <p>{@code Dist.CLIENT} and the MOD bus: colour registration happens on the client only, and this class must
- * never be touched by a dedicated server.
+ * <p>MMC 1.1 resolves controller tint index 1 from the bound machine's color. Unrelated models retain
+ * their original untinted textures; the modularium ingot continues to use the global machine color.</p>
  */
 @Mod.EventBusSubscriber(modid = Modularmachinery.MODID, value = Dist.CLIENT,
         bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -107,7 +98,13 @@ public final class ColorHandlers {
             // ineffective rather than visibly wrong.
             return;
         }
-        event.register((state, level, pos, tintIndex) -> NO_TINT, ours.toArray(new Block[0]));
+        event.register((state, level, pos, tintIndex) -> {
+            if (tintIndex != MACHINE_TINT || !(state.getBlock() instanceof hellfirepvp.modularmachinery.common.block.BlockController)) return NO_TINT;
+            String name = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(state.getBlock());
+            if (name == null && level != null && pos != null
+                    && level.getBlockEntity(pos) instanceof hellfirepvp.modularmachinery.common.tiles.TileController controller) name = controller.getMachineName();
+            return name == null ? NO_TINT : hellfirepvp.modularmachinery.common.registry.DedicatedControllers.color(name);
+        }, ours.toArray(new Block[0]));
         // Registered. Nothing to log: the effect is visible and the count is not a diagnostic.
         } catch (Throwable coloured) {
             // Cosmetic only: the textures render untinted, which is correct.
@@ -139,7 +136,15 @@ public final class ColorHandlers {
                 if (key.getPath().equals("itemmodularium")) {
                     continue;
                 }
-                event.register((stack, tintIndex) -> NO_TINT, entry.getValue());
+                event.register((stack, tintIndex) -> {
+                    if (tintIndex == MACHINE_TINT && stack.getItem() instanceof net.minecraft.world.item.BlockItem item) {
+                        if (item.getBlock() instanceof hellfirepvp.modularmachinery.common.block.BlockController
+                                && stack.hasTag() && stack.getTag().contains("mmcPreviewColor")) return stack.getTag().getInt("mmcPreviewColor") & 0xFFFFFF;
+                        String name = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(item.getBlock());
+                        if (name != null) return hellfirepvp.modularmachinery.common.registry.DedicatedControllers.color(name);
+                    }
+                    return NO_TINT;
+                }, entry.getValue());
             }
 
         // THE MACHINE COLOUR, for the one greyscale texture in this mod (PLAN section 288).

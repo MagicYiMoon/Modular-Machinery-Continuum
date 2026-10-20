@@ -129,7 +129,10 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
 
                 @Override
                 public boolean isItemValid(int slot, net.minecraft.world.item.ItemStack stack) {
-                    return stack.getItem() instanceof hellfirepvp.modularmachinery.common.item.ItemBlueprint;
+                    if (!(stack.getItem() instanceof hellfirepvp.modularmachinery.common.item.ItemBlueprint)) return false;
+                    String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
+                    var associated = hellfirepvp.modularmachinery.common.item.ItemBlueprint.getAssociatedMachine(stack);
+                    return fixed == null || associated != null && fixed.equals(associated.getRegistryName());
                 }
             };
 
@@ -673,6 +676,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     protected TileController(java.util.function.Supplier<? extends net.minecraft.world.level.block.entity.BlockEntityType<?>> type,
                              BlockPos pos, BlockState state) {
         super(type, pos, state);
+        this.machineName = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(state.getBlock());
     }
 
     public TileController(BlockPos pos, BlockState state) {
@@ -799,7 +803,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     }
 
     public String getMachineName() {
-        return machineName;
+        String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
+        return fixed == null ? machineName : fixed;
     }
 
     /**
@@ -837,7 +842,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     }
 
     public void setMachineName(String machineName) {
-        this.machineName = machineName;
+        String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
+        this.machineName = fixed == null ? machineName : fixed;
         markForUpdate();
     }
 
@@ -858,7 +864,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
             if (this instanceof TileFactoryController factory) factory.abandonAllRecipes();
             else abandonRecipe();
         }
-        this.machineName = blueprint == null ? null : blueprint.getRegistryName();
+        String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
+        this.machineName = fixed != null ? fixed : blueprint == null ? null : blueprint.getRegistryName();
         nextAutomaticStructureCheck = Long.MIN_VALUE;
         structureSearchRetries = 0;
         markForUpdate();
@@ -893,7 +900,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         // A WORLD RELOAD IS NOT A FORMATION: the flag comes back and the binding does not (PLAN 627).
         this.pendingRebind = this.formed;
         this.hiddenPositions = readHiddenPositions(tag);
-        this.machineName = tag.contains("machineName") ? tag.getString("machineName") : null;
+        String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
+        this.machineName = fixed != null ? fixed : tag.contains("machineName") ? tag.getString("machineName") : null;
         if (tag.hasUUID("owner")) {
             this.owner = tag.getUUID("owner");
         } else {

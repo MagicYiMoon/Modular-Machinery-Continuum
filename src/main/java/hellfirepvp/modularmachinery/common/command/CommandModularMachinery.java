@@ -298,6 +298,11 @@ public final class CommandModularMachinery {
         if (controller == null) {
             return 0;
         }
+        String dedicated = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(controller.getBlockState().getBlock());
+        if (dedicated != null && !dedicated.equals(machine.getRegistryName())) {
+            ctx.getSource().sendFailure(Component.literal("This controller is dedicated to '" + dedicated + "'; use that machine's controller or a generic controller"));
+            return 0;
+        }
         controller.setMachineName(machine.getRegistryName());
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "bound controller at " + pos.toShortString() + " to '" + machine.getRegistryName() + "'"), true);

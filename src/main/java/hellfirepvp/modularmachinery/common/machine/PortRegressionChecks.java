@@ -82,6 +82,7 @@ public final class PortRegressionChecks {
             if (hellfirepvp.modularmachinery.integration.extrautilities.RainbowIntegration.available())
                 hellfirepvp.modularmachinery.integration.extrautilities.RainbowRegressionChecks.run(level, origin.offset(0, 0, 432));
             EnergyHatchCapacityRegressionChecks.run(level, origin.offset(0, 0, 464));
+            DedicatedControllerRegressionChecks.run(level, origin.offset(0, 0, 496));
             NbtRegressionChecks.run(level, origin.offset(16, 0, 0));
             FluidTickRegressionChecks.run(level, origin.offset(32, 0, 0));
             DurabilityRegressionChecks.run(level, origin.offset(48, 0, 0));

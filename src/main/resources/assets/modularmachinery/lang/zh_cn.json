@@ -1,4 +1,6 @@
 {
+  "block.modularmachinery.dedicated_controller": "%s控制器",
+  "block.modularmachinery.dedicated_factory": "%s工厂控制器",
   "jei.modularmachinery.structure_preview": "机器结构",
   "jei.modularmachinery.structure_layer": "层 Y=%s（共 %s 层）",
   "jei.modularmachinery.structure_hint": "左键选中/旋转；右键平移；滚轮缩放/切层",

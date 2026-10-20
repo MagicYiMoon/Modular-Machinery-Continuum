@@ -118,6 +118,15 @@ public final class MachineFormation {
             return new Attempt(false, null, 0, List.of("controller is not bound to a machine definition"));
         }
 
+        String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(level.getBlockState(pos).getBlock());
+        if (fixed != null) {
+            if (!fixed.equals(machine.getRegistryName()))
+                return new Attempt(false, machine, 0, List.of("This controller belongs to machine " + fixed));
+            if (machine.isRequiresBlueprint() && level.getBlockEntity(pos) instanceof hellfirepvp.modularmachinery.common.tiles.TileController controller
+                    && hellfirepvp.modularmachinery.common.item.ItemBlueprint.getAssociatedMachine(controller.getBlueprintInventory().getStackInSlot(0)) != machine)
+                return new Attempt(false, machine, 0, List.of("This machine requires its matching blueprint"));
+        }
+
         // The machine's modifier replacements are passed IN, so their blocks count as alternatives to the
         // pattern at their positions (PLAN section 239). This is upstream's fourth parameter to
         // BlockArray.matches, and without it a machine that declares a modifier can never form with the

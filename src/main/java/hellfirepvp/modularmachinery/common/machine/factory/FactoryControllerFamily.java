@@ -24,29 +24,9 @@ import java.util.Map;
 /**
  * The factory controllers bound to ONE machine definition -- the family.
  *
- * <h2>RULE A0 -- what upstream has here, and why the port cannot copy its shape</h2>
- *
- * <p>Upstream keeps {@code BlockFactoryController.FACTORY_CONTROLLERS}, a
- * {@code Map<DynamicMachine, BlockFactoryController>}, with a lookup
- * {@code getControllerWithMachine(DynamicMachine)} (upstream BlockFactoryController L26 and L39-U41). Its
- * entries are written at BLOCK-REGISTRATION time, because upstream registers a factory controller BLOCK PER
- * MACHINE DEFINITION (upstream RegistryBlocks L422-U429, gated on the machine's {@code has-factory} flag or
- * the config's {@code enableFactoryControllerByDefault}).</p>
- *
- * <p><b>A BLOCK CANNOT BE REGISTERED ON 1.20.1 AFTER THE REGISTRIES FREEZE, AND THIS PORT ALREADY HAS THE
- * EVIDENCE.</b> Freezing happens at mod load -- the same fact that made {@code new ItemConstructTool()}
- * illegal and cost this project a round: the Item constructor writes an intrusive holder into a frozen
- * registry (PLAN 657.2(a), found by disassembling the mapped jar). This port's machine definitions are read
- * from the config directory at RELOAD time, long after the last block could be registered. So the port has
- * ONE always-registered factory controller block
- * ({@code RegistryBlocks.blockFactoryController}), which binds to a machine AT RUNTIME through the blueprint
- * slot ({@code TileController.syncMachineFromBlueprint}).</p>
- *
- * <p>THEREFORE THIS CLASS KEYS ON THE MACHINE NAME AND HOLDS LIVE BLOCK ENTITIES, where upstream keys on the
- * machine object and holds a block. THE QUESTION IT ANSWERS IS THE SAME ONE: which controllers serve this
- * machine, and how much of its factory capacity is in use. What is NOT lost: upstream's map is a lookup
- * "the block for machine X", and the port's is a lookup "the controllers for machine X" -- strictly more
- * information about the same family, since a block cannot say how much work its family is doing.</p>
+ * <p>MMC 1.1 registers dedicated factory blocks during startup, following upstream's has-factory
+ * setting. This runtime family additionally tracks live block entities by machine name, including
+ * legacy generic controllers, so reloads do not invalidate capacity or HUD statistics.</p>
  *
  * <h2>Consumers, named because a registry nothing reads is this project's most repeated defect</h2>
  *

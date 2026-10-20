@@ -32,10 +32,9 @@ public final class BlueprintSceneDefinition {
                     List.copyOf(new LinkedHashSet<>(StructureMatcher.acceptedStates(
                             part, variables, resolver, machine.getModifierReplacements())))));
         }
-        // The port allows both controller types for every machine; preserve that existing rule here.
+        // Dedicated identities plus legacy controller compatibility.
         cells.put(BlockPos.ZERO, new Cell(new MachinePattern.Part(0, 0, 0, "modularmachinery:blockcontroller"),
-                List.of(RegistryBlocks.blockController.get().defaultBlockState(),
-                        RegistryBlocks.blockFactoryController.get().defaultBlockState())));
+                hellfirepvp.modularmachinery.common.registry.DedicatedControllers.controllerStates(machine.getRegistryName())));
         for (var replacement : machine.getModifierReplacements()) {
             Map<BlockPos, List<BlockState>> offsets = new LinkedHashMap<>();
             offsets.put(new BlockPos(replacement.getX(), replacement.getY(), replacement.getZ()),

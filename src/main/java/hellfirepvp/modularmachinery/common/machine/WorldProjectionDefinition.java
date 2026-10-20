@@ -48,10 +48,9 @@ public final class WorldProjectionDefinition {
             built.put(new BlockPos(part.x(), part.y(), part.z()), new Cell(part,
                     List.copyOf(new LinkedHashSet<>(StructureMatcher.acceptedStates(part, variables, resolver, List.of()))), false));
         }
-        // Keep the port's existing rule allowing both controller types for every machine.
+        // Only this machine's dedicated controllers are accepted; legacy controllers remain compatible.
         built.put(BlockPos.ZERO, new Cell(new MachinePattern.Part(0, 0, 0, "modularmachinery:blockcontroller"),
-                List.of(RegistryBlocks.blockController.get().defaultBlockState(),
-                        RegistryBlocks.blockFactoryController.get().defaultBlockState()), true));
+                hellfirepvp.modularmachinery.common.registry.DedicatedControllers.controllerStates(machine.getRegistryName()), true));
         // Source getModifiersAsMatchingReplacements includes single-block conditions only, including exterior cells.
         for (var replacement : machine.getModifierReplacements()) {
             BlockPos pos = new BlockPos(replacement.getX(), replacement.getY(), replacement.getZ());

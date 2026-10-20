@@ -75,14 +75,10 @@ import java.util.stream.Stream;
  * the first. It never restores a file the player deleted — that is the gate's job, and upstream's
  * answer there is "not restored" as well.
  *
- * <h2>Why the setup call lives in this class</h2>
- *
- * <p>Upstream called {@code setup} and the conditional {@code copyDefaultMachinery} from
- * {@code CommonProxy.preInit} (upstream CommonProxy L117-L119). This port has no proxy — it uses
- * {@code DistExecutor}/{@code @EventBusSubscriber} instead (see {@code Modularmachinery}'s javadoc) —
- * so the call site is an {@link FMLCommonSetupEvent} subscriber on the mod bus, which is the nearest
- * 1.20.1 equivalent of pre-initialisation and, like preInit, is guaranteed to run <b>before</b> the
- * server's resource reload, which is when the loaders read these directories.
+ * <h2>Startup order</h2>
+ * <p>MMC 1.1 prepares the directories and first-run templates in DedicatedControllers.register(),
+ * before deferred block registration. The common-setup subscriber remains idempotent for callers
+ * using the historical initialization path. Runtime loaders still read complete definitions on reload.</p>
  */
 @Mod.EventBusSubscriber(modid = Modularmachinery.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ModDataHolder {

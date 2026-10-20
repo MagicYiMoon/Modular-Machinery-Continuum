@@ -48,8 +48,10 @@ import org.jetbrains.annotations.Nullable;
  */
 public class BlockFactoryController extends BlockController {
 
-    public BlockFactoryController(Properties properties) {
-        super(properties);
+    public BlockFactoryController(Properties properties) { this(properties, null); }
+
+    public BlockFactoryController(Properties properties, String machine) {
+        super(properties, machine);
     }
 
     @Override

@@ -86,9 +86,9 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
         ItemBlueprint.setAssociatedMachine(blueprint, entry.machine());
         builder.addSlot(RecipeIngredientRole.OUTPUT, 124, 2).addItemStack(blueprint);
         builder.addSlot(RecipeIngredientRole.OUTPUT, 142, 2)
-                .addItemStack(new ItemStack(RegistryBlocks.blockController.get()));
+                .addItemStack(hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stackOrGeneric(entry.machine().getRegistryName(), false));
         builder.addSlot(RecipeIngredientRole.OUTPUT, 160, 2)
-                .addItemStack(new ItemStack(RegistryBlocks.blockFactoryController.get()));
+                .addItemStack(hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stackOrGeneric(entry.machine().getRegistryName(), true));
         var materials = builder.addInvisibleIngredients(RecipeIngredientRole.INPUT);
         entry.ingredients().forEach(materials::addItemStack);
         StructureMaterialWidget.addSlots(builder);

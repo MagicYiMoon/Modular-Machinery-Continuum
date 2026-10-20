@@ -56,7 +56,7 @@ public final class RegistryBlockEntities {
 
     public static final RegistryObject<BlockEntityType<TileController>> CONTROLLER =
             BLOCK_ENTITIES.register("blockcontroller", () -> BlockEntityType.Builder
-                    .of(TileController::new, RegistryBlocks.blockController.get())
+                    .of(TileController::new, DedicatedControllers.validBlocks(false, RegistryBlocks.blockController.get()))
                     .build(null));
 
     public static final RegistryObject<BlockEntityType<TileItemInputBus>> ITEM_INPUT_BUS =
@@ -109,7 +109,7 @@ public final class RegistryBlockEntities {
 
     public static final RegistryObject<BlockEntityType<TileFactoryController>> FACTORY_CONTROLLER =
             BLOCK_ENTITIES.register("blockfactorycontroller", () -> BlockEntityType.Builder
-                    .of(TileFactoryController::new, RegistryBlocks.blockFactoryController.get())
+                    .of(TileFactoryController::new, DedicatedControllers.validBlocks(true, RegistryBlocks.blockFactoryController.get()))
                     .build(null));
 
     public static final RegistryObject<BlockEntityType<TileSmartInterface>> SMART_INTERFACE =

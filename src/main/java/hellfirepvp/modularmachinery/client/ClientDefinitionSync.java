@@ -35,13 +35,13 @@ public final class ClientDefinitionSync {
                 RecipeLoader recipes = RecipeLoader.fromSnapshot(json.getAsJsonArray("recipes"), machines);
                 GeoMachineModelRegistry.installSnapshot(json.has("geoModels")
                         ? json.getAsJsonArray("geoModels") : null);
+                MachineReloadListener.installClientDefinitions(new MachineReloadListener.Definitions(machines, recipes));
                 // A definition reload can change the selected model while the block entity stays
                 // loaded.  Rebuild render sections immediately so the new model is visible without
                 // a chunk reload; the GeckoLib resource listener handles baked resource changes.
                 if (net.minecraft.client.Minecraft.getInstance().level != null) {
                     net.minecraft.client.Minecraft.getInstance().levelRenderer.allChanged();
                 }
-                MachineReloadListener.installClientDefinitions(new MachineReloadListener.Definitions(machines, recipes));
                 Modularmachinery.LOG.info("[MMCE] synchronized {} machines and {} recipes from server",
                         machines.getMachines().size(), recipes.getRecipeNames().size());
             }

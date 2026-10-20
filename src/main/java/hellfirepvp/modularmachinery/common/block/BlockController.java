@@ -50,11 +50,31 @@ public class BlockController extends BlockMachineComponent {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
 
-    public BlockController(Properties properties) {
+    private final String dedicatedMachine;
+
+    public BlockController(Properties properties) { this(properties, null); }
+
+    public BlockController(Properties properties, String dedicatedMachine) {
         super(properties);
+        this.dedicatedMachine = dedicatedMachine;
         registerDefaultState(stateDefinition.any()
                 .setValue(FACING, net.minecraft.core.Direction.NORTH)
                 .setValue(FORMED, false));
+    }
+
+    public String getDedicatedMachine() { return dedicatedMachine; }
+
+    @Override
+    public net.minecraft.network.chat.MutableComponent getName() {
+        return dedicatedMachine == null ? super.getName()
+                : hellfirepvp.modularmachinery.common.registry.DedicatedControllers.displayName(
+                        dedicatedMachine, this instanceof BlockFactoryController).copy();
+    }
+
+    @Override
+    public String getDescriptionId() {
+        if (dedicatedMachine == null) return super.getDescriptionId();
+        return this instanceof BlockFactoryController ? "block.modularmachinery.dedicated_factory" : "block.modularmachinery.dedicated_controller";
     }
 
     /** Capture the placer when a fresh controller is placed; a tagged drop keeps its original owner. */
@@ -71,6 +91,7 @@ public class BlockController extends BlockMachineComponent {
                 owner = player.getGameProfile().getId();
             }
             controller.setOwner(owner);
+            if (dedicatedMachine != null) controller.setMachineName(dedicatedMachine);
         }
     }
 

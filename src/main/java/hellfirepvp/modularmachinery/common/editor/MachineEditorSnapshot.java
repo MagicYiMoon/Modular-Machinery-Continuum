@@ -43,6 +43,10 @@ public final class MachineEditorSnapshot {
             entry.addProperty("name", machine.getRegistryName());
             entry.addProperty("localizedName", machine.getLocalizedName());
             entry.addProperty("editableName", true);
+            entry.addProperty("color", machine.getDefinedColor() & 0xFFFFFF);
+            entry.addProperty("hasFactory", machine.isHasFactory());
+            entry.addProperty("controllerRegistered", !hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stack(machine.getRegistryName(), false).isEmpty());
+            entry.addProperty("factoryRegistered", !hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stack(machine.getRegistryName(), true).isEmpty());
             var smartTypes = new JsonArray();
             SmartInterfaceEditor.options(machine).forEach(smartTypes::add);
             entry.add("smartInterfaceTypes", smartTypes);

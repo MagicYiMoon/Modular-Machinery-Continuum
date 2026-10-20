@@ -105,6 +105,9 @@ public abstract class BlockMachineComponent extends Block implements EntityBlock
         if (level.isClientSide()) {
             return;
         }
+        // Keep vanilla block loot/statistics even when the component has no inventory.
+        // onRemove may already have ejected a controller blueprint before this callback.
+        super.playerDestroy(level, player, pos, state, blockEntity, tool);
         BlockEntity be = blockEntity != null ? blockEntity : level.getBlockEntity(pos);
         if (be == null) {
             return;

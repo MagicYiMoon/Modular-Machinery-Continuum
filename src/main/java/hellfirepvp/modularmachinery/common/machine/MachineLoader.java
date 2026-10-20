@@ -179,6 +179,7 @@ public final class MachineLoader {
             DynamicMachine machine = machines.get(new ResourceLocation(Modularmachinery.MODID, name));
             // This default comes from the server config, which can differ on a remote client.
             effective.addProperty("color", Integer.toHexString(machine.getDefinedColor()));
+            effective.addProperty("has-factory", machine.isHasFactory());
             // MachineModifier.setMachinePrefix changes client presentation, so carry the resolved
             // value in the same server snapshot as the other script machine settings.
             effective.addProperty("prefix", machine.getPrefix());
@@ -491,6 +492,7 @@ public final class MachineLoader {
             //
             // A bad value is reported and the config colour is kept, rather than throwing: the port's
             // loader collects problems and keeps loading, which is its contract for every other key.
+            if (root.has("has-factory")) machine.setHasFactory(root.get("has-factory").getAsBoolean());
             if (root.has("color") && root.get("color").isJsonPrimitive()) {
                 String colorStr = root.get("color").getAsString();
                 try {

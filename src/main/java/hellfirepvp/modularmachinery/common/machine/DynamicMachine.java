@@ -97,6 +97,10 @@ public final class DynamicMachine {
      * <p>Read from the JSON's {@code color} as a HEX STRING (upstream parses it with
      * {@code Integer.parseInt(hexStr, 16)} and rejects anything else).
      */
+    private boolean hasFactory;
+    public boolean isHasFactory() { return hasFactory; }
+    public void setHasFactory(boolean value) { hasFactory = value; }
+
     private int definedColor = hellfirepvp.modularmachinery.common.data.Config.machineColor();
     // Server config supplies defaults; JSON and CraftTweaker builders/modifiers may override them.
     // Capture them per definition so config reloads cannot change a paid run in place.

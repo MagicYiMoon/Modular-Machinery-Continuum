@@ -258,6 +258,12 @@ public final class MachineTicker {
         if (!(level instanceof net.minecraft.server.level.ServerLevel server)
                 || !controller.automaticStructureCheckDue(level.getGameTime())) return;
         MachineLoader loader = MachineReloadListener.getLoader();
+        String dedicated = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(controller.getBlockState().getBlock());
+        if (dedicated != null) {
+            DynamicMachine machine = loader.findByName(dedicated);
+            if (machine != null) formCandidate(server, pos, controller, machine, loader);
+            return;
+        }
         DynamicMachine blueprint = hellfirepvp.modularmachinery.common.item.ItemBlueprint
                 .getAssociatedMachine(controller.getBlueprintInventory().getStackInSlot(0));
         if (blueprint != null && formCandidate(server, pos, controller, blueprint, loader)) return;

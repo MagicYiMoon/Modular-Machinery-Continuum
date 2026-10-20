@@ -144,6 +144,8 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private boolean pickerReplacing;
     private boolean editorOpen;
     private boolean editorRecipe;
+    private boolean colorOpen;
+    private final ControllerAppearancePanel controllerAppearance = new ControllerAppearancePanel();
     private boolean namePreviewOpen;
     private boolean namePreviewRecipe;
     private int pickerScroll;
@@ -227,6 +229,13 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         pickerSearch.setHint(Component.literal(pickerHint()));
         addRenderableWidget(pickerSearch);
 
+        controllerAppearance.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), settings -> {
+            if (machine() != null) submitMutation(new hellfirepvp.modularmachinery.common.network.PktMachineEditorControllerSettings(
+                    machine().get("name").getAsString(), settings.color(), settings.factory()));
+        }, this::closeControllerAppearance);
+        addMainWidget(Button.builder(Component.literal("控制器外观"), b -> openControllerAppearance())
+                .bounds(leftPos + 8, topPos + 174, 128, 20)
+                .tooltip(Tooltip.create(Component.literal("设置该机器普通／工厂控制器的外壳颜色，预览并保存\n新增机器或开启独立工厂控制器后需重启"))).build());
         localizedName = new EditBox(font, leftPos + 8, topPos + 232, 114, 18, Component.literal("显示名称"));
         localizedName.setMaxLength(200);
         localizedName.setTooltip(Tooltip.create(Component.literal(
@@ -362,6 +371,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         setEditorVisible(editorOpen);
         setPickerVisible(pickerOpen);
         setNamePreviewVisible(namePreviewOpen);
+        controllerAppearance.setVisible(colorOpen, menu.saves().pending());
         setTypePickerVisible(typePickerOpen);
         modifierPanel.setVisible(modifiersOpen);
         catalystTooltipPanel.setVisible(catalystTooltipsOpen);
@@ -397,7 +407,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void syncMainWidgets() {
-        boolean visible = !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && !selectorOpen && !batchOpen && !triggerOpen && !smartOpen && !recipeOptionsOpen;
+        boolean visible = !colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && !selectorOpen && !batchOpen && !triggerOpen && !smartOpen && !recipeOptionsOpen;
         for (AbstractWidget widget : mainWidgets) {
             widget.visible = visible;
             widget.active = visible && !menu.saves().pending();
@@ -490,6 +500,17 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         submitMutation(new PktMachineEditorSmartInterface(current.get("name").getAsString(), addingRequirement ? -1 : requirementIndex,
                 condition.toString(), isNewRecipe(current) ? machine().get("name").getAsString() : "",
                 current.get("duration").getAsInt(), current.has("displayName") ? current.get("displayName").getAsString() : ""));
+    }
+
+    private void openControllerAppearance() {
+        if (machine() == null || menu.saves().pending()) return;
+        colorOpen = true; saveStatus = ""; saveFailed = false;
+        controllerAppearance.open(machine()); controllerAppearance.setVisible(true, false); syncMainWidgets();
+    }
+
+    private void closeControllerAppearance() {
+        if (menu.saves().pending()) return;
+        colorOpen = false; controllerAppearance.setVisible(false, false); syncMainWidgets(); setFocused(null);
     }
 
     private void openNamePreview() {
@@ -1146,6 +1167,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             saveStatus = result.message();
             saveFailed = !result.success();
             if (result.success()) {
+                if (colorOpen) closeControllerAppearance();
                 if (batchOpen) closeRequirementBatch();
                 if (triggerOpen) closeRequirementTrigger();
                 if (smartOpen) closeSmartInterface();
@@ -1166,6 +1188,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             triggerPanel.setVisible(triggerOpen, menu.saves().pending());
             smartPanel.setVisible(smartOpen, menu.saves().pending());
         }
+        controllerAppearance.setVisible(colorOpen, menu.saves().pending());
         String snapshot = menu.snapshot();
         if (!menu.saves().pending() && !snapshot.equals(loadedSnapshot)) refreshDocument(snapshot);
     }
@@ -1505,7 +1528,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             groupScroll = clampScroll(groupScroll - (int) Math.signum(delta), groupItems().size(), groupRows());
             return true;
         }
-        if (pickerOpen || editorOpen || namePreviewOpen || typePickerOpen) return true;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen) return true;
         if (y >= LIST_TOP && y < LIST_BOTTOM) {
             if (x >= MACHINE_X && x < MACHINE_X + MACHINE_W) {
                 machineScroll = clampScroll(machineScroll - (int) Math.signum(delta), machines().size(), rows);
@@ -1528,6 +1551,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (colorOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
         if (menu.saves().pending()) return true;
         if (batchOpen || triggerOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
         if (recipeOptionsOpen) {
@@ -1690,6 +1714,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         if (pickerOpen) drawPickerOverlay(graphics);
         if (editorOpen) drawEditorOverlay(graphics);
         if (namePreviewOpen) drawNamePreviewOverlay(graphics);
+        if (colorOpen) controllerAppearance.draw(graphics, saveStatus, saveFailed);
         if (typePickerOpen) drawTypePickerOverlay(graphics);
         if (modifiersOpen) modifierPanel.draw(graphics);
         if (catalystTooltipsOpen) catalystTooltipPanel.draw(graphics);
@@ -1703,7 +1728,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || recipeOptionsOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || recipeOptionsOpen) return;
         graphics.drawString(font, Component.literal("机器"), MACHINE_X, 6, 0xFFFFFF, false);
         graphics.drawString(font, Component.literal("配方"), RECIPE_X, 6, 0xFFFFFF, false);
         graphics.drawString(font, Component.literal("需求"), REQUIREMENT_X, 6, 0xFFFFFF, false);
@@ -2016,6 +2041,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (keyCode == 256) onClose();
             return true;
         }
+        if (colorOpen && keyCode == 256) { closeControllerAppearance(); return true; }
         if (namePreviewOpen && keyCode == 256) {
             closeNamePreview();
             return true;
@@ -2088,7 +2114,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         renderFluidTickTooltip(graphics, mouseX, mouseY);
         renderSmartTooltip(graphics, mouseX, mouseY);
         renderSelectorTooltip(graphics, mouseX, mouseY);
-        if (!pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen) {
+        if (!colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen) {
             int x = mouseX - leftPos;
             int y = mouseY - topPos;
             JsonObject hovered = null;
@@ -2128,7 +2154,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 && x >= 82 && x < 280 && y >= 52 && y < 78) {
             tag = ItemTagSelection.id(requirement().get("item").getAsString());
             durability = durabilityRequirement();
-        } else if (!pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen
+        } else if (!colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen
                 && x >= REQUIREMENT_X && x < REQUIREMENT_X + REQUIREMENT_W - 18) {
             boolean output = y >= OUTPUT_TOP;
             int row = (y - (output ? OUTPUT_TOP : INPUT_TOP)) / ROW_HEIGHT;
@@ -2153,7 +2179,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void renderFluidTickTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 28) return;
         boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
@@ -2171,7 +2197,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void renderSmartTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 28 || y < INPUT_TOP || y >= INPUT_TOP + SIDE_ROWS * ROW_HEIGHT) return;
         var indices = sideIndices(false); int index = inputScroll + (y - INPUT_TOP) / ROW_HEIGHT;
@@ -2185,7 +2211,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void renderSelectorTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X + REQUIREMENT_W - 28 || x >= REQUIREMENT_X + REQUIREMENT_W - 18) return;
         boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
@@ -2198,7 +2224,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void renderFuelTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 18) return;
         boolean output = y >= OUTPUT_TOP;
@@ -2219,7 +2245,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void renderDurabilityTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 18) return;
         boolean output = y >= OUTPUT_TOP;
@@ -2259,7 +2285,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
             return;
         }
-        if (!pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && x >= REQUIREMENT_X && x < REQUIREMENT_X + REQUIREMENT_W - 18) {
+        if (!colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && x >= REQUIREMENT_X && x < REQUIREMENT_X + REQUIREMENT_W - 18) {
             boolean output = y >= OUTPUT_TOP;
             int top = output ? OUTPUT_TOP : INPUT_TOP;
             if (y < top || y >= top + SIDE_ROWS * ROW_HEIGHT) return;

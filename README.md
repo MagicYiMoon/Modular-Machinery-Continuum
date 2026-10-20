@@ -2,7 +2,13 @@
 
 将 Modular Machinery Community Edition 2.3.2 从 Forge 1.12.2 移植到 **Minecraft 1.20.1 / Forge 47.x**，供整合包作者定义多方块机器与配方。本文核对日期：**2026-10-20**。
 
-发布文件：`build/libs/modularmachinerycontinuum-1.0.0-1.20.1-all.jar`。内部模组 ID 继续使用 `modularmachinery`，魔法接口继续使用 `modularmagic`，配置目录和物品 ID 不随显示名称改变。客户端和服务器应安装同一版 JAR；当前网络协议为 **31**。
+发布文件：`build/libs/modularmachinerycontinuum-1.1.0-1.20.1-all.jar`。内部模组 ID 继续使用 `modularmachinery`，魔法接口继续使用 `modularmagic`，配置目录和物品 ID 不随显示名称改变。客户端和服务器应安装同一版 JAR；当前网络协议为 **32**。
+
+## 1.1.0 大更新
+
+每种机器现在独立注册普通控制器，按 `has-factory` 或全局默认配置注册工厂控制器。控制器固定绑定机器，名称和外壳颜色来自机器定义；可在 `/modularmachinery gui` 的“控制器外观”中输入 RGB、使用调色板并预览。
+
+旧通用控制器、旧方块实体 ID、蓝图和配置路径保留。颜色和配方可重载；新增机器身份、新增工厂控制器需客户端与服务端一起重启。分发配置时同时保留 `controller-registry.json`，详细迁移和资源包用法见[独立控制器教程](docs/DEDICATED_CONTROLLERS_ZH.md)。
 
 ## 教程入口
 
@@ -66,7 +72,7 @@
 .\gradlew.bat build jarJar reobfJarJar '-Pforge_version=47.4.23'
 ```
 
-服务端回归方法与实际通过记录见 [VERIFY.md](VERIFY.md)。2026-10-20 的独立运行和全联动回归均为 `OVERALL: PASS`；这不能代替客户端画面验证，也不意味着已经完全兼容所有 1.12.2 整合包。容量及可选联动用法见[整合包作者教程](docs/PACK_AUTHOR_GUIDE_ZH.md)，发布变更见[发布说明](RELEASE_NOTES.md)。
+服务端回归方法与实际通过记录见 [VERIFY.md](VERIFY.md)。1.1.0 的独立、全联动和全新配置环境覆盖固定控制器身份、实际加工与生存挖掘、颜色编辑保护、投影和资源包。客户端新界面与染色画面仍需实际验证；本模组不保证兼容所有 1.12.2 整合包。版本变化见[发布说明](RELEASE_NOTES.md)。
 
 ## 许可与来源
 

@@ -1,6 +1,6 @@
 # 开发回归运行方法
 
-截至 2026-10-20，Forge 47.3.0 独立运行与 Forge 47.4.23 全联动服务端回归均通过，包含 FE 大容量及菜单同步专项。原始本机日志没有放进公开源码包；以下命令供开发者复现检查。
+截至 2026-10-20，MMC 1.1.0 已通过 Forge 47.3.0 独立环境、全新配置启动及 Forge 47.4.23 全联动服务端回归，包含独立控制器、普通／工厂实际加工、掉落、投影、颜色编辑保护与生成资源包专项。原始本机日志没有放进公开源码包；以下命令供开发者复现检查。
 
 服务端回归不等于客户端画面或所有整合包兼容性保证。功能范围见[项目说明](README.md)，教程见[文档目录](docs/README.md)。
 
@@ -24,4 +24,15 @@
 
 缓存完整时可加 `--offline`。先确认日志存在 `OVERALL: PASS` 且没有专项失败，再确认 Gradle 构建成功；单独的 `BUILD SUCCESSFUL` 不能证明服务端自测成功。旧日志里故意触发的坏 JSON 保存错误属于失败保护回归，不等于本轮联动异常。
 
-发布产物为 `build/libs/modularmachinerycontinuum-1.0.0-1.20.1-all.jar`，Jar-in-Jar 仅包含 GeckoLib 4.8.4。文档修改本身无需重新构建模组。
+发布产物为 `build/libs/modularmachinerycontinuum-1.1.0-1.20.1-all.jar`，Jar-in-Jar 仅包含 GeckoLib 4.8.4。文档修改本身无需重新构建模组。
+
+## 独立控制器的启动条件
+
+测试无法在注册冻结后创建新方块。想同时验证专属普通与工厂控制器，可以在首次启动前放入一份有效机器 JSON 并声明 `"has-factory": true`，或在没有 `config/modularmachinery/` 的隔离实例中，仅预先创建 `config/modularmachinery-common.toml`：
+
+```toml
+[factory-system]
+enable-factory-controller-bydefault = true
+```
+
+然后按前文命令运行自测。前一种验证按机器注册，后一种同时验证首次默认配置提取及全局工厂注册。没有启用任何工厂时，自测仍验证普通独立控制器的四个朝向。回归会临时修改隔离机器定义并恢复原文件，不要对真实整合包运行。

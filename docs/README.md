@@ -1,7 +1,8 @@
 # Modular Machinery: Continuum 文档目录
 
-适用 Minecraft 1.20.1 / Forge，版本 1.0.0-1.20.1，网络协议 31。
+适用 Minecraft 1.20.1 / Forge，版本 1.1.0-1.20.1，网络协议 32。
 
+- [1.1.0 独立控制器与颜色编辑](DEDICATED_CONTROLLERS_ZH.md)
 - [玩家使用教程](USER_GUIDE_ZH.md)：安装、控制器、自动装配、蓝图、投影与命令。
 - [整合包作者教程](PACK_AUTHOR_GUIDE_ZH.md)：机器、配方、线程、智能接口、可视化编辑、GeckoLib 和可选联动。
 - [JSON 补充参考](ADDING_MACHINES.md)：结构、NBT、修饰符与高级需求。

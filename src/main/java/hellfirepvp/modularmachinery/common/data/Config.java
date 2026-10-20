@@ -94,6 +94,7 @@ public final class Config {
 
     /** The spec, built once in the static initialiser. */
     public static final ForgeConfigSpec SPEC;
+    private static final ForgeConfigSpec.BooleanValue FACTORY_CONTROLLERS_DEFAULT;
 
     private static final ForgeConfigSpec.ConfigValue<String> MACHINE_COLOR;
     private static final ForgeConfigSpec.BooleanValue MACHINE_PARALLEL_DEFAULT;
@@ -298,6 +299,8 @@ public final class Config {
         builder.pop(2);
 
         builder.push("factory-system");
+        FACTORY_CONTROLLERS_DEFAULT = builder.comment("Register a dedicated factory controller for every machine at startup. Requires restart.")
+                .worldRestart().define("enable-factory-controller-bydefault", false);
         FACTORY_MAX_THREADS = builder
                 .comment("Default factory thread ceiling. MMCE's loaded default is 10 (its field initializer was 20).",
                         "Changes apply when machine definitions are reloaded; existing paid runs retain their batch.")

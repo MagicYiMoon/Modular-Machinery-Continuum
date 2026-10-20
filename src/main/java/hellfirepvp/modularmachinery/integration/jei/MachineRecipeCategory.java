@@ -317,6 +317,12 @@ public class MachineRecipeCategory implements IRecipeCategory<MachineRecipe> {
     @Override
 
     public void setRecipe(IRecipeLayoutBuilder builder, MachineRecipe recipe, IFocusGroup focuses) {
+        var controllers = builder.addInvisibleIngredients(RecipeIngredientRole.CATALYST);
+        // Per-recipe catalysts keep a dedicated controller's JEI focus on its own machine.
+        for (boolean factory : new boolean[] {false, true}) {
+            var stack = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stack(recipe.machine(), factory);
+            if (!stack.isEmpty()) controllers.addItemStack(stack);
+        }
         List<RequirementFuel> fuels = new ArrayList<>();
         List<RequirementIngredientArray> arrays = new ArrayList<>();
         List<RequirementIngredientArray> arrayOutputs = new ArrayList<>();

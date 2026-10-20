@@ -1,4 +1,6 @@
 {
+  "block.modularmachinery.dedicated_controller": "%s Controller",
+  "block.modularmachinery.dedicated_factory": "%s Factory Controller",
   "jei.modularmachinery.structure_preview": "Machine Structure",
   "jei.modularmachinery.structure_layer": "Y=%s (%s layers)",
   "jei.modularmachinery.structure_hint": "Left: pick/rotate | Right: pan | Wheel: zoom/layer",

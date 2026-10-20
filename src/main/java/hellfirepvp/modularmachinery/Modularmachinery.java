@@ -72,6 +72,9 @@ public class Modularmachinery {
                 net.minecraftforge.fml.config.ModConfig.Type.COMMON,
                 hellfirepvp.modularmachinery.common.data.Config.SPEC);
 
+        hellfirepvp.modularmachinery.common.registry.DedicatedControllers.register();
+        modBus.addListener(hellfirepvp.modularmachinery.common.registry.ControllerResourcePack::addPacks);
+
         // --- Registration: every holder must be attached, or it silently registers nothing. ---
         RegistryBlocks.BLOCKS.register(modBus);
         if (hellfirepvp.modularmachinery.common.integration.AstralIntegration.available())

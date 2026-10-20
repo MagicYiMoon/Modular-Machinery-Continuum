@@ -125,6 +125,7 @@ public final class RegistryCreativeTabs {
                     .icon(() -> new ItemStack(RegistryItems.itemModularium.get()))
                     .displayItems((parameters, output) -> {
                         EXPLICIT_ITEMS.forEach(entry -> output.accept(entry.get()));
+                        DedicatedControllers.entries().forEach(entry -> output.accept(entry.item().get()));
                         // modularmagic providers: registered under another namespace but shown in
                         // this mod's tab, since they ship in this jar.
                         RegistryModularMagicItems.PROVIDERS.forEach(item -> output.accept(item.get()));
