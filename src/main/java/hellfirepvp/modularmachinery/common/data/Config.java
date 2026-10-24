@@ -103,6 +103,7 @@ public final class Config {
     private static final ForgeConfigSpec.IntValue FACTORY_MAX_THREADS;
     private static final ForgeConfigSpec.IntValue MANA_PROVIDER_CAPACITY;
     private static final ForgeConfigSpec.BooleanValue ENABLE_SECURITY_SYSTEM;
+    private static final ForgeConfigSpec.BooleanValue ENABLE_FLUX_NETWORKS;
     private static final ForgeConfigSpec.BooleanValue CLEAN_CUSTOM_DATA_ON_STRUCTURE_FAILURE;
     private static final ForgeConfigSpec.ConfigValue<String> DEFAULT_FAILURE_ACTION;
 
@@ -206,6 +207,11 @@ public final class Config {
                         "Creative players bypass this check.")
                 .push("general");
         ENABLE_SECURITY_SYSTEM = builder.define("enable-security-system", false);
+        ENABLE_FLUX_NETWORKS = builder
+                .comment("Expose the Flux Networks energy capability on ordinary FE hatches.",
+                        "Shares the existing FE buffer and respects its direction, capacity and transfer limit.",
+                        "Disabling this does not disable ordinary Forge Energy connections.")
+                .define("enable-fluxnetworks-integration", true);
         CLEAN_CUSTOM_DATA_ON_STRUCTURE_FAILURE = builder
                 .comment("Clear controller customData and custom modifiers when its structure becomes invalid.")
                 .define("clean-custom-data-on-structure-check-failed", false);
@@ -559,6 +565,14 @@ public final class Config {
     /** Whether controller owner checks are enabled. */
     public static boolean enableSecuritySystem() {
         return read(ENABLE_SECURITY_SYSTEM, false);
+    }
+
+    public static boolean enableFluxNetworksIntegration() {
+        return read(ENABLE_FLUX_NETWORKS, true);
+    }
+
+    public static ForgeConfigSpec.BooleanValue entryForFluxNetworksIntegration() {
+        return ENABLE_FLUX_NETWORKS;
     }
 
     /** Mirrors upstream's optional cleanup on a failed structure check. */

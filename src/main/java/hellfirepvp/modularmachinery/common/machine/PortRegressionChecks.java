@@ -82,6 +82,9 @@ public final class PortRegressionChecks {
             if (hellfirepvp.modularmachinery.integration.extrautilities.RainbowIntegration.available())
                 hellfirepvp.modularmachinery.integration.extrautilities.RainbowRegressionChecks.run(level, origin.offset(0, 0, 432));
             EnergyHatchCapacityRegressionChecks.run(level, origin.offset(0, 0, 464));
+            if (net.minecraftforge.fml.ModList.get().isLoaded("fluxnetworks"))
+                hellfirepvp.modularmachinery.integration.fluxnetworks.FluxNetworksRegressionChecks.run(
+                        level, origin.offset(0, 0, 528));
             DedicatedControllerRegressionChecks.run(level, origin.offset(0, 0, 496));
             NbtRegressionChecks.run(level, origin.offset(16, 0, 0));
             FluidTickRegressionChecks.run(level, origin.offset(32, 0, 0));

@@ -77,6 +77,8 @@ public class Modularmachinery {
 
         // --- Registration: every holder must be attached, or it silently registers nothing. ---
         RegistryBlocks.BLOCKS.register(modBus);
+        if (net.minecraftforge.fml.ModList.get().isLoaded("fluxnetworks"))
+            hellfirepvp.modularmachinery.integration.fluxnetworks.FluxNetworksIntegration.register();
         if (hellfirepvp.modularmachinery.common.integration.AstralIntegration.available())
             hellfirepvp.modularmachinery.integration.astral.AstralRegistration.register(modBus);
         if (hellfirepvp.modularmachinery.integration.extrautilities.RainbowIntegration.available())

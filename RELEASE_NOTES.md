@@ -1,3 +1,20 @@
+# Modular Machinery: Continuum 1.2.0 — Minecraft 1.20.1
+
+## 通量网络联动 / Flux Networks integration
+
+- 新增 Flux Networks 7.2.1.15 原生能量接口，能源输入／输出仓与 FE 共用库存。
+- 支持通量节点供能和输出仓向通量插头主动输送；保留仓室方向、容量、传输限制及标准 FE 回退。
+- 长整型请求安全限制到现有 FE 容量范围，负数请求不执行传输；接口在方块卸载／移除时失效。
+- 新增默认开启的 general.enable-fluxnetworks-integration 开关，仅控制专用联动，不禁止标准 FE 连接。
+- Flux Networks 是可选外部依赖，需要另装；发行包仍只内嵌 GeckoLib 4.8.4。
+- 不包含新星工程的梦之能量端口或超大整数储能系统。
+
+Adds optional native Flux Networks 7.2.1.15 support for energy hatches. Flux Points supply input hatches, and output hatches feed adjacent Flux Plugs. Both native Flux and Forge Energy share the existing buffer and respect hatch direction, capacity and transfer limits. Long requests are bounded safely; no additional storage is introduced. Flux Networks must be installed separately. Standard FE remains available when the dedicated integration is disabled.
+
+安装 modularmachinerycontinuum-1.2.0-1.20.1-all.jar，替换旧版 MMC，客户端和服务端一起更新。网络协议仍为 32；现有控制器与能源仓存档格式不变。连接及配置见[通量网络教程](docs/FLUX_NETWORKS_ZH.md)。
+
+---
+
 # Modular Machinery: Continuum 1.1.0 — Minecraft 1.20.1
 
 本次大更新为机器增加独立控制器身份，并在已有可视化编辑器中加入控制器外观设置。

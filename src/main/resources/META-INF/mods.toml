@@ -40,6 +40,13 @@ side="BOTH"
 
 # --- Soft dependencies: integrations are compileOnly + optional at runtime ---
 [[dependencies.${mod_id}]]
+modId="fluxnetworks"
+versionRange="[7.2.1.15,8)"
+mandatory=false
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
 modId="jei"
 versionRange="[0,)"
 mandatory=false

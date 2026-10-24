@@ -1,10 +1,14 @@
 # Modular Machinery: Continuum（MMC，模块化机械：延续）
 
-将 Modular Machinery Community Edition 2.3.2 从 Forge 1.12.2 移植到 **Minecraft 1.20.1 / Forge 47.x**，供整合包作者定义多方块机器与配方。本文核对日期：**2026-10-20**。
+将 Modular Machinery Community Edition 2.3.2 从 Forge 1.12.2 移植到 **Minecraft 1.20.1 / Forge 47.x**，供整合包作者定义多方块机器与配方。本文核对日期：**2026-10-24**。
 
-发布文件：`build/libs/modularmachinerycontinuum-1.1.0-1.20.1-all.jar`。内部模组 ID 继续使用 `modularmachinery`，魔法接口继续使用 `modularmagic`，配置目录和物品 ID 不随显示名称改变。客户端和服务器应安装同一版 JAR；当前网络协议为 **32**。
+发布文件：`build/libs/modularmachinerycontinuum-1.2.0-1.20.1-all.jar`。内部模组 ID 继续使用 `modularmachinery`，魔法接口继续使用 `modularmagic`，配置目录和物品 ID 不随显示名称改变。客户端和服务器应安装同一版 JAR；当前网络协议为 **32**。
 
-## 1.1.0 大更新
+## 1.2.0 通量网络联动
+
+新增 Flux Networks 7.2.1.15 可选联动：通量节点向能源输入仓供能，能源输出仓向通量插头送电。原生通量接口与 FE 共用库存，保留容量、方向和传输限制。安装和配置见[通量网络教程](docs/FLUX_NETWORKS_ZH.md)。
+
+## 1.1.0 独立控制器
 
 每种机器现在独立注册普通控制器，按 `has-factory` 或全局默认配置注册工厂控制器。控制器固定绑定机器，名称和外壳颜色来自机器定义；可在 `/modularmachinery gui` 的“控制器外观”中输入 RGB、使用调色板并预览。
 
@@ -18,7 +22,7 @@
 - [JSON 补充参考](docs/ADDING_MACHINES.md)：结构、NBT、修饰符、动态结构和智能接口示例。
 - [可选社区依赖的来源与版本](libs/optional/README.md)
 
-使用教程以这些入口为准。本公开源码包不包含内部开发日记、审计文件、测试存档或本机日志。
+使用教程以这些入口为准。本公开包不含内部开发日记、审计文件、测试世界和本机日志。
 
 ## 安装与当前功能
 
@@ -42,6 +46,7 @@
 | CraftTweaker 14.0.60 | 脚本配方、机器修改、核心线程与 GeckoLib 绑定 |
 | AE2 15.4.11 + GuideME 20.1.7 | ME 物品／流体总线、样板供应等 |
 | Mekanism 10.4.16.80 | 气体仓与气体配方 |
+| Flux Networks 7.2.1.15 | 普通 FE 能源仓原生通量接口、插头／节点连接 |
 | Applied Mekanistics 1.4.3 + AE2 + Mekanism | ME 气体输入／输出总线 |
 | The One Probe 10.0.4 | 控制器、配方进度与阻塞原因提示 |
 | Botania（Forge 1.20.1）+ Patchouli + Curios | 魔力输入／输出 |
@@ -78,4 +83,4 @@
 
 本项目为 GPL-3.0-only 衍生作品，保留原作者署名，见 [LICENSE](LICENSE) 与[第三方声明](src/main/resources/META-INF/THIRD-PARTY-NOTICES.md)。分发时应按 GPL 提供对应源码。原作者包括 HellFirePvP、wiiv、KasumiNova、youyihj、ikexing 及其他社区贡献者；社区依赖的许可由各自项目声明。
 
-构建完整内嵌依赖发行包的步骤见 [BUILDING.md](BUILDING.md)。请向玩家分发 `-all.jar`，并在同一 GitHub Release 提供对应源码包。
+完整发行包构建方法见 [BUILDING.md](BUILDING.md)。

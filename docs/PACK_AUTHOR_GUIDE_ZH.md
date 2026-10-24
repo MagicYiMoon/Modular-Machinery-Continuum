@@ -15,7 +15,7 @@ scripts/                               CraftTweaker 脚本
 resourcepacks/<资源包>/assets/         GeckoLib 模型、动画和纹理
 ```
 
-主模组发布文件名为 `modularmachinerycontinuum-1.1.0-1.20.1-all.jar`，GeckoLib Forge 4.8.4 已内嵌，不需要另装。CraftTweaker、JEI、AE2、Mekanism、TOP、Applied Mekanistics、Botania、Blood Magic、Nature’s Aura、社区 Astral Sorcery 和 Extra Utilities Rebirth 均为可选联动，不会内嵌到发布包；各模组的必需前置仍要安装。
+主模组发布文件名为 `modularmachinerycontinuum-1.2.0-1.20.1-all.jar`，GeckoLib Forge 4.8.4 已内嵌，不需要另装。CraftTweaker、JEI、AE2、Mekanism、TOP、Applied Mekanistics、Botania、Blood Magic、Nature’s Aura、社区 Astral Sorcery 和 Extra Utilities Rebirth 均为可选联动，不会内嵌到发布包；各模组的必需前置仍要安装。
 
 基础版已在 Forge 47.3.0 验证，全联动组合已在 **47.4.23** 验证。Rebirth 内部版本 1.7.3 需要使用已验证的 47.4.23，不能在 47.3.0 正常加载。社区依赖固定版本与来源见[依赖说明](../libs/optional/README.md)；源质、GP、Impetus 六个接口继续占位。
 
@@ -872,3 +872,7 @@ JEI 显示强度与星座摘要，文字区悬停可查看全部需求。未安�
 **与 1.12.2 源版的区别：**源版查询 Extra Utilities 2 的同玩家频率网络；Rebirth 没有对应网络，本适配明确使用相邻检测。迁移旧整合包时需要调整发电机摆放。此功能不提供 GP 网络兼容，也不会将 FE 当成 GP。缺少依赖或内部版本不同则保留占位行为，不接受条件配方。
 
 本次还确认 Rebirth 1.7.3 自身的 `forge:frosty_gen_tag`、`forge:pink_items` 物品标签含霜冰、细雪方块、盆栽、墙旗等没有物品形式的 ID，导致两个标签加载失败。项目附有可选修复示例 [`examples/datapacks/mmr-extrautilitiesrebirth-1.7.3-tags`](../examples/datapacks/mmr-extrautilitiesrebirth-1.7.3-tags/pack.mcmeta)：将整个目录放到目标存档的 `datapacks/` 下并重载。示例用 `replace: true` 保留原列表中的有效物品，移除无效引用；不会修改机械模组或外部 JAR。已有自定义发电机材料标签的整合包应在自己的数据包里合并修正，避免被示例覆盖。
+
+## Flux Networks：能源仓通量连接
+
+MMC 1.2.0 新增通量网络专用接口；普通 FE 库存与容量不变。节点贴输入仓、插头贴输出仓，详见[通量网络联动教程](FLUX_NETWORKS_ZH.md)。

@@ -40,6 +40,8 @@ import org.jetbrains.annotations.Nullable;
  * Forge Energy, whose {@link IEnergyStorage} is {@code int}-based — see
  * {@link hellfirepvp.modularmachinery.common.block.prop.EnergyHatchData#getMaxEnergy()} for why the
  * hatch model follows that rather than the other way round.
+ * Optional Flux Networks support attaches its long-amount capability to this same int-sized store;
+ * it does not introduce a second buffer or change the configured capacity.
  *
  * <p>Input/output asymmetry is enforced in the storage predicates, expressed through the same
  * {@link IOType} the machine components use. Notice that the two directions are genuinely different

@@ -36,41 +36,9 @@ public class TileEnergyOutputHatch extends TileEnergyHatch {
     }
 
     /**
-     * Gives Forge Energy to every neighbour that will take it (PLAN section 383).
-     *
-     * <h2>What was missing, and why this is a reconstruction rather than a port</h2>
-     *
-     * <p>Upstream's {@code TileEnergyOutputHatch} is 288 lines; this class was 37 and constructor-only, so the hatch held
-     * energy, exposed it to the machine, and pushed it NOWHERE. PLAN section 365.2 called it "a behaviour to reconstruct
-     * rather than a method to copy", and this method is the part of those 288 lines that has a meaning on 1.20.1.
-     *
-     * <p><b>Most of upstream's length is other mods' transports</b> -- Draconic Evolution, GregTech and FluxNetworks each
-     * get a branch in its per-face loop, and IndustrialCraft 2 gets an on-load callback. None of those mods exists on
-     * 1.20.1 (PLAN section 359.5 lists IC2 as topping out at 1.19.2), so the branch that matters here is upstream's
-     * "FE / RF Transfer" one, and Forge Energy is the whole of it.
-     *
-     * <h2>The three rules taken from upstream, each of which a guess would get wrong</h2>
-     *
-     * <ol>
-     *   <li><b>It is NOT throttled.</b> Upstream pushes every tick, capped by {@code size.transferLimit}; the item buses
-     *       use a random 5..60 tick delay (section 366.2) and this does not. Sampling the energy buffer on the same cadence
-     *       as the item buses would make a power hatch deliver a fraction of its rated throughput.</li>
-     *   <li><b>The capability is queried with {@code face.getOpposite()}</b> -- ask the neighbour for the face that points
-     *       BACK at us. Passing {@code face} asks for its far side and finds nothing on most blocks.</li>
-     *   <li><b>The loop breaks once the budget is spent.</b> Upstream's {@code if (maxCanExtract &lt;= 0) break;}, and
-     *       without it every later face is still asked -- which is harmless for FE but would matter for the mod-specific
-     *       transports upstream has, and is the structure a reader should not have to re-derive.</li>
-     * </ol>
-     *
-     * <h2>And why the transfer limit needs no field here</h2>
-     *
-     * <p>The constructor passes {@code getMaxTransfer()} into the base, which bakes it into the {@code EnergyStorage} --
-     * so {@link #extractEnergy}{@code (amount, true)} already returns a value clamped to it. That is what upstream's
-     * {@code Math.min(this.size.transferLimit, this.energy.get())} computes by hand, and taking it from the storage keeps
-     * the limit in ONE place instead of two that can disagree.
-     *
-     * @param level the level, always server-side when this is reached
-     * @param pos this hatch's position
+     * Pushes once per server tick with one shared budget for all faces. Uses Flux Networks' native
+     * capability when installed and enabled, otherwise Forge Energy. Each offer uses only one path,
+     * and the buffer is debited only by the amount the neighbour actually accepted.
      */
     public void step(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
         // Simulated: how much this hatch COULD give away right now, already clamped to its transfer limit. Nothing has
@@ -95,7 +63,13 @@ public class TileEnergyOutputHatch extends TileEnergyHatch {
                 continue;
             }
             int offered = budget;
-            var accepted = neighbour.getCapability(
+            int accepted = -1;
+            if (hellfirepvp.modularmachinery.common.data.Config.enableFluxNetworksIntegration()
+                    && net.minecraftforge.fml.ModList.get().isLoaded("fluxnetworks")) {
+                accepted = hellfirepvp.modularmachinery.integration.fluxnetworks.FluxNetworksIntegration
+                        .tryReceive(neighbour, face.getOpposite(), offered);
+            }
+            if (accepted < 0) accepted = neighbour.getCapability(
                             net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY,
                             face.getOpposite())
                     .map(handler -> handler.receiveEnergy(offered, false))

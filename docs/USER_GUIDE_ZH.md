@@ -9,7 +9,7 @@
 当前发布文件名：
 
 ```text
-modularmachinerycontinuum-1.1.0-1.20.1-all.jar
+modularmachinerycontinuum-1.2.0-1.20.1-all.jar
 ```
 
 主模组可以单独运行。JEI、AE2、Mekanism、The One Probe（TOP）和 CraftTweaker 都是可选集成，安装后才会启用相应功能。GeckoLib 已随本体打包，不需要再放一个 GeckoLib jar。

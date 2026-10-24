@@ -170,6 +170,12 @@ dependencies {
     // sixth.
     compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}")
 
+    // Optional Flux Networks long-amount capability. Never bundle the external mod.
+    compileOnly fg.deobf("curse.maven:flux-networks-${fluxnetworks_project}:${fluxnetworks_file}")
+    if (project.hasProperty('withFluxIntegration')) {
+        runtimeOnly fg.deobf("curse.maven:flux-networks-${fluxnetworks_project}:${fluxnetworks_file}")
+    }
+
     // Applied Mekanistics supplies AE2's chemical keys/cells; AE2 alone has no gas storage channel.
     compileOnly fg.deobf("maven.modrinth:applied-mekanistics:${appmek_version}")
     compileOnly fg.deobf("maven.modrinth:botania:${botania_version}")

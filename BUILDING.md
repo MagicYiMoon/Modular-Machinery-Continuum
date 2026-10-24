@@ -29,7 +29,7 @@ chmod +x gradlew
 .\gradlew.bat build jarJar reobfJarJar '-Pforge_version=47.4.23'
 ```
 
-发行文件为 `build/libs/modularmachinerycontinuum-1.1.0-1.20.1-all.jar`，通过 Forge Jar-in-Jar 内嵌 GeckoLib 4.8.4。分发时选用此文件；普通无 `-all` 的 JAR 不含完整内嵌依赖。外部联动不会被一起打包。
+发行文件为 `build/libs/modularmachinerycontinuum-1.2.0-1.20.1-all.jar`，通过 Forge Jar-in-Jar 内嵌 GeckoLib 4.8.4。分发时选用此文件；普通无 `-all` 的 JAR 不含完整内嵌依赖。外部联动不会被一起打包。
 
 依赖下载并缓存完整后可追加 `--offline`。本地依赖来源固定，但上游构建时间、ZIP 元数据等可能令重建文件哈希不同，不要求逐字节一致。
 

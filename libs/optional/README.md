@@ -2,6 +2,16 @@
 
 These external mods are not embedded in Modular Machinery: Continuum. Only GeckoLib is embedded.
 
+## Flux Networks compile API / optional runtime
+
+- Forge 1.20.1 version: `7.2.1.15`, file `FluxNetworks-1.20.1-7.2.1.15.jar`.
+- Official file: https://www.curseforge.com/minecraft/mc-mods/flux-networks/files/5234697
+- Source: https://github.com/SonarSonic/Flux-Networks/tree/1.20
+- Compile dependency: `curse.maven:flux-networks-248020:5234697` (downloaded by Gradle).
+- SHA256: `8d24f39b6e1b2d83426a28a62ae0b65294b7e6e925e39a26b62f8ae077f54a89`.
+- Runtime only with `-PwithFluxIntegration`; not embedded and not a required dependency.
+- Setup and limits: [Flux Networks guide](../../docs/FLUX_NETWORKS_ZH.md).
+
 ## Astral Sorcery compile API / optional runtime
 
 - File: `astralsorcery-1.20.1-1.0.0.0.jar`
