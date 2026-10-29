@@ -46,64 +46,64 @@ import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * JEI integration: makes the mod's JSON machine recipes browsable in JEI, and keeps them equal to
- * what the engine is running after a {@code /reload}.
- *
- * <h2>Soft dependency, and how that is enforced</h2>
- *
- * <p>JEI is a {@code compileOnly} dependency. This class is loaded <b>only by JEI itself</b> — through
- * the {@link JeiPlugin} annotation, which JEI scans for — so with JEI absent the class is never touched
- * and the mod loads normally. That is why no {@code DeferredRegister}, no event subscriber and no code
- * reachable from {@code @Mod} may reference anything in this package: a single such reference would turn
- * a soft dependency into a hard crash on startup for every player without JEI.
- *
- * <p>This is also why the classes live in their own {@code integration.jei} package rather than beside
- * the recipe code. The package boundary is the enforcement: a reference from {@code common.*} to
- * {@code integration.jei.*} is visible in review, whereas a reference buried among unrelated imports in
- * an existing class is not.
- *
- * <h2>Where the recipes come from</h2>
- *
- * <p>Straight from {@code MachineReloadListener} — <b>the same registry the machines themselves run
- * from</b>. JEI must never re-parse the JSON: a second parse would be a second source of truth, and a
- * recipe shown in JEI that the machine would refuse to run is worse than no JEI entry at all. Reading
- * the same objects makes the two impossible to disagree. {@link #collectRecipes()} read a second time is
- * the whole of the reload below.
- *
- * <h2>The reload path, and why it hides rather than only adds</h2>
- *
- * <p><b>RULE A0 — how upstream did the same job, and the three places this deviates.</b> Upstream's
- * {@code ModIntegrationJEI.reloadRecipeWrappers()} (U105-U121) is driven by
- * {@code ModIntegrationCrafttweaker.onScriptsReloaded} (U127) in the script-reload POST phase. Its entries
- * were <b>mutable wrapper objects held in a map</b> ({@code MACHINE_RECIPE_WRAPPERS}), so the reload could
- * hand each wrapper the new recipe ({@code wrapper.reloadWrapper(recipe)}, and
- * {@code CategoryDynamicRecipe.reloadCategory} U? re-measured the layout the same way), and what JEI was
- * already showing changed <b>in place</b> — upstream needed no removal, because nothing was ever replaced.
- * The deviations:
- *
- * <ol>
- *   <li><b>Replace rather than mutate.</b> A ported recipe is an immutable {@link MachineRecipe} record, so
- *       a reload produces new objects and JEI holds the old ones. The entry has to be replaced, and the old
- *       one has to stop being shown.</li>
- *   <li><b>One category, not one per machine.</b> Upstream rebuilt a category per machine ({@code reloadCategory}
- *       above); this port has a single merged category (PLAN 306's reasoning) whose layout is computed per
- *       entry in {@code setRecipe}/ {@code draw}, so there is no cached layout to re-measure — the new
- *       objects are laid out by the same code the old ones used.</li>
- *   <li><b>Hidden, not removed.</b> See the paragraph after this list: JEI 15.62 cannot drop an entry.</li>
- * </ol>
- *
- * <p>"Stop being shown" is the hard half, and the API decided its shape. {@code IRecipeManager.hideRecipes}
- * in JEI 15.62 does <b>not</b> remove a recipe from JEI's index — read from the bytecode, it is
- * {@code RecipeTypeData.getHiddenRecipes().addAll(recipes)} (and {@code unhideRecipes} the matching
- * {@code removeAll}), with {@code isRecipeVisible} consulting that same set. So nothing can be taken back
- * out of JEI; what can be done is to make an old entry <b>invisible</b>, which is what a player sees.
- * {@link #refreshRecipes()} therefore hides the set last handed to JEI and then adds the set the engine is
- * running now. {@code MachineRecipe} being a record is what makes that exact: {@code hideRecipes} resolves
- * its argument through {@code Set.contains} against records whose equality is <b>structural</b>, so an entry
- * whose contents changed is matched and hidden even though the new object is a different instance, while the
- * live set added in the same pass is not in the hidden set and stays visible.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 @JeiPlugin
 public class JeiPluginModularMachinery implements IModPlugin {
 
@@ -369,23 +369,23 @@ public class JeiPluginModularMachinery implements IModPlugin {
         });
     }
 
-    /**
-     * TELLS JEI THAT A TIER LIVES IN THE STACK'S NBT (PLAN section 277).
-     *
-     * <p>JEI catalogs ITEMS, and every tier of a bus is the SAME item distinguished only by a
-     * {@code BlockStateTag}. Without this, JEI showed one entry per item, named with the base key --
-     * reported as "jei显示的还是物品输出总线，应该和拿手上一样显示完整名称". The hand shows the tier because
-     * {@code ItemBlockMachineComponent.getName} reads the tag; JEI never saw the tag at all.
-     *
-     * <p><b>{@code useNbtForSubtypes}, not a custom interpreter.</b> The first attempt implemented
-     * {@code ISubtypeInterpreter} as a lambda and did not compile: that interface has TWO abstract methods, so
-     * it is not a functional interface. Reading the API settled it -- JEI already offers the case this mod
-     * needs, "these stacks differ by their NBT", as one call per item. Writing an interpreter would have been
-     * work done to reach something the API hands over.
-     *
-     * <p>The API was read from the JEI jar by {@code javap} rather than recalled, per section 186, after the
-     * compiler rejected the guess.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public void registerItemSubtypes(mezz.jei.api.registration.ISubtypeRegistration registration) {
         registration.useNbtForSubtypes(
@@ -409,25 +409,25 @@ public class JeiPluginModularMachinery implements IModPlugin {
         registration.addRecipeCatalyst(RegistryBlocks.blockFactoryController.get(), STRUCTURE_PREVIEW);
     }
 
-    /**
-     * Gathers every loaded machine recipe — the CURRENT revision, read fresh on each call.
-     *
-     * <p>Skips <b>unexpanded adapter recipes</b>, matching what the engine does: an adapter recipe is a
-     * template naming a vanilla recipe type, and until it is expanded against the vanilla
-     * {@code RecipeManager} it has no requirements and no duration. Listing one in JEI would show a
-     * recipe with no inputs that the machine will not actually run.
-     *
-     * <p>Package-private rather than private so {@link MachineRecipeCategory} can size itself from the same
-     * list JEI is given (PLAN section 306). A second traversal of the loader could disagree with this one,
-     * which is the reason the plugin already reads the machines from a single source — and the same reason
-     * the reload path calls this method instead of carrying its own copy of the traversal.
-     *
-     * <p>The reload path depends on it re-reading: {@code RecipeLoader.load} clears its map and rebuilds
-     * every {@code MachineRecipe} from the files, so the objects the engine runs afterwards are new ones,
-     * and a list captured before the reload would be a list of the previous revision.
-     *
-     * @return the live set, in the loader's own order, so a rebuild cannot reorder the category
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     static List<MachineRecipe> collectRecipes() {
         List<MachineRecipe> collected = new ArrayList<>();
         var byMachine = MachineReloadListener.getRecipeLoader().getByMachine();

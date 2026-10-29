@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "size=tiny": {
+      "model": "modularmachinery:block/blockemberinputhatch_tiny"
+    },
+    "size=small": {
+      "model": "modularmachinery:block/blockemberinputhatch_small"
+    },
+    "size=medium": {
+      "model": "modularmachinery:block/blockemberinputhatch_medium"
+    },
+    "size=reinforced": {
+      "model": "modularmachinery:block/blockemberinputhatch_reinforced"
+    },
+    "size=big": {
+      "model": "modularmachinery:block/blockemberinputhatch_big"
+    },
+    "size=huge": {
+      "model": "modularmachinery:block/blockemberinputhatch_huge"
+    },
+    "size=ludicrous": {
+      "model": "modularmachinery:block/blockemberinputhatch_ludicrous"
+    },
+    "size=extreme": {
+      "model": "modularmachinery:block/blockemberinputhatch_extreme"
+    }
+  }
+}

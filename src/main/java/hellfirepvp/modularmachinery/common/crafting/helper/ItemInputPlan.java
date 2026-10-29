@@ -15,7 +15,13 @@ import java.util.*;
 
 /** Simulates item consumption and tool uses together, so overlapping requirements cannot spend one tool twice. */
 public final class ItemInputPlan {
-    private record Slot(IItemHandler handler, int index) {}
+    private record Slot(IItemHandler handler, int index) {
+        // Equal-valued wrappers can still own different inventories.
+        @Override public boolean equals(Object other) {
+            return other instanceof Slot slot && handler == slot.handler && index == slot.index;
+        }
+        @Override public int hashCode() { return 31 * System.identityHashCode(handler) + index; }
+    }
     private final Map<Slot, ItemStack> before = new LinkedHashMap<>();
     private final Map<Slot, ItemStack> after = new LinkedHashMap<>();
     private final Set<Slot> rewritten = new HashSet<>();

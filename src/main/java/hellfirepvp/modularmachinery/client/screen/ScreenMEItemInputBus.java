@@ -23,56 +23,56 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * The ME item input bus screen — the port of upstream's {@code GuiMEItemInputBus} (262 lines), and the half of this bus
- * that a player can actually see. Until this class, its menu and its {@code use} existed nowhere, so
- * {@code modularmachinery:blockmeiteminputbus} could not be opened at all (PLAN section 686).
- *
- * <h2>What upstream's screen is, read at the body (rule A)</h2>
- *
- * <pre>
- *   GuiMEItemInputBus extends GuiMEItemBus                            (upstream U42)
- *     U43   TEXTURES_INPUT_BUS = modularmachinery:textures/gui/meiteminputbus.png  <- THE PORT'S OWN ASSET,
- *                                                                      already shipped at this exact path
- *     U49   this.ySize = 204
- *     U167  drawFG: the title, then "Config", "Stored Items" and the inventory label
- *     U181-U198 renderToolTip: "Items marked: N" on a fake slot, "Items Cached: N" on a disabled one
- *     U166-U175 drawBG: one blit of the texture at (offsetX, offsetY, xSize, ySize)
- * </pre>
- *
- * <p><b>The texture needs no new asset, and its geometry was MEASURED rather than assumed:</b> the file is 256x256 with
- * the panel drawn to 176x204, the two 4x4 grids at (8 + 18x, 35 + 18y) and (98 + 18x, 35 + 18y), and the player's wells
- * at rows 123/141/159 and 181 — which is what {@link MenuMEItemInputBus}'s constants declare and what the screen's
- * {@code blit} reads. The measurement is the same one {@code MachineSelfTest}'s wells check runs at runtime on five
- * other screens, and this screen joined it.</p>
- *
- * <h2>What was NOT ported, and the record of it</h2>
- *
- * <pre>
- *   U32-U94   the SCROLL WHEEL count gesture -> ported through the port's own validated count packet; the menu remains the
- *             single source of the marked stack and the packet only changes its count.
- *   U187-U193 the "SHIFT + CTRL ... multiply/divide/increase/decrease" tooltip lines -> drawn when the marked cell is hovered.
- *   U206-U261 the JEI ghost-ingredient targets -> registered by the optional JEI plugin, which sends the same
- *             server-validated configuration write as the carried-stack click gesture.
- *   U49's Ae2EL reflection branch and mouseWheelEvent's EMPTY override -> not written: 1.20.1 positions every slot
- *             from the MENU (Slot's x/y are constructor arguments), so there is no frame-time fixup at all.
- * </pre>
- *
- * <h2>The error this cannot make, and the one it still can</h2>
- *
- * <p>Every text line is drawn from the MENU's or the mod's own key, and every slot position comes from the MENU — so the
- * screen cannot disagree with the menu about where a slot is. The tooltips are drawn by iterating the MENU's slot list
- * and testing the mouse against each {@code Slot}'s own x/y, rather than through a per-slot tooltip hook, for the same
- * reason: the position asked about is the position that was drawn.</p>
- *
- * <p><b>AND THIS FILE HAS NEVER BEEN RENDERED.</b> The project's harness is a dedicated server and cannot draw; what IS
- * verified for this screen is that it compiles, that its panel size and its player rows match the art (the two checks
- * that caught the fluid bus's 65-pixel row defect), and that the menu it renders carries a 4x4 config grid whose clicks
- * reach the tile. The pixels are the user's to judge.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class ScreenMEItemInputBus extends AbstractContainerScreen<MenuMEItemInputBus> {
 
-    /** Upstream U43, verbatim — the same path this port already ships. */
+     
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(Modularmachinery.MODID, "textures/gui/meiteminputbus.png");
 
@@ -115,29 +115,29 @@ public class ScreenMEItemInputBus extends AbstractContainerScreen<MenuMEItemInpu
                 imageHeight - 96 + 3, 0x404040, false);
     }
 
-    /**
-     * Runs the frame and then the tooltip pass.
-     *
-     * <h2>Why this four-line override is the difference between a tooltip and none at all</h2>
-     *
-     * <p><b>On 1.20.1 {@code AbstractContainerScreen.render} does NOT call {@code renderTooltip}.</b> Measured with
-     * {@code javap -p -c} over the mapped 47.3.0 jar: that class contains the declaration and the
-     * {@code GuiGraphics.renderTooltip} call inside its own body, and no call site; vanilla's own
-     * {@code ContainerScreen.render} is what invokes it, in the order {@code renderBackground}, {@code super.render},
-     * {@code invokevirtual renderTooltip}. Upstream never had to think about it: its list is queried by
-     * {@code AEBaseGuiContainerDynamic.renderHoveredToolTip}, a 1.12.2 {@code GuiScreen} hook vanilla called.</p>
-     *
-     * <p><b>So an override with no caller is invisible — and worse than invisible here.</b> This screen's
-     * {@code renderTooltip} ends in {@code super.renderTooltip}, so with nothing calling it <i>the player inventory's
-     * own vanilla item tooltips did not appear either</i>, which is why the defect was reported as "nothing hovers"
-     * rather than "one line is missing". This is the same fix, in the same order, that
-     * {@code ScreenMEPatternProvider} carries (PLAN 745) — reused rather than reinvented (rule B).</p>
-     *
-     * <p><b>ORDER:</b> {@code super.render} first, because it runs {@code renderBg} (where the screen's hover flags are
-     * set) and fills {@code hoveredSlot} for the parent's own item tooltip; {@code renderTooltip} second, so the flags
-     * and the tooltip are the SAME frame's mouse position. {@code renderBackground} is deliberately NOT called, as it
-     * is not in any screen of this port.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);

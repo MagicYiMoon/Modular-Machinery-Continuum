@@ -25,57 +25,57 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 
-/**
- * The decisions the in-world structure preview makes about ONE declared cell (PLAN 741).
- *
- * <h2>Why this is not inside the renderer</h2>
- *
- * <p>It was, and that made the three user-visible rules <b>unverifiable</b>: the renderer is a
- * {@code Dist.CLIENT} class in a client package, and this port's harness is a dedicated server that
- * cannot load one at all (§737.4's boundary list, quoted by §739.5). Every rule encoded here is a
- * function of a world state, a position and the machine's pattern -- server-side data -- so it lives
- * where the harness can exercise it and the renderer merely obeys. <b>The renderer keeps the drawing;
- * this class keeps the decisions.</b>
- *
- * <h2>The three rules, each with the upstream line it comes from</h2>
- *
- * <p><b>① 32 BLOCKS, NOT 40.</b> Upstream {@code BlockArrayPreviewRenderHelper.tick()} U132-U135:</p>
- *
- * <pre>
- * if (Minecraft.getMinecraft().player != null &amp;&amp;
- *     Minecraft.getMinecraft().player.getDistanceSqToCenter(attachedPosition) &gt;= 1024) {
- *     clearSelection();
- * }
- * </pre>
- *
- * <p>1024 is 32 SQUARED, so upstream's limit is <b>32 blocks</b> -- and the user remembered 40. The
- * code is the authority; {@link #OUT_OF_RANGE_SQ} is that same 1024 and {@link #MAX_PREVIEW_DISTANCE}
- * is the 32 it means, both derived from each other rather than two independent literals.</p>
- *
- * <p><b>AND IT CLEARS, IT DOES NOT HIDE.</b> U134 is {@code clearSelection()}, which nulls the whole
- * helper state (U350-U357) and is reached from {@code tick()}, i.e. once per client tick. A player who
- * walks away and comes back does NOT get the projection again: they must use the projector item. That
- * is the choice this port makes too, and it is upstream's, not a preference -- the alternative
- * (hide while far, redraw while near) would need a second state bit upstream does not have.</p>
- *
- * <p><b>② SKIP A CELL THE WORLD ALREADY SATISFIES.</b> Upstream {@code batchBlocks()} U257-U260 skips
- * the draw when the world at the position already matches the pattern, and {@code hashBlocks()}
- * U200-U201 does the same for the display list's hash. The comparison is
- * {@link StructureMatcher#matchesAny} over {@link StructureMatcher#acceptedStates} -- the matcher's
- * own rule, not a second one.</p>
- *
- * <p><b>③ THE RED. THERE IS NO UPSTREAM LINE FOR IT, AND THAT IS RECORDED RATHER THAN INVENTED.</b>
- * PLAN 741 searched the whole upstream 2.3.2 tree for a red or otherwise tinted block in the in-world
- * projection and found none -- the searches and what they returned are in PLAN.md §741.2. Upstream's
- * in-world ghost is ONE colour for every cell ({@code GlStateManager.color(1F, 1F, 1F, 1F)}, U166 and
- * U189-U190) and its "look" is the inverting blend at U181. The only red block tint in the tree is the
- * JEI preview screen's HOVER highlight ({@code RenderUtils.renderBlockOverLay(selected, .6f, 0f, 0f,
- * .5f, 1.01f)}, {@code WorldSceneRendererWidget} U241), which marks the block the mouse is over and is
- * not this feature. <b>{@link PreviewCell#HIGHLIGHTED} is therefore a PORT-SIDE CHOICE</b>, requested
- * by name by the user, and it reuses the one mechanism the port already verified for a per-draw colour:
- * {@code RenderSystem.setShaderColor} -> {@code ColorModulator} (the bytecode chain in
- * {@code StructurePreviewRenderer}'s class javadoc).</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class PreviewCellDecision {
 
     /**

@@ -27,12 +27,68 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Behavioral regressions for the takeover fixes. Runs only in the opt-in in-world suite. */
+ 
 public final class PortRegressionChecks {
     private PortRegressionChecks() {}
 
     public static boolean run(ServerLevel level, BlockPos origin) {
         try {
+            hellfirepvp.modularmachinery.integration.recipes.ForeignRecipeRegressionChecks.run(level);
+            EnergyOutputPortRegressionChecks.run(level, origin.offset(0, 0, 1952));
+            if (net.minecraftforge.fml.ModList.get().isLoaded("embers"))
+                hellfirepvp.modularmachinery.integration.embers.EmberRegressionChecks.run(level, origin.offset(0, 0, 1888));
+            else {
+                var block = hellfirepvp.modularmachinery.common.registry.RegistryBlocks.emberInput.get();
+                if (block.newBlockEntity(origin, block.defaultBlockState()) != null)
+                    throw new AssertionError("Ember placeholder created optional tile without Embers");
+                for (var tier : hellfirepvp.modularmachinery.common.block.prop.EmberHatchSize.values())
+                    if (level.getRecipeManager().byKey(new net.minecraft.resources.ResourceLocation("modularmachinery", "ember_input_" + tier.getSerializedName())).isPresent())
+                        throw new AssertionError("Ember recipe loaded without Embers");
+            }
+            if (net.minecraftforge.fml.ModList.get().isLoaded("pneumaticcraft"))
+                hellfirepvp.modularmachinery.integration.pneumatic.PressureRegressionChecks.run(level, origin.offset(0, 0, 1824));
+            else {
+                for (var block : List.of(hellfirepvp.modularmachinery.common.registry.RegistryBlocks.pressureInput.get(),
+                        hellfirepvp.modularmachinery.common.registry.RegistryBlocks.pressureOutput.get()))
+                    if (block.newBlockEntity(origin, block.defaultBlockState()) != null)
+                        throw new AssertionError("Pressure placeholder created optional tile without PneumaticCraft");
+                for (String id : List.of("pressure_input", "pressure_output"))
+                    if (level.getRecipeManager().byKey(new net.minecraft.resources.ResourceLocation("modularmachinery", id)).isPresent())
+                        throw new AssertionError("Pressure recipe loaded without PneumaticCraft: " + id);
+            }
+            if (net.minecraftforge.fml.ModList.get().isLoaded("botania"))
+                hellfirepvp.modularmachinery.integration.botania.SparkManaRegressionChecks.run(level, origin.offset(0, 0, 1760));
+            else {
+                for (var block : List.of(hellfirepvp.modularmachinery.common.registry.RegistryBlocks.sparkManaInput.get(),
+                        hellfirepvp.modularmachinery.common.registry.RegistryBlocks.sparkManaOutput.get()))
+                    if (block.newBlockEntity(origin, block.defaultBlockState()) != null)
+                        throw new AssertionError("Spark placeholder created optional tile without Botania");
+                for (String id : List.of("spark_mana_input", "spark_mana_output"))
+                    if (level.getRecipeManager().byKey(new net.minecraft.resources.ResourceLocation("modularmachinery", id)).isPresent())
+                        throw new AssertionError("Spark recipe loaded without Botania: " + id);
+            }
+            EnvironmentRegressionChecks.run(level, origin.offset(0, 0, 1696));
+            EnvironmentEditorRegressionChecks.run(level);
+            if (net.minecraftforge.fml.ModList.get().isLoaded("gtceu"))
+                hellfirepvp.modularmachinery.integration.gtceu.GTCEuEnergyRegressionChecks.run(level, origin.offset(0, 0, 1632));
+            if (net.minecraftforge.fml.ModList.get().isLoaded("gtceu"))
+                hellfirepvp.modularmachinery.integration.gtceu.GTCEuComponentRegressionChecks.run(level, origin.offset(0, 0, 1568));
+            ComponentProxyRegressionChecks.run(level, origin.offset(0, 0, 1504));
+            ControllerPerformanceRegressionChecks.run(level, origin.offset(0, 0, 1440));
+            ControllerRuntimeLimitsRegressionChecks.run(level, origin.offset(0, 0, 1376));
+            ControllerIdentityRegressionChecks.run(level, origin.offset(0, 0, 1312));
+            StructureQueryRegressionChecks.run(level, origin.offset(0, 0, 1248));
+            MultiDynamicUpgradeRegressionChecks.run(level, origin.offset(0, 0, 1184));
+            UpgradeRuntimeRegressionChecks.run(level, origin.offset(0, 0, 1120));
+            SmartInterfaceRuntimeRegressionChecks.run(level, origin.offset(0, 0, 1056));
+            ControllerSpatialRegressionChecks.run(level, origin.offset(0, 0, 992));
+            ControllerCustomDataRegressionChecks.run(level, origin.offset(0, 0, 928));
+            RuntimeModifierRegressionChecks.run(level, origin.offset(0, 0, 864));
+            RuntimeRecipeQueryRegressionChecks.run(level, origin.offset(0, 0, 800));
+            GeoAnimationRegressionChecks.run(level, origin.offset(0, 0, 720));
+            RecipeSortingRegressionChecks.run(level, origin.offset(0, 0, 640));
+            StructureLifecycleRegressionChecks.run(level, origin.offset(0, 0, 560));
+            AssemblyPerformanceRegressionChecks.run(level, origin.offset(0, 0, 272));
             checkReplacementPreserved(level, origin);
             checkSnapshots();
             checkRecipeValues();
@@ -40,6 +96,14 @@ public final class PortRegressionChecks {
             RecipeDisplayNameRegressionChecks.run(level);
             BasicRequirementEditorRegressionChecks.run(level);
             EditorSaveConfirmationRegressionChecks.run(level);
+            RecipeCopyRegressionChecks.run(level, origin.offset(0, 0, 2112));
+            PneumaticEditorRegressionChecks.run(level);
+            ResourceAmountEditorRegressionChecks.run(level);
+            BloodAuraEditorRegressionChecks.run(level);
+            RequirementNbtEditorRegressionChecks.run(level, origin.offset(0,0,2208));
+            NestedNbtEditorRegressionChecks.run(level);
+            InventoryIngredientEditorRegressionChecks.run(level);
+            AdapterTemplateEditorRegressionChecks.run(level);
             ItemTagEditorRegressionChecks.run(level);
             IngredientGroupEditorRegressionChecks.run(level, origin.offset(0, 0, 32));
             RandomOutputEditorRegressionChecks.run(level, origin.offset(0, 0, 48));

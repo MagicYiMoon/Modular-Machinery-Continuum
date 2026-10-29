@@ -56,7 +56,7 @@ public class ScreenFluidHatch extends ScreenGaugeBase<MenuFluidHatch> {
         int gaugeX = leftPos + 15;
         int gaugeY = topPos + 10;
         float fraction = Math.max(0F, Math.min(1F, fillFraction()));
-        // THE WELL'S ACTUAL INTERIOR, MEASURED FROM THE TEXTURE (PLAN section 258).
+         
         //
         // Scanning guibar.png across the fluid well (u=176..195) gives:
         //
@@ -73,7 +73,7 @@ public class ScreenFluidHatch extends ScreenGaugeBase<MenuFluidHatch> {
         // were not where they belong.
         int filled = (int) (59 * fraction);
 
-        // THE FLUID WELL, NOT THE ENERGY GAUGE (PLAN section 255).
+         
         //
         // This blitted u=196, which is the ENERGY gauge's art -- measured from the shipped guibar.png:
         // u=176 is the grey fluid well, u=196 is dark red. So the fluid hatch drew the energy bar, which is
@@ -84,13 +84,13 @@ public class ScreenFluidHatch extends ScreenGaugeBase<MenuFluidHatch> {
         // question.
         graphics.blit(TEXTURE, gaugeX, gaugeY, 176, 0, 20, 61, 256, 256);
 
-        // THEN THE FLUID, IN THE FLUID'S OWN COLOUR (PLAN section 256).
+         
         //
         // The first attempt bound the fluid's still SPRITE as if it were a standalone texture
         // (`graphics.blit(getStillTexture(), ...)`), and the client saw the purple-and-black missing-texture
         // checkerboard: a still texture is a sprite inside the BLOCK ATLAS, not a texture a GUI can bind.
         // Drawing it properly means resolving it through the atlas and blitting by UV, which is a larger
-        // change than this round can carry.
+         
         //
         // So the gauge is filled with the FLUID'S OWN TINT -- the colour vanilla itself multiplies the
         // still texture by -- which is what the client asked for ("should it not be the fluid's colour?").
@@ -104,7 +104,7 @@ public class ScreenFluidHatch extends ScreenGaugeBase<MenuFluidHatch> {
         if (filled > 0 && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
             int tint = net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions
                     .of(fluid).getTintColor();
-            // The still texture, drawn AS A SPRITE WITH ITS OWN TINT (PLAN section 257).
+             
             //
             // The previous version filled the well with a flat rectangle in the fluid's tint: the right
             // COLOUR and the wrong surface. Upstream draws the fluid's own still texture, and a flat block
@@ -126,7 +126,7 @@ public class ScreenFluidHatch extends ScreenGaugeBase<MenuFluidHatch> {
                                 .getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
                                 .apply(still);
                 // The well's interior is 16 wide, inset 2 from the 20-wide frame, drawn bottom-up.
-                // FULL inner width, then the scale rail drawn OVER it (PLAN section 259).
+                 
                 //
                 // The previous version filled only x=184..194 -- the part of the well to the RIGHT of the
                 // tick rail. The client saw the result immediately and said what was wrong with it: the
@@ -142,7 +142,7 @@ public class ScreenFluidHatch extends ScreenGaugeBase<MenuFluidHatch> {
             }
         }
 
-        // And the scale rail back ON TOP (PLAN section 259), so the graduation marks read OVER the fluid
+         
         // rather than the fluid being squeezed in beside them. The rail is the 7-pixel band at u=177..183,
         // drawn over the well's full 59-pixel height. This blit is the same kind the frame used, so it needs
         // no shader state and no tint -- it is the art as authored.

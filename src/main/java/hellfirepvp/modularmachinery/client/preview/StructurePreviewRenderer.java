@@ -49,6 +49,7 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = Modularmachinery.MODID, value = Dist.CLIENT,
         bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class StructurePreviewRenderer {
+    private static final ProjectionViewFrame VIEW_FRAME = new ProjectionViewFrame();
     private static final WorldProjectionBlockRenderer BLOCK_RENDERER = new WorldProjectionBlockRenderer();
     private static final MultiBufferSource.BufferSource GHOST_BUFFERS = MultiBufferSource.immediate(new BufferBuilder(4096));
     private static final WorldProjectionRenderTypes GHOST_TYPES = new WorldProjectionRenderTypes();
@@ -58,6 +59,7 @@ public final class StructurePreviewRenderer {
     private StructurePreviewRenderer() { }
 
     static void clearSceneRenderCache() {
+        VIEW_FRAME.clear();
         BLOCK_RENDERER.clear();
         GHOST_TYPES.clear();
     }
@@ -93,9 +95,19 @@ public final class StructurePreviewRenderer {
 
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+            if (StructurePreviewHelper.isPreviewing()) VIEW_FRAME.capture(event.getPoseStack());
+            else VIEW_FRAME.clear();
+            return;
+        }
         // AFTER_PARTICLES can still target an uncomposited Fabulous buffer. Source destination-color
         // blending needs the completed world color, after glass, particles and weather have been combined.
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL || !StructurePreviewHelper.isPreviewing()) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
+        // Forge GameRenderer passes its local projection/bobbing stack here, not the world-view
+        // argument passed to LevelRenderer. Using it loses camera rotation (especially visible in F5).
+        // Consume a copy from this frame's world stage, retaining camera mods' roll and view effects.
+        PoseStack pose = VIEW_FRAME.take();
+        if (pose == null || !StructurePreviewHelper.isPreviewing()) return;
         var projection = StructurePreviewHelper.getDefinition();
         BlockPos anchor = StructurePreviewHelper.getRenderPos();
         Minecraft mc = Minecraft.getInstance();
@@ -108,7 +120,6 @@ public final class StructurePreviewRenderer {
         var scene = StructurePreviewHelper.getScene();
         if (scene == null) return;
 
-        PoseStack pose = event.getPoseStack();
         var camera = event.getCamera().getPosition();
         var facing = StructurePreviewHelper.getFacing();
         long sampleTick = StructurePreviewHelper.getSampleTick();

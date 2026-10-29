@@ -89,24 +89,24 @@ public final class MachinePattern {
         return parts;
     }
 
-    /**
-     * Adds a part <b>INSTEAD OF</b> whatever this pattern already declares at the same offset (PLAN §750).
-     *
-     * <p><b>THIS IS UPSTREAM'S SEMANTIC, AND IT IS WHAT MAKES THE DYNAMIC SECTIONS PART OF ONE PATTERN.</b>
-     * {@code DynamicPattern.addPatternToBlockArray} (upstream {@code github.kasuminova.mmce.common.util.DynamicPattern}
-     * L184/L203) writes each section's and the cap's blocks into the pattern with {@code toAdd.addBlock(...)}, and
-     * {@code BlockArray.addBlock} indexes by {@link BlockPos} in a map — so a section cell REPLACES the machine's own
-     * part at that exact offset. {@code Assembly Line} shows why that matters: the wall's part
-     * {@code (0,-1,0)} is {@code blockcasing@5}, while the first section's template part at the same offset is
-     * {@code casings_item_input}, i.e. a {@code blockinputbus}. Keeping both would ask the matcher for two block
-     * states at ONE world position, which no structure can satisfy.
-     *
-     * <p>{@link #addPart} appends an already-resolved cell. The JSON loader first expands coordinate arrays and
-     * resolves duplicate offsets in a position-indexed map. Dynamic merging must also replace static cells;
-     * appending a section on top of one would demand two block states at a single world position.
-     *
-     * @param part the part that wins at its offset
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public void addPartReplacing(Part part) {
         parts.removeIf(existing -> existing.x() == part.x() && existing.y() == part.y()
                 && existing.z() == part.z());

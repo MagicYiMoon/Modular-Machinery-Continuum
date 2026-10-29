@@ -1,0 +1,38 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "pneumaticcraft"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          " T ",
+          "RCR",
+          " I "
+        ],
+        "key": {
+          "T": {
+            "item": "pneumaticcraft:advanced_pressure_tube"
+          },
+          "R": {
+            "item": "minecraft:redstone"
+          },
+          "C": {
+            "item": "modularmachinery:blockfluidoutputhatch"
+          },
+          "I": {
+            "item": "pneumaticcraft:ingot_iron_compressed"
+          }
+        },
+        "result": {
+          "item": "modularmachinery:blockpressureoutputhatch"
+        }
+      }
+    }
+  ]
+}

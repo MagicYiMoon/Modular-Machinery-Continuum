@@ -67,6 +67,12 @@ public final class BlockStateShim {
     private static final Map<String, Function<Block, BlockState>> METADATA = new HashMap<>();
 
     static {
+        // The new optional hatch uses the extension's eight-tier declaration order.
+        for (var tier : hellfirepvp.modularmachinery.common.block.prop.EmberHatchSize.values()) {
+            metadata("modularmachinery:blockemberinputhatch", tier.ordinal(),
+                    block -> block.defaultBlockState().setValue(
+                            hellfirepvp.modularmachinery.common.block.BlockEmberHatch.SIZE, tier));
+        }
         // --- Renamed blocks. Verified against the 1.13 flattening rename list. ---
         aliases("minecraft:stonebrick", "minecraft:stone_bricks");
         aliases("minecraft:stone_stairs", "minecraft:stone_brick_stairs");
@@ -120,7 +126,7 @@ public final class BlockStateShim {
 
         // --- Stairs, whose 1.12.2 metadata IS documented: bits 0-1 are the FACING, bit 2 the HALF. ---
         //
-        // Found by the dynamic-pattern walk (PLAN section 331), which could not rebuild the assembly line
+         
         // because this pair was missing. Upstream's assembly_line.json uses quartz_stairs@0 at x=-1 and
         // quartz_stairs@1 at x=+1 -- a mirrored left/right pair -- and 1.12.2's order is EAST 0, WEST 1,
         // SOUTH 2, NORTH 3.

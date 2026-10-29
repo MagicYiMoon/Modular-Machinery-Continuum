@@ -19,18 +19,18 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * modularmachinery:blockmepatternprovider -- the block form of TileMEPatternProvider.
- *
- * EXPERIMENT STATE (PLAN section 452). createTile currently names NO TYPE AT ALL. Section 451 established by
- * experiment that the trigger is this CLASS and not the registration position; this file isolates whether the
- * trigger is the BODY of createTile, which normally reaches the tile through MEBusTiles.
- *
- * If registering THIS passes standalone, the body is the trigger. If it fails, the body is exonerated and the
- * trigger is in the class hierarchy this class shares with the four working ME buses.
- *
- * The AE2 guard is inherited from BlockMEMachineComponent, which makes newBlockEntity final (section 429).
- */
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class BlockMEPatternProvider extends BlockMEMachineComponent {
 
     public BlockMEPatternProvider(Properties properties) {
@@ -41,21 +41,21 @@ public class BlockMEPatternProvider extends BlockMEMachineComponent {
     @Override
     protected BlockEntity createTile(BlockPos pos, BlockState state) {
         // CHAIN A. createPatternProvider returns BlockEntity, which is what keeps this body from resolving
-        // TileMEPatternProvider and through it AE2 (PLAN section 452).
+         
         return MEBusTiles.createPatternProvider(
                 hellfirepvp.modularmachinery.common.registry.RegistryMEBlockEntities.ME_PATTERN_PROVIDER, pos, state);
     }
 
-    /**
-     * Opens AE2 pattern-editing screen on right-click (PLAN section 459).
-     *
-     * THIS BODY NAMES ONLY MEBusTiles. AE2 is reached inside that class, behind a signature of vanilla types, for the
-     * class-linking reason section 452 established: a method body is verified when its CLASS is linked, so naming an
-     * AE2-adjacent type here would break the standalone configuration even though the line only runs on a click.
-     *
-     * Upstream opened TWO GUIs (section 458): AE2 renamer at U68, its own screen at U76. THIS IS THE FIRST OF THOSE.
-     * The provider own screen is still unported.
-     */
+    
+
+
+
+
+
+
+
+
+ 
     @Override
     public net.minecraft.world.InteractionResult use(
             net.minecraft.world.level.block.state.BlockState state,
@@ -64,7 +64,7 @@ public class BlockMEPatternProvider extends BlockMEMachineComponent {
             net.minecraft.world.entity.player.Player player,
             net.minecraft.world.InteractionHand hand,
             net.minecraft.world.phys.BlockHitResult hit) {
-        // THE GUARD THAT WAS MISSING, and a crash report found it (PLAN section 483):
+         
         //
         //   NoClassDefFoundError: appeng/api/networking/IInWorldGridNodeHost
         //       at BlockMEPatternProvider.use(BlockMEPatternProvider.java:67)

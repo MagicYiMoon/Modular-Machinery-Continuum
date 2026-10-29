@@ -19,34 +19,34 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * The entry point: does this stack's NBT satisfy this requirement's NBT pattern?
- *
- * <h2>The two null rules, both asymmetric and both load-bearing</h2>
- *
- * <p>Upstream's {@code matchNBTCompound} opens with:</p>
- *
- * <pre>
- * if (matchNBT == null)      return true;                              // no pattern = matches ANYTHING
- * if (itemStackNBT == null)  return matchNBT.getKeySet().isEmpty();    // no stack tag = only an EMPTY pattern
- * </pre>
- *
- * <p><b>They are not the same rule, and swapping them inverts which stacks a recipe accepts without anything failing.</b>
- * The first says a requirement with no NBT constraint accepts every stack -- which is what "the pack author did not constrain
- * NBT" must mean. The second says a stack carrying NO tag satisfies only a pattern with no keys, so an empty pattern is <i>a
- * stack with no NBT</i>, not <i>anything</i>. If the second were also "true", an author who wrote an empty pattern would
- * silently accept stacks with arbitrary tags.
- *
- * <h2>What differs from upstream, and only because it must</h2>
- *
- * <p>Upstream walks a FAKE TAG against a real one: its patterns are subclasses of the vanilla tags. On 1.20.1 that is
- * impossible -- {@code StringTag}'s only constructor is private (PLAN section 385.1) -- so the pattern is an {@link NbtPattern}
- * tree walked against a real {@code Tag}. The traversal of compounds, lists and arrays lives here and in the container nodes
- * instead of in the vanilla library, which is more code in ONE place.
- *
- * <p>The rules did not change. Every one of them was read from upstream rather than inferred: the null pair above, compound
- * SUBSET semantics ({@link NbtCompoundPattern}), and list containment with consumption ({@link NbtListPattern}).
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class NbtMatchingHelper {
 
     private NbtMatchingHelper() {

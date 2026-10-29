@@ -19,6 +19,17 @@ public final class ControllerResourcePack {
         Path root = ModDataHolder.INSTANCE.getMachineryDirectory().toPath().getParent().resolve("generated_controller_assets");
         try {
             write(root.resolve("pack.mcmeta"), "{\"pack\":{\"pack_format\":15,\"description\":\"MMC dedicated controller fallback models\"}}");
+            // Optional Blood Magic art uses its modern block path; missing dependencies retain a vanilla fallback.
+            for (String direction : java.util.List.of("input", "output")) {
+                String model = "blocklifeessenceprovider" + direction;
+                try (var in = ControllerResourcePack.class.getResourceAsStream("/assets/modularmagic/models/block/" + model + ".json")) {
+                    if (in == null) throw new IllegalStateException("Missing life essence model " + model);
+                    String json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                    if (net.minecraftforge.fml.ModList.get().isLoaded("bloodmagic"))
+                        json = json.replace("minecraft:block/polished_andesite", "bloodmagic:block/blankrune");
+                    write(root.resolve("assets/modularmagic/models/block/" + model + ".json"), json);
+                }
+            }
             for (var entry : DedicatedControllers.entries()) {
                 String base = entry.factory() ? "blockfactorycontroller" : "blockcontroller";
                 String path = entry.block().getId().getPath();

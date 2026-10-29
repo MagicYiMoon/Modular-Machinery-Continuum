@@ -74,17 +74,17 @@ public class MachineUpgradeItem extends Item {
         return type;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The description lines come from the upgrade rather than from a language file, which is upstream's own
-     * arrangement ({@code MachineUpgradeBuilder.addDescriptions(String...)} takes them at registration time and
-     * {@code UpgradeEventHandler.onUpgradeItemTooltip} adds them verbatim, U39-U53). The NAME, however, does come
-     * from a language file, because an item's name always does — {@code Item#getDescriptionId()} derives
-     * {@code item.modularmachinery.<registryName>}. <b>That key is a NEW key for each upgrade item and this unit
-     * does not add it</b> (the language files are not this unit's to edit); it is reported in the remainder instead,
-     * and the block-name audit does not walk items, so nothing in the suite is weakened by its absence.
-     */
+    
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);

@@ -35,4 +35,9 @@ public class FactoryRecipeFinishEvent extends FactoryRecipeEvent {
     public FactoryRecipeFinishEvent(FactoryRecipeThread recipeThread, TileController controller) {
         super(recipeThread, controller);
     }
+
+    public FactoryRecipeFinishEvent(FactoryRecipeThread recipeThread, TileController controller,
+                                   hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext context) {
+        super(recipeThread, controller, context);
+    }
 }

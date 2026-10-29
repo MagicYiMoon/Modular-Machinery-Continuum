@@ -16,18 +16,18 @@ package hellfirepvp.modularmachinery.common.event.recipe;
 import hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext;
 import hellfirepvp.modularmachinery.common.tiles.TileController;
 
-/**
- * Fired when a recipe fails (upstream RecipeFailureEvent, 36 lines).
- *
- * <p>CARRIES A MUTABLE FLAG, AND IT IS DATA RATHER THAN BEHAVIOUR -- which is why this one ports where
- * RecipeTickEvent does not (PLAN 505.2). destructRecipe is READ BY THE CALLER to decide whether to tear the active
- * recipe down; there is no override here whose effect the flag depends on. A handler that sets it changes a decision
- * the caller is about to make, which is a complete contract.</p>
- *
- * <p>setDestructRecipe IS WRITABLE ON PURPOSE (upstream U32-U35): a handler may decide that a failure this severe
- * should destroy the in-flight recipe rather than let it retry, or the reverse. Turning it read-only would remove the
- * only reason the setter exists.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+ 
 @com.blamejared.crafttweaker.api.annotation.ZenRegister
 @org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.RecipeFailureEvent")
 public class RecipeFailureEvent extends RecipeEvent {

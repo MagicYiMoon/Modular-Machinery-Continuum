@@ -149,7 +149,7 @@ public class ScreenParallelController extends AbstractContainerScreen<MenuParall
      */
     private void addDeltaButton(int x, int y, int delta, String label) {
         addRenderableWidget(Button.builder(Component.literal(label), button -> {
-            // CLAMPED HERE, WITH THE SERVER'S OWN FUNCTION (PLAN section 256).
+             
             //
             // This used to send and display the raw `menu.getParallelism() + delta` and set the field to
             // it, with a comment claiming "the server's value overwrites it on the next sync, and it

@@ -16,60 +16,75 @@ package hellfirepvp.modularmachinery.common.machine.factory;
 import hellfirepvp.modularmachinery.common.crafting.MachineRecipe;
 import hellfirepvp.modularmachinery.common.tiles.TileFactoryController;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import hellfirepvp.modularmachinery.common.modifier.RecipeModifier;
 import java.util.Map;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Collection;
 import java.util.Set;
 import java.util.List;
 
-/**
- * ONE recipe run inside a factory controller.
- *
- * <p>Upstream calls this {@code FactoryRecipeThread} and says in its own javadoc what it is:
- * <i>"Part of the TileFactoryController that stores data for separate recipe runs. Not a thread in the
- * true sense of the word."</i> (upstream U33-U38). The name is kept so the two read alike; THE TYPE NAME IS
- * THE ONE THING ABOUT IT THAT IS NOT A THREAD, and that is upstream's wording rather than this port's.</p>
- *
- * <h2>RULE A0 -- what upstream's thread owns and what this one owns instead</h2>
- *
- * <pre>
- * upstream FactoryRecipeThread extends RecipeThread (upstream RecipeThread, 301 lines)
- *   ctrl, permanentModifiers, semiPermanentModifiers, activeRecipe, status (CraftingStatus),
- *   waitForFinish, searchTask, context (RecipeCraftingContext), recipeSet (TreeSet)
- * this port: the craft's own state, and NOTHING that only a thread pool needs
- *   recipeName, ticks, duration, parallelism, maxParallelism, idleTime, blockedReason
- * </pre>
- *
- * <p>WHY EACH OMISSION, because a dropped field is a dropped behaviour unless the reason is written down:</p>
- *
- * <ul>
- *   <li><b>No {@code RecipeCraftingContext} field.</b> The port builds its context per evaluation from the
- *       recipe and the machine's live component positions ({@code MachineTicker.satisfies} does exactly
- *       that for the normal controller), so a held context would be a second copy of state that is already
- *       derived -- and the port's context is a value, not a handle (PLAN 228/229, RecipeCraftingContext).</li>
- *   <li><b>No {@code searchTask}.</b> Upstream's per-thread search is asynchronous
- *       ({@code FactoryRecipeSearchTask} hand its result back through a {@code ForkJoinTask}). This port
- *       searches inline on the server thread, which is the whole point of B1's decision, so there is no
- *       task handle to hold.</li>
- *   <li><b>No {@code CraftingStatus}.</b> That class does not exist in the port at all (PLAN 521, proven
- *       absent by concept search). Its reader here is {@code blockedReason}: the same string without the
- *       four-state wrapper, and it is what the failure event carries and the GUI would print.</li>
- *   <li>Per-thread permanent/semi-permanent modifiers and core recipe sets are retained below. Recipe sets
- *       store names rather than old loader objects so a definition reload resolves the current recipe.</li>
- * </ul>
- */
-public class FactoryRecipeThread {
 
-    /**
-     * How long an IDLE thread is kept before it is dropped (upstream U42, verbatim).
-     *
-     * <p>Load-bearing rather than cosmetic: upstream removes idle threads every 20 ticks
-     * (TileFactoryController U514-U519), and without the timeout a factory that once ran twenty different
-     * recipes would hold twenty thread objects for the rest of the world's life.</p>
-     */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+public class FactoryRecipeThread {
+    private hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext runtimeRecipeContext;
+    private long runtimeRecipeContextRevision;
+
+    public void observeRuntimeRecipeContext(hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext run) {
+        runtimeRecipeContext = run;
+        if (run != null) {
+            run.bindRuntimeThread(new hellfirepvp.modularmachinery.common.machine.RecipeThread(factory, this));
+            if (java.util.Objects.equals(getRecipeName(), run.getRecipeName())) updateRecipeDuration(run.effectiveDuration());
+        }
+        runtimeRecipeContextRevision = hellfirepvp.modularmachinery.common.machine.MachineReloadListener.getServerDefinitionRevision();
+    }
+
+    public hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext getRuntimeRecipeContext() {
+        return hasActiveRecipe() && runtimeRecipeContext != null
+                && java.util.Objects.equals(getRecipeName(), runtimeRecipeContext.getRecipe().registryName())
+                && runtimeRecipeContextRevision == hellfirepvp.modularmachinery.common.machine.MachineReloadListener.getServerDefinitionRevision()
+                ? runtimeRecipeContext : null;
+    }
+
+    
+
+
+
+
+
+ 
     public static final int IDLE_TIME_OUT = 200;
 
     /** The controller this run belongs to. Never null for a live thread; upstream allowed null for a preset. */
@@ -110,22 +125,22 @@ public class FactoryRecipeThread {
     private final java.util.Set<Integer> activeCatalystRequirements = new java.util.LinkedHashSet<>();
 
     /** Upstream RecipeThread modifier scopes, retained per factory run. */
-    private final Map<String, RecipeModifier> permanentModifiers = new LinkedHashMap<>();
-    private final Map<String, RecipeModifier> semiPermanentModifiers = new LinkedHashMap<>();
+    private final hellfirepvp.modularmachinery.common.modifier.RuntimeModifierState modifiers =
+            new hellfirepvp.modularmachinery.common.modifier.RuntimeModifierState();
 
-    /**
-     * The loader's recipe object this run resolved to, or {@code null} while idle.
-     *
-     * <p>NOT A SECOND COPY OF STATE: it is the object the ticker already resolved out of the machine's
-     * candidate list, held so the events can hand a handler the run's recipe without every fire site
-     * re-resolving it. Upstream reaches the same result differently -- its thread owns an
-     * {@code ActiveMachineRecipe} and its events read {@code getContext().getActiveRecipe().getRecipe()}
-     * (upstream RecipeEvent L24) -- and this port's context is derived from the recipe instead (PLAN 500.3).</p>
-     *
-     * <p>NOT PERSISTED: the recipe is re-resolved by NAME from the loader on the first tick after a load, so a
-     * stored handle would only create a way for the saved object to disagree with the reloaded definitions --
-     * the reason MachineTicker abandons a run whose recipe name is gone.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+ 
     private MachineRecipe recipe;
 
     public FactoryRecipeThread(TileFactoryController factory) {
@@ -146,10 +161,7 @@ public class FactoryRecipeThread {
                 if (recipe != null && !recipe.isBlank()) this.recipeSet.add(recipe);
             }
         }
-        permanentModifiers.clear();
-        semiPermanentModifiers.clear();
-        if (permanent != null) permanent.forEach(this::addPermanentModifier);
-        if (semiPermanent != null) semiPermanent.forEach(this::addSemiPermanentModifier);
+        if (modifiers.configure(permanent, semiPermanent)) modifiersChanged();
     }
 
     public String getThreadName() {
@@ -235,6 +247,7 @@ public class FactoryRecipeThread {
 
     /** Starts one recipe identity with a batch multiplier. Inputs must already have been consumed. */
     public void beginRecipe(String recipeName, int duration, int parallelism) {
+        runtimeRecipeContext = null;
         if (hasActiveRecipe()) throw new IllegalStateException("A factory thread already has an active recipe");
         this.recipeName = recipeName;
         this.duration = Math.max(1, duration);
@@ -248,39 +261,39 @@ public class FactoryRecipeThread {
         this.idleTime = 0;
     }
 
-    /**
-     * Advances this run's progress counter by one tick, <b>stopping at its own duration</b>.
-     *
-     * <p><b>THE CLAMP IS TILE CONTROLLER'S, AND WITHOUT IT A HELD FACTORY RUN COUNTED UP FOREVER (PLAN 708,
-     * DEFECT B).</b> It is the same guard, on the same kind of field, for the same reason, and the two must
-     * not disagree — a factory run and a single craft are the same craft with a different owner
-     * ({@code TileController.advanceRecipe}, PLAN 683; upstream {@code ActiveMachineRecipe.tick} U82-U85
-     * returns <i>before</i> its own {@code this.tick++} once {@code isCompleted()} — {@code tick >= totalTick},
-     * U117-U118 — so upstream's counter is clamped by construction on both paths).</p>
-     *
-     * <p><b>WHY THE FACTORY NEEDED IT EVEN THOUGH IT INHERITS NOTHING FROM {@code TileController}:</b> a factory
-     * run keeps its own {@code ticks}/{@code duration} on this class, and {@code FactoryTicker.tickThread}
-     * increments it <i>before</i> it asks whether the outputs have room, then RETURNS on the hold — so the
-     * increment survived the refusal and the next tick incremented again. The client saw the two numbers come
-     * from different sources: the TOP overlay and the GUI's ticks line read this raw counter
-     * ({@code 797 / 60}, {@code 300 / 60 t}), while the row's percentage and the bar are derived from
-     * {@code min(1, ticks/duration)} and so read 100% on every one of those ticks. Clamping at the writer makes
-     * all four agree at {@code duration/duration}.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public void advanceRecipe() {
         if (this.ticks < this.duration) {
             this.ticks++;
         }
     }
 
-    /**
-     * Rewinds this run's tick counter by one, floored at zero.
-     *
-     * <p>THE ONE-STEP REWIND IS THE WHOLE CONTRACT a {@code FactoryRecipeTickEvent} handler gets from
-     * {@code preventProgressing} (upstream U30-U38 subtracts one when the counter is above zero), and the
-     * floor is upstream's own. Carried over rather than reinvented, exactly as
-     * {@code TileController.rewindRecipeTick} was for the single-craft path at PLAN 542.</p>
-     */
+    
+
+
+
+
+
+
+ 
     public void rewindRecipeTick() {
         if (this.ticks > 0) {
             this.ticks--;
@@ -294,6 +307,7 @@ public class FactoryRecipeThread {
 
     /** Completes the run and returns the thread to idle, ready for the next recipe. */
     public void finishRecipe() {
+        runtimeRecipeContext = null;
         boolean releasedRecipe = hasActiveRecipe();
         this.recipeName = null;
         this.recipe = null;
@@ -306,7 +320,7 @@ public class FactoryRecipeThread {
         this.activeCatalystRequirements.clear();
         this.isolationGroupKey = null;
         // Upstream clears semi-permanent modifiers after a completed craft; permanent ones survive.
-        this.semiPermanentModifiers.clear();
+        this.modifiers.clearSemi();
         // Includes normal completion, reload removal and destruction by tick/failure event handlers.
         if (releasedRecipe && factory != null) factory.requestImmediateRecipeSearch();
     }
@@ -356,31 +370,45 @@ public class FactoryRecipeThread {
     }
 
     public Map<String, RecipeModifier> getPermanentModifiers() {
-        return java.util.Collections.unmodifiableMap(permanentModifiers);
+        return modifiers.permanent();
     }
 
     public Map<String, RecipeModifier> getSemiPermanentModifiers() {
-        return java.util.Collections.unmodifiableMap(semiPermanentModifiers);
+        return modifiers.semi();
     }
 
     public void addPermanentModifier(String key, RecipeModifier modifier) {
-        if (key != null && !key.isEmpty() && modifier != null) permanentModifiers.put(key, modifier);
+        if (canChangeModifiers() && modifiers.put(true, key, modifier)) modifiersChanged();
     }
 
     public void removePermanentModifier(String key) {
-        if (key != null) permanentModifiers.remove(key);
+        if (canChangeModifiers() && modifiers.remove(true, key)) modifiersChanged();
     }
 
     public void addSemiPermanentModifier(String key, RecipeModifier modifier) {
-        if (key != null && !key.isEmpty() && modifier != null) semiPermanentModifiers.put(key, modifier);
+        if (canChangeModifiers() && modifiers.put(false, key, modifier)) modifiersChanged();
     }
 
     public void removeSemiPermanentModifier(String key) {
-        if (key != null) semiPermanentModifiers.remove(key);
+        if (canChangeModifiers() && modifiers.remove(false, key)) modifiersChanged();
     }
 
     public void clearSemiPermanentModifiers() {
-        semiPermanentModifiers.clear();
+        if (canChangeModifiers() && modifiers.clearSemi()) modifiersChanged();
+    }
+
+    private boolean canChangeModifiers() { return factory == null || factory.canChangeRuntimeModifiers(); }
+    private void modifiersChanged() {
+        if (factory == null) return;
+        var run = getRuntimeRecipeContext();
+        if (run != null) observeRuntimeRecipeContext(hellfirepvp.modularmachinery.common.tiles.MachineTicker
+                .refreshRuntimeModifiers(factory, this, run));
+        factory.requestImmediateRecipeSearch(); factory.markForUpdate();
+    }
+
+    public void updateRecipeDuration(int value) {
+        if (!hasActiveRecipe()) return;
+        duration = Math.max(1, value); ticks = Math.min(ticks, duration);
     }
 
     public boolean hasTriggeredRequirement(int index) {
@@ -393,9 +421,7 @@ public class FactoryRecipeThread {
 
     /** All per-thread modifiers in deterministic insertion order. */
     public List<RecipeModifier> activeModifiers() {
-        List<RecipeModifier> modifiers = new java.util.ArrayList<>(semiPermanentModifiers.values());
-        modifiers.addAll(permanentModifiers.values());
-        return modifiers;
+        return modifiers.active();
     }
 
     // ------------------------------------------------------------------
@@ -429,21 +455,8 @@ public class FactoryRecipeThread {
         }
         if (!activeCatalystRequirements.isEmpty()) tag.putIntArray("activeCatalysts",
                 activeCatalystRequirements.stream().mapToInt(Integer::intValue).toArray());
-        writeModifiers(tag, "permanentModifiers", permanentModifiers);
-        writeModifiers(tag, "semiPermanentModifiers", semiPermanentModifiers);
+        modifiers.write(tag);
         return tag;
-    }
-
-    private static void writeModifiers(CompoundTag tag, String key, Map<String, RecipeModifier> modifiers) {
-        if (modifiers.isEmpty()) return;
-        ListTag list = new ListTag();
-        modifiers.forEach((name, modifier) -> {
-            CompoundTag entry = new CompoundTag();
-            entry.putString("key", name);
-            entry.put("modifier", modifier.serialize());
-            list.add(entry);
-        });
-        tag.put(key, list);
     }
 
     /**
@@ -462,7 +475,9 @@ public class FactoryRecipeThread {
         boolean hasRecipe = tag.contains("recipeName");
         boolean hasReason = tag.contains("blockedReason");
         boolean hasPreset = tag.contains("threadName") || tag.contains("recipeSet", net.minecraft.nbt.Tag.TAG_LIST);
-        if (!hasRecipe && !hasReason && !hasPreset && tag.getInt("idleTime") == 0) {
+        boolean hasModifiers = !tag.getList("permanentModifiers", net.minecraft.nbt.Tag.TAG_COMPOUND).isEmpty()
+                || !tag.getList("semiPermanentModifiers", net.minecraft.nbt.Tag.TAG_COMPOUND).isEmpty();
+        if (!hasRecipe && !hasReason && !hasPreset && !hasModifiers && tag.getInt("idleTime") == 0) {
             return null;
         }
         FactoryRecipeThread thread = new FactoryRecipeThread(factory);
@@ -492,18 +507,8 @@ public class FactoryRecipeThread {
             thread.maxParallelism = Math.max(1, tag.getInt("maxParallelism"));
             thread.isolationGroupKey = tag.contains("isolationGroupKey") ? tag.getString("isolationGroupKey") : null;
         }
-        readModifiers(tag, "permanentModifiers", thread.permanentModifiers);
-        readModifiers(tag, "semiPermanentModifiers", thread.semiPermanentModifiers);
+        thread.modifiers.read(tag);
         return thread;
     }
 
-    private static void readModifiers(CompoundTag tag, String key, Map<String, RecipeModifier> target) {
-        if (!tag.contains(key, net.minecraft.nbt.Tag.TAG_LIST)) return;
-        ListTag list = tag.getList(key, net.minecraft.nbt.Tag.TAG_COMPOUND);
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag entry = list.getCompound(i);
-            RecipeModifier modifier = RecipeModifier.deserialize(entry.getCompound("modifier"));
-            if (modifier != null && entry.contains("key")) target.put(entry.getString("key"), modifier);
-        }
-    }
 }

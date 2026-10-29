@@ -93,24 +93,24 @@ public enum ItemBusSize implements StringRepresentable, TierTipValue {
         return slots;
     }
 
-    /**
-     * The tier whose grid holds exactly {@code slotCount} slots.
-     *
-     * <p><b>Why the menu needs this.</b> {@code MenuItemBus.forBus} used to read the tier from the blockstate
-     * and the handler from the tile -- two reads of one tile that CAN disagree, and did: the crash was
-     * {@code Slot 6 not in valid range - [0,6)}, a menu built for a larger tier over a handler that had six
-     * slots (PLAN section 274).
-     *
-     * <p>The menu needs the TIER rather than the count, because the tier carries the slot GEOMETRY and the count
-     * alone would put the right number of slots in the wrong places. So the tier is recovered from the count,
-     * which is the one quantity both sides already agree on, and geometry and count then come from a single
-     * source.
-     *
-     * <p>The counts are distinct (1, 4, 6, 9, 12, 16, 32), so the lookup is unambiguous.
-     *
-     * @param slotCount the slot count of the handler the menu will wrap
-     * @return the matching tier, or {@link #NORMAL} when no tier has that count
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static ItemBusSize forSlotCount(int slotCount) {
         for (ItemBusSize size : values()) {
             if (size.getSlots() == slotCount) {

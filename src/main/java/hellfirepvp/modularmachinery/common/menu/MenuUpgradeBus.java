@@ -125,31 +125,31 @@ public class MenuUpgradeBus extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Builds the server-side menu for a bus, using the bus's real inventory and tier.
-     *
-     * <h2>THE DERIVATION DIRECTION WAS REVERSED (defect B)</h2>
-     *
-     * <p>This read {@code UpgradeBusData.forSlotCount(handler.getSlots())}, i.e. it asked the HANDLER how many
-     * slots it had and then looked a tier up from that. PLAN 275 wrote it that way to keep the menu from
-     * overflowing its handler, and it is the right shape for {@code MenuItemBus}, whose handler is rebuilt from
-     * the block state on every read ({@code TileItemBus.getInventory}, L243-L284).</p>
-     *
-     * <p><b>It is the wrong direction here, and the report is what that cost:</b> "升级总线默认全栏位可用，没有按
-     * 说明给栏位" — a bus exposing eighteen slots where its tooltip says three. The slot count travelled
-     * {@code handler -> forSlotCount -> tier} and the handler's size is not a function of the tier: Forge's
-     * {@code ItemStackHandler.deserializeNBT} resizes the handler from the saved {@code Size} (L188), so a bus
-     * restored from a world whose saved grid was larger came back larger, and the menu faithfully displayed it.
-     * See {@link TileUpgradeBus} — the tier is now read from the block and the inventory is reconciled to it, so
-     * the two cannot disagree, and the menu takes the tier from the BLOCK the way
-     * {@link #MenuUpgradeBus(int, Inventory, BlockPos, UpgradeBusData, IItemHandler)}'s own geometry already
-     * assumes.</p>
-     *
-     * <p>The handler passed on is the tile's own instance, read through the reconciling getter, so the slot
-     * indices the menu builds are always inside it — the crash PLAN 275 was guarding against ({@code Slot 6 not
-     * in valid range - [0,6)}) is prevented by the reconciliation rather than by deriving the tier from the
-     * thing that needs to fit.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static MenuUpgradeBus forBus(int windowId, Inventory playerInventory, TileUpgradeBus bus) {
         // ONE SOURCE FOR THE TIER: THE BLOCK, via the tile's own state-derived accessor. The handler is read
         // through the same accessor's repair, so "the menu exposes exactly the tier's count" and "the handler

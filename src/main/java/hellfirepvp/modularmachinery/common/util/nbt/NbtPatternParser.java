@@ -19,41 +19,41 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Turns a pattern's TEXT into an {@link NbtPattern} tree.
- *
- * <h2>Why this exists instead of a call into {@code TagParser}</h2>
- *
- * <p>PLAN section 388 corrected an earlier plan that said 1.20.1's {@code TagParser} could do the container half. <b>It
- * cannot, and the reason is the feature itself:</b> a pattern's leaves are deliberately NOT valid SNBT --
- * {@code {Name:>=100}} and {@code {Name:.*Sword.*}} are both rejected outright by a parser that requires legal NBT.
- * <b>{@code TagParser} is all-or-nothing, and a pattern needs per-leaf interception by construction.</b> That is why upstream's
- * deserializer is 306 lines rather than a borrowed container parser plus a small addition.
- *
- * <p>So this walks the text itself. It is smaller than upstream's because {@link NbtLeafParser} already decides leaf kinds, so
- * the byte/short/long suffix fidelity a general parser would provide is not duplicated here.
- *
- * <h2>The four shapes, and the one decision that is worth stating</h2>
- *
- * <pre>
- *   { key : value , ... }     compound
- *   [ value , ... ]           list
- *   "..."                     a quoted value
- *   bare token                a value up to a separator
- * </pre>
- *
- * <p><b>A QUOTED value and a BARE value both go to {@link NbtLeafParser}.</b> The quotes are not what makes something a literal:
- * they exist so the value may contain characters that would otherwise end it -- a comma, a brace, a space -- and so it may use
- * escapes. A pattern written {@code {Name:"Sword|Axe"}} is a REGEX, exactly as the unquoted form is. <b>Treating quoted values as
- * literals would make the two spellings mean different things</b>, which is the kind of split a pack author cannot debug.
- *
- * <h2>What is deliberately not supported, and why silence would be wrong</h2>
- *
- * <p>Unquoted values stop at a comma, brace, bracket or whitespace. Minecraft's own SNBT also allows an unquoted string to
- * contain spaces and to run to the end of its brace, and <b>this parser does not rely on that</b>: a quoted value is the
- * supported way to write anything unusual, and upstream's own tests and shipped recipes use quotes for exactly those cases.
- * Where the choice costs something, it costs a parse error rather than a wrong pattern -- see {@link #parse}.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class NbtPatternParser {
 
     private final String text;
@@ -63,15 +63,15 @@ public final class NbtPatternParser {
         this.text = text;
     }
 
-    /**
-     * Parses a pattern's text.
-     *
-     * @param text the pattern as written in the recipe file
-     * @return the pattern tree
-     * @throws NbtPatternSyntaxException when the text is malformed -- <b>thrown rather than returning null</b>, because the
-     *         caller's contract is to record a problem against the FILE (PLAN section 385.3), and an exception carries the
-     *         offset that makes the message actionable
-     */
+    
+
+
+
+
+
+
+
+ 
     public static NbtPattern parse(@Nullable String text) {
         if (text == null || text.isBlank()) {
             // An empty pattern constrains nothing. This is the VALUE form of the null rule in NbtMatchingHelper: a pattern

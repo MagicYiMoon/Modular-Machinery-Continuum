@@ -43,49 +43,49 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Upgrade bus — holds machine upgrades, whose number of slots is fixed by the tier.
- *
- * <p>Upstream's {@code TileUpgradeBus} kept a {@code Map<UpgradeType, MachineUpgrade>} plus a
- * per-controller map of dynamic upgrades, and implemented {@code SelectiveUpdateTileEntity} to avoid
- * syncing the whole inventory. The upgrade-type registry itself is a later unit; what this class
- * establishes is the slot model and the inventory that the upgrade system will populate.
- *
- * <p>Slots come from {@link UpgradeBusData} via the {@code type=} blockstate property (upstream
- * read the same tier from metadata), and the inventory is exposed through the standard item-handler
- * capability so that a hopper or automation can be used to install upgrades — which is how pack
- * authors actually drive it.
- *
- * <h2>THE TIER IS READ FROM THE BLOCK, AND THE INVENTORY IS REBUILT WHEN IT DISAGREES (defect B)</h2>
- *
- * <p><b>Reported:</b> "升级总线默认全栏位可用，没有按说明给栏位" — a bus offering all eighteen slots where its
- * own tooltip (PLAN 732) says 3. The cause was measured rather than guessed: the slot count was the ONE
- * thing in this family that came from the <i>inventory object</i> instead of the tier, and the inventory
- * object's size is <b>not</b> a function of the tier. Two bodies establish that, and neither is a guess:</p>
- *
- * <pre>
- *   Forge 47.3.0  ItemStackHandler.deserializeNBT (sources jar, L186-L188):
- *       setSize(nbt.contains("Size", Tag.TAG_INT) ? nbt.getInt("Size") : stacks.size());
- *
- *   this class  load(...)  ->  upgradeInventory.deserializeNBT(tag.getCompound("upgrades"))
- * </pre>
- *
- * <p>So a tile restored from a save takes its slot count from the SAVED {@code Size}, not from its tier:
- * a bus whose saved handler was larger than its block's tier comes back larger, and
- * {@code MenuUpgradeBus.forBus} — which asked the handler (PLAN 275's shape) — then exposed that larger
- * grid. The extra slots were real and reachable: a hopper inserts into them, so they were HIDDEN ONLY IN
- * THE SENSE THAT NOTHING DESCRIBED THEM. The blockstate is the authority on 1.20.1 (upstream read the same
- * tier from metadata), so the count is derived from it here and any handler that disagrees is rebuilt.</p>
- *
- * <p><b>The repair is {@code TileItemBus.getInventory}'s own shape (PLAN 279/280), reused deliberately
- * rather than reinvented.</b> That method reads the LIVE level state rather than {@code getBlockState()}
- * because the block entity's cached state is filled on first call and never refreshed, and it rebuilds the
- * inventory whenever the size does not match. Doing it in the getter rather than in a load hook is also
- * §279's finding: it repairs blocks already placed in saved worlds, which is the population that has the
- * bug. <b>Its consequence is inherited with it:</b> the rebuild starts empty, so stacks in the removed
- * slots are lost — the same tradeoff the item bus already makes, recorded here rather than silently
- * different.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class TileUpgradeBus extends TileMachineComponent {
 
     private int slots;
@@ -191,16 +191,66 @@ public class TileUpgradeBus extends TileMachineComponent {
         } finally {
             suppressUpgradeRefresh = false;
         }
-        // DynamicMachineUpgrade has already updated its own parentStack before calling this method. Preserve that
-        // live instance for a non-empty replacement, matching the source's per-slot updateDynamicUpgrades path.
-        // Emptying a slot is different: the source removes and invalidates every dynamic instance in that slot.
+        // Every type in this slot observes the current item, without rebuilding or invalidating siblings.
         if (updated.isEmpty()) {
             List<DynamicMachineUpgrade> removed = foundDynamicUpgrades.remove(slot);
-            if (removed != null) removed.forEach(DynamicMachineUpgrade::invalidate);
+            if (removed != null) removed.forEach(dynamic -> { dynamic.setParentStack(ItemStack.EMPTY); dynamic.invalidate(); });
+            rebuildStaticUpgrades();
+        } else {
+            foundDynamicUpgrades.getOrDefault(slot, List.of()).forEach(dynamic -> dynamic.setParentStack(updated));
         }
         upgradesDirty = false;
         upgradeRevision++;
         setChanged();
+    }
+
+    /** Null means this instance no longer owns the slot; returned stacks never expose mutable inventory aliases. */
+    public ItemStack getDynamicUpgradeStack(DynamicMachineUpgrade source) {
+        if (level instanceof net.minecraft.server.level.ServerLevel server && !server.getServer().isSameThread()) return null;
+        IItemHandler inventory = getUpgradeInventory();
+        int slot = source.getBusInventoryIndex();
+        if (slot < 0 || slot >= inventory.getSlots()
+                || foundDynamicUpgrades.getOrDefault(slot, List.of()).stream().noneMatch(installed -> installed == source)) return null;
+        return inventory.getStackInSlot(slot).copy();
+    }
+
+    /** Serializes all types from the current slot, then applies wear to that same current item. */
+    public void updateDynamicUpgrade(DynamicMachineUpgrade source, int durability) {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel server) || !server.getServer().isSameThread()
+                || isRemoved() || !level.hasChunkAt(worldPosition) || level.getBlockEntity(worldPosition) != this || !source.isValid()) return;
+        ItemStack current = getDynamicUpgradeStack(source);
+        if (current == null || current.isEmpty() || durability < 0 || durability > 0 && !current.isDamageableItem()) return;
+        int slot = source.getBusInventoryIndex();
+        long damage = (long) current.getDamageValue() + durability;
+        if (durability > 0 && damage >= current.getMaxDamage()) {
+            setUpgradeStack(slot, ItemStack.EMPTY);
+            return;
+        }
+        ItemStack updated = RegistryMachineUpgrade.preserveUpgradeIdentities(current);
+        CompoundTag byType = updated.getOrCreateTag().getCompound(DynamicMachineUpgrade.ITEM_DATA_BY_TYPE_TAG);
+        for (DynamicMachineUpgrade sibling : foundDynamicUpgrades.getOrDefault(slot, List.of()))
+            byType.put(sibling.getType().getName(), sibling.writeItemNBT());
+        updated.getOrCreateTag().put(DynamicMachineUpgrade.ITEM_DATA_BY_TYPE_TAG, byType);
+        if (durability > 0) updated.setDamageValue((int) damage);
+        if (!ItemStack.matches(current, updated)) setUpgradeStack(slot, updated);
+    }
+
+    /** A broken mixed item must lose its static effects, while other slots' dynamic handles remain valid. */
+    private void rebuildStaticUpgrades() {
+        foundUpgrades.forEach((key, upgrade) -> customUpgradeData.put(key, upgrade.writeNBT()));
+        foundUpgrades.clear();
+        for (int slot = 0; slot < upgradeInventory.getSlots(); slot++) {
+            ItemStack stack = upgradeInventory.getStackInSlot(slot);
+            for (MachineUpgrade upgrade : RegistryMachineUpgrade.upgradesFor(stack)) {
+                if (upgrade instanceof DynamicMachineUpgrade) continue;
+                MachineUpgrade existing = foundUpgrades.get(upgrade.getType().getName());
+                if (existing != null) { existing.incrementStackSize(upgrade.getStackSize() + stack.getCount() - 1); continue; }
+                CompoundTag saved = customUpgradeData.get(upgrade.getType().getName());
+                if (saved != null) upgrade.setCustomData(saved);
+                upgrade.incrementStackSize(stack.getCount() - 1);
+                foundUpgrades.put(upgrade.getType().getName(), upgrade);
+            }
+        }
     }
 
     // =============================================================================================
@@ -251,7 +301,7 @@ public class TileUpgradeBus extends TileMachineComponent {
                 }
                 MachineUpgrade existing = foundUpgrades.get(upgrade.getType().getName());
                 if (existing != null) {
-                    existing.incrementStackSize(upgrade.getStackSize());
+                    existing.incrementStackSize(upgrade.getStackSize() + stack.getCount() - 1);
                     continue;
                 }
                 CompoundTag saved = customUpgradeData.get(upgrade.getType().getName());
@@ -379,9 +429,10 @@ public class TileUpgradeBus extends TileMachineComponent {
         if (typeName == null || typeName.isBlank()) throw new IllegalArgumentException("upgrade type is blank");
         customUpgradeData.put(typeName, data == null ? new CompoundTag() : data.copy());
         MachineUpgrade upgrade = foundUpgrades.get(typeName);
-        if (upgrade != null) upgrade.setCustomData(data);
+        if (upgrade != null && !upgrade.getCustomData().equals(data == null ? new CompoundTag() : data)) upgrade.setCustomData(data);
         foundDynamicUpgrades.values().forEach(upgrades -> upgrades.stream()
                 .filter(dynamic -> dynamic.getType().getName().equals(typeName))
+                .filter(dynamic -> !dynamic.getCustomData().equals(data == null ? new CompoundTag() : data))
                 .forEach(dynamic -> dynamic.setCustomData(data)));
         setChanged();
     }

@@ -17,35 +17,35 @@ import hellfirepvp.modularmachinery.common.crafting.Requirement;
 import hellfirepvp.modularmachinery.common.crafting.requirement.RequirementItem;
 import hellfirepvp.modularmachinery.common.machine.IOType;
 
-/**
- * {@code modularmachinery:item} -- an item cost or product.
- *
- * <p>This is the body of one branch of {@code RecipeLoader}'s former {@code switch}, moved here by PLAN section 380 with
- * its reasoning intact:
- *
- * <pre>
- * case TYPE_ITEM -&gt; {
- *     String raw = string(requirement, "item", null);
- *     if (raw == null || raw.isEmpty()) {
- *         problems.add(path + ": item requirement has no 'item' key");
- *         yield null;
- *     }
- *     yield new RequirementItem(ioType, raw, clampedItemAmount(requirement), chanceOf(requirement));
- * }
- * </pre>
- *
- * <h2>Two things here are decisions, and both are easy to undo by accident</h2>
- *
- * <p><b>1. The raw string is passed through UNPARSED.</b> A legacy id such as {@code ore:ingotIron} (an ore-dictionary
- * name) or {@code minecraft:dye@3} (item plus metadata) is NOT a valid resource location. Rejecting it at this point
- * would discard the shims' chance to resolve it, and {@link RequirementItem} owns resolution and reports what it could
- * not map. <b>A "tidy-up" that parsed the id here would look like validation and would break every legacy recipe.</b>
- *
- * <p><b>2. {@code chance} IS read, and it was not always.</b> The port did not read it at all, so a recipe declaring
- * {@code "chance": 0.6} -- as {@code centrifuge_wash_redstone} does -- always produced its output. Silently giving more
- * than the pack asked for is the worst kind of divergence: <b>nothing fails and nothing warns.</b> That is why the chance
- * travels into the constructor here even though the requirement would still be valid without it.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class ItemRequirementType implements RequirementType {
 
     public static final String NAME = "item";

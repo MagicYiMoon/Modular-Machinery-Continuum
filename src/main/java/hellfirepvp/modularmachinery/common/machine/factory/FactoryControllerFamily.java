@@ -138,13 +138,13 @@ public final class FactoryControllerFamily {
      *         standing and will run again once it forms.
      */
     public static int[] threads(String machineName) {
-        int running = 0;
-        int max = 0;
+        long running = 0;
+        long max = 0;
         for (TileFactoryController controller : withMachine(machineName)) {
             running += controller.getRunningThreadCount();
             max += controller.getMaxThreads();
         }
-        return new int[]{running, max};
+        return new int[]{(int) Math.min(Integer.MAX_VALUE, running), (int) Math.min(Integer.MAX_VALUE, max)};
     }
 
     private static void pruneDead(List<TileFactoryController> family) {

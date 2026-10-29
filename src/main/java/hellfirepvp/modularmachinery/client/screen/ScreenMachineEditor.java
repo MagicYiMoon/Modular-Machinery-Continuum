@@ -22,6 +22,12 @@ import hellfirepvp.modularmachinery.common.editor.RequirementBatchEditor;
 import hellfirepvp.modularmachinery.common.network.PktMachineEditorRecipeOptions;
 import hellfirepvp.modularmachinery.common.network.PktMachineEditorFluidTick;
 import hellfirepvp.modularmachinery.common.editor.SmartInterfaceEditor;
+import hellfirepvp.modularmachinery.common.editor.PneumaticEditor;
+import hellfirepvp.modularmachinery.common.editor.EnvironmentEditor;
+import hellfirepvp.modularmachinery.common.network.PktMachineEditorEnvironment;
+import hellfirepvp.modularmachinery.common.editor.ResourceAmountEditor;
+import hellfirepvp.modularmachinery.common.network.PktMachineEditorResourceAmount;
+import hellfirepvp.modularmachinery.common.network.PktMachineEditorPneumatic;
 import hellfirepvp.modularmachinery.common.network.PktMachineEditorSmartInterface;
 import hellfirepvp.modularmachinery.common.network.PktMachineEditorFuel;
 import hellfirepvp.modularmachinery.common.network.PktMachineEditorSelector;
@@ -83,6 +89,10 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private static final int GROUP_ROWS = 4;
 
     private JsonObject document;
+    private boolean adapterOpen, templateModifiers;
+    private final AdapterTemplatePanel adapterPanel = new AdapterTemplatePanel();
+    private JsonObject templateDraft;
+    private java.util.function.Consumer<JsonArray> templateReturn;
     private int machineIndex;
     private int recipeIndex;
     private int requirementIndex;
@@ -98,7 +108,9 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private EditBox recipeDisplayName;
     private Button editorSave;
     private Button editorCancel;
-    private Button pickerCancel;
+    private Button pickerCancel, inventoryPicker, inventoryNbt;
+    private boolean pickerInventory, importInventoryNbt = true, inventoryItemDraft;
+    private final List<ItemStack> inventoryChoices = new ArrayList<>();
     private Button namePreviewClose;
     private Button recipeNamePreview;
     private Button recipeAdvanced;
@@ -118,6 +130,19 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private Button smartType;
     private final SmartInterfacePanel smartPanel = new SmartInterfacePanel();
     private boolean smartOpen;
+    private final PneumaticPanel pneumaticPanel = new PneumaticPanel();
+    private boolean pneumaticOpen;
+    private boolean environmentOpen;
+    private Button environmentType;
+    private final EnvironmentPanel environmentPanel = new EnvironmentPanel();
+    private Button pneumaticType;
+    private final ResourceAmountPanel resourcePanel = new ResourceAmountPanel();
+    private boolean resourceOpen, nbtOpen;
+    private final RequirementNbtPanel nbtPanel = new RequirementNbtPanel();
+    private Button requirementNbt;
+    private Button candidateNbt, groupDefaultNbt;
+    private int nestedNbt;
+    private Button resourceType;
     private EditBox toolDamage;
     private Button itemTagType;
     private Button ingredientGroupType;
@@ -145,6 +170,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private boolean editorOpen;
     private boolean editorRecipe;
     private boolean colorOpen;
+    private boolean copyOpen;
+    private String copiedMachineId = "";
+    private final RecipeCopyPanel copyPanel = new RecipeCopyPanel();
+    private Button recipeCopy;
+    private String copiedRecipeId = "";
     private final ControllerAppearancePanel controllerAppearance = new ControllerAppearancePanel();
     private boolean namePreviewOpen;
     private boolean namePreviewRecipe;
@@ -226,6 +256,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 topPos + PICKER_Y + PICKER_SEARCH_Y,
                 PICKER_W - PICKER_PADDING * 2, PICKER_SEARCH_H, Component.literal("搜索物品"));
         pickerSearch.setMaxLength(200);
+        pickerSearch.setResponder(value -> { pickerScroll = 0; cachedPickerQuery = null; });
         pickerSearch.setHint(Component.literal(pickerHint()));
         addRenderableWidget(pickerSearch);
 
@@ -233,9 +264,22 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (machine() != null) submitMutation(new hellfirepvp.modularmachinery.common.network.PktMachineEditorControllerSettings(
                     machine().get("name").getAsString(), settings.color(), settings.factory()));
         }, this::closeControllerAppearance);
+        copyPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), target -> {
+            copiedRecipeId = target.newId(); copiedMachineId = target.machine();
+            submitMutation(new ModularmachineryNetwork.PktMachineEditorAction(
+                    ModularmachineryNetwork.PktMachineEditorAction.COPY_RECIPE, target.machine(), target.sourceId(), -1, target.newId(), false));
+        }, this::closeRecipeCopy);
+        recipeCopy = addMainWidget(Button.builder(Component.literal("复制"), b -> openRecipeCopy())
+                .bounds(leftPos + 212, topPos + 2, 44, 18).build());
         addMainWidget(Button.builder(Component.literal("控制器外观"), b -> openControllerAppearance())
                 .bounds(leftPos + 8, topPos + 174, 128, 20)
                 .tooltip(Tooltip.create(Component.literal("设置该机器普通／工厂控制器的外壳颜色，预览并保存\n新增机器或开启独立工厂控制器后需重启"))).build());
+        addMainWidget(Button.builder(Component.literal(templateDraft == null ? "导入模板" : "完成追加需求"), b -> {
+            if(templateDraft != null) onClose(); else openAdapterTemplates();
+        }).bounds(leftPos+8,topPos+199,128,18).build());
+        requirementNbt = addMainWidget(Button.builder(Component.literal("NBT 数据"), b -> openRequirementNbt())
+                .bounds(leftPos + 146, topPos + 174, 70, 20)
+                .tooltip(Tooltip.create(Component.literal("选中已保存的物品／流体需求，编辑匹配／实际输出和独立显示数据\n先保存新需求；高级候选组与催化剂暂不开放此入口"))).build());
         localizedName = new EditBox(font, leftPos + 8, topPos + 232, 114, 18, Component.literal("显示名称"));
         localizedName.setMaxLength(200);
         localizedName.setTooltip(Tooltip.create(Component.literal(
@@ -282,6 +326,13 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         addRenderableWidget(editorSave);
         addRenderableWidget(editorCancel);
         addRenderableWidget(pickerCancel);
+        inventoryPicker = addRenderableWidget(Button.builder(Component.literal("背包"), b -> {
+            pickerInventory=!pickerInventory;pickerScroll=0;cachedPickerQuery=null;setPickerVisible(true);
+        }).bounds(leftPos+218,topPos+20,54,20).tooltip(Tooltip.create(Component.literal("切换注册表／背包内物品；只复制编辑数据，不消耗物品"))).build());
+        inventoryNbt = addRenderableWidget(Button.builder(Component.literal("带入 NBT ✓"), b -> {
+            importInventoryNbt=!importInventoryNbt;inventoryNbt.setMessage(Component.literal(importInventoryNbt?"带入 NBT ✓":"带入 NBT ×"));
+        }).bounds(leftPos+276,topPos+20,58,20).tooltip(Tooltip.create(Component.literal("选择物品时带入其 NBT；输入字符串按字面匹配\n不支持的 NBT 数组会提示关闭本选项\n数量仍可修改，背包不会被取走任何物品"))).build());
+        inventoryNbt.setMessage(Component.literal(importInventoryNbt ? "带入 NBT ✓" : "带入 NBT ×"));
         namePreviewClose = addRenderableWidget(Button.builder(Component.literal("返回"), b -> closeNamePreview())
                 .bounds(leftPos + 188, topPos + 208, 64, 20).build());
         recipeNamePreview = addRenderableWidget(Button.builder(Component.literal("预览名称"), b -> openNamePreview(true))
@@ -325,8 +376,20 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         typeWidgets.add(addRenderableWidget(Button.builder(Component.literal("流体/刻"), b -> chooseFluidTick())
                 .bounds(leftPos + 105, topPos + 202, 112, 26)
                 .tooltip(Tooltip.create(Component.literal("每个配方进度 tick 输入或输出指定流体，单位 mB/t\n批量倍率放大速率；缺流体或输出满时暂停，不设置概率"))).build()));
+        pneumaticType = addRenderableWidget(Button.builder(Component.literal("气动／温度"), b -> openPneumatic(-1))
+                .bounds(leftPos + 223, topPos + 202, 112, 20)
+                .tooltip(Tooltip.create(Component.literal("压缩空气（单次或逐 tick）、压力／真空、持续 Kelvin 温度条件"))).build());
+        typeWidgets.add(pneumaticType);
+        resourceType = addRenderableWidget(Button.builder(Component.literal("魔法资源"), b -> openResourceAmount(-1))
+                .bounds(leftPos + 105, topPos + 230, 112, 20)
+                .tooltip(Tooltip.create(Component.literal("Botania 魔力、Embers 余烬、Blood Magic LP／意志、Nature’s Aura 灵气\n按服务端依赖和实际支持的方向开放"))).build());
+        typeWidgets.add(resourceType);
+        environmentType = addRenderableWidget(Button.builder(Component.literal("环境条件（输入）"), b -> openEnvironment(-1))
+                .bounds(leftPos + 223, topPos + 230, 112, 20)
+                .tooltip(Tooltip.create(Component.literal("高度、时间、维度、群系、月相和天气；需要环境检测器"))).build());
+        typeWidgets.add(environmentType);
         typeWidgets.add(addRenderableWidget(Button.builder(Component.literal("取消"), b -> closeTypePicker())
-                .bounds(leftPos + 188, topPos + 230, 64, 20).build()));
+                .bounds(leftPos + 292, topPos + 40, 48, 18).build()));
         groupAddItem = addRenderableWidget(Button.builder(Component.literal("+ 物品"), b -> openGroupPicker(false, -1))
                 .bounds(leftPos + 238, topPos + 24, 62, 20).build());
         groupAddTag = addRenderableWidget(Button.builder(Component.literal("+ 标签"), b -> openGroupPicker(true, -1))
@@ -339,6 +402,9 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 .bounds(leftPos + 185, topPos + 190, 26, 18).tooltip(Tooltip.create(Component.literal("下移，降低优先顺序"))).build());
         groupWidgets.add(groupUp);
         groupWidgets.add(groupDown);
+        candidateNbt = addRenderableWidget(Button.builder(Component.literal("候选 NBT"), b -> openNestedNbt(false)).bounds(leftPos+70,topPos+208,72,20).build());
+        groupDefaultNbt = addRenderableWidget(Button.builder(Component.literal("默认 NBT"), b -> openNestedNbt(true)).bounds(leftPos+148,topPos+208,72,20).build());
+        groupWidgets.add(candidateNbt); groupWidgets.add(groupDefaultNbt);
         catalystModifiers = addRenderableWidget(Button.builder(Component.literal("修改器"), b -> openCatalystModifiers())
                 .bounds(leftPos + 70, topPos + 142, 134, 20)
                 .tooltip(Tooltip.create(Component.literal("编辑找到催化剂后应用的效果；缺少催化剂不阻止加工\n消耗概率 0 仍可生效，但不消耗催化剂"))).build());
@@ -352,7 +418,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             closeCatalystTooltips();
         }, this::closeCatalystTooltips);
         modifierPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), mods -> {
-            pendingRequirement.add("modifiers", mods);
+            if(templateModifiers)adapterPanel.modifiers(mods);else pendingRequirement.add("modifiers", mods);
             closeCatalystModifiers();
         }, this::closeCatalystModifiers);
         triggerPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), (tick, repeat) ->
@@ -364,6 +430,21 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         selectorPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), tag ->
                 submitMutation(new PktMachineEditorSelector(recipe().get("name").getAsString(), requirementIndex, tag)),
                 this::closeSelectorBinding);
+        nbtPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), draft -> {
+            if (nestedNbt != 0) {
+                var target = nestedNbt == 2 ? pendingRequirement : groupItems().get(groupIndex).getAsJsonObject();
+                var context=target.deepCopy();context.addProperty("io-type", IngredientGroupEditor.isOutput(pendingRequirement)?"output":"input");
+                var merged=hellfirepvp.modularmachinery.common.editor.RequirementNbtEditor.merge(context,draft.dataMode(),draft.data(),draft.displayMode(),draft.display());
+                for(String key:List.of("nbt","nbt-display")){if(merged.has(key))target.add(key,merged.get(key));else target.remove(key);}
+                closeRequirementNbt();
+            } else submitMutation(new hellfirepvp.modularmachinery.common.network.PktMachineEditorRequirementNbt(recipe().get("name").getAsString(), requirementIndex,
+                        draft.dataMode(),draft.data(),draft.displayMode(),draft.display()));
+        }, this::closeRequirementNbt);
+        adapterPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::submitMutation, this::closeAdapterTemplates,
+                this::openTemplateModifiers, this::openTemplateRequirements);
+        resourcePanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::saveResourceAmount, this::closeResourceAmount);
+        environmentPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::saveEnvironment, this::closeEnvironment);
+        pneumaticPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::savePneumatic, this::closePneumatic);
         smartPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::saveSmartInterface, this::closeSmartInterface);
         recipeOptionsPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), options -> {
             recipeOptionsDraft = options; closeRecipeOptions();
@@ -379,6 +460,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         batchPanel.setVisible(batchOpen, menu.saves().pending());
         triggerPanel.setVisible(triggerOpen, menu.saves().pending());
         smartPanel.setVisible(smartOpen, menu.saves().pending());
+        adapterPanel.setVisible(adapterOpen, menu.saves().pending());
+        environmentPanel.setVisible(environmentOpen, menu.saves().pending());
+        pneumaticPanel.setVisible(pneumaticOpen, menu.saves().pending());
+        nbtPanel.setVisible(nbtOpen, menu.saves().pending());
+        resourcePanel.setVisible(resourceOpen, menu.saves().pending());
         recipeOptionsPanel.setVisible(recipeOptionsOpen);
         syncFields();
         syncMachineName();
@@ -407,16 +493,70 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void syncMainWidgets() {
-        boolean visible = !colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && !selectorOpen && !batchOpen && !triggerOpen && !smartOpen && !recipeOptionsOpen;
+        boolean visible = !copyOpen && !colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && !selectorOpen && !batchOpen && !triggerOpen && !smartOpen && !adapterOpen && !environmentOpen && !pneumaticOpen && !nbtOpen && !resourceOpen && !recipeOptionsOpen;
         for (AbstractWidget widget : mainWidgets) {
             widget.visible = visible;
             widget.active = visible && !menu.saves().pending();
             if (!visible && getFocused() == widget) setFocused(null);
         }
+        if (requirementNbt != null) requirementNbt.active &= nbtEditable(requirement());
         if (selectorBinding != null) selectorBinding.active &= selectorEditable(requirement());
         if (requirementBatch != null) requirementBatch.active &= batchEditable(requirement());
         if (requirementTrigger != null) requirementTrigger.active &= triggerEditable(requirement());
+        if (recipeCopy != null) {
+            boolean supported = recipe() != null && !isNewRecipe(recipe()) && !isReadOnly(recipe());
+            recipeCopy.active &= supported;
+            recipeCopy.setTooltip(Tooltip.create(Component.literal(supported ? "将已保存的 JSON 配方复制为独立新配方，原配方保持不变"
+                    : recipe() == null ? "请先选择配方" : isNewRecipe(recipe()) ? "请先保存配方草稿" : readOnlyReason(recipe()) + "\n不能直接复制动态配方为普通 JSON")));
+        }
+        if(templateDraft != null)for(var widget:mainWidgets){
+            String label=widget.getMessage().getString();boolean allowed=widget==requirementNbt||widget==selectorBinding||widget==requirementBatch||label.equals("完成追加需求")||label.equals("+")&&widget.getX()>=leftPos+REQUIREMENT_X;
+            widget.visible&=allowed;widget.active&=allowed;
+        }
+        copyPanel.setVisible(copyOpen, menu.saves().pending());
     }
+
+    private void openAdapterTemplates(){if(machine()==null||menu.saves().pending())return;adapterOpen=true;saveStatus="";saveFailed=false;adapterPanel.open(document,machine());syncMainWidgets();setFocused(null);}
+    private void closeAdapterTemplates(){adapterOpen=false;adapterPanel.setVisible(false,false);syncMainWidgets();setFocused(null);}
+    private void openTemplateModifiers(){try{var mods=adapterPanel.modifiers();adapterOpen=false;adapterPanel.setVisible(false,false);templateModifiers=true;modifiersOpen=true;modifierPanel.open(mods,true);syncMainWidgets();setFocused(null);}catch(RuntimeException e){saveStatus=e.getMessage();saveFailed=true;}}
+    private void openTemplateRequirements(){
+        var player = Minecraft.getInstance().player;
+        if (player == null) return;
+        var child=new ScreenMachineEditor(menu,player.getInventory(),Component.literal("模板追加需求"));
+        child.document=document.deepCopy();var owner=adapterPanel.owner().deepCopy();var recipe=new JsonObject();recipe.addProperty("name","template_draft");recipe.addProperty("duration",2000000000);recipe.addProperty("editable",true);
+        recipe.add("selectorTags",owner.get("selectorTags").deepCopy());recipe.add("smartInterfaceTypes",owner.get("smartInterfaceTypes").deepCopy());recipe.add("requirements",hellfirepvp.modularmachinery.common.network.TemplateRequirementDraft.decorate(adapterPanel.requirements()));
+        child.templateDraft=recipe;var recipes=new JsonArray();recipes.add(recipe);owner.add("recipes",recipes);var owners=new JsonArray();owners.add(owner);child.document.add("machines",owners);
+        child.templateReturn=values->{adapterPanel.requirements(values);Minecraft.getInstance().setScreen(this);};Minecraft.getInstance().setScreen(child);
+    }
+    @Override public void onClose(){if(templateDraft!=null){templateReturn.accept(hellfirepvp.modularmachinery.common.network.TemplateRequirementDraft.clean(templateDraft.getAsJsonArray("requirements")));return;}super.onClose();}
+
+    private void openRecipeCopy() {
+        if (recipe() == null || isNewRecipe(recipe()) || isReadOnly(recipe()) || menu.saves().pending()) return;
+        copyOpen = true; copiedRecipeId = ""; copiedMachineId = ""; saveStatus = ""; saveFailed = false;
+        copyPanel.open(recipe(), machine(), document.getAsJsonArray("machines")); syncMainWidgets(); setFocused(copyPanel.field());
+    }
+    private void closeRecipeCopy() {
+        copyOpen = false; copyPanel.setVisible(false, false); syncMainWidgets(); setFocused(null);
+    }
+
+    private boolean nbtEditable(JsonObject req) {
+        return recipe()!=null && !isReadOnly(recipe()) && !isNewRecipe(recipe()) && req!=null && req.has("editableNbt") && req.get("editableNbt").getAsBoolean();
+    }
+    private void openRequirementNbt() {
+        var req=requirement(); if(!nbtEditable(req) || menu.saves().pending())return;
+        try { nbtPanel.open(req); }
+        catch(RuntimeException invalid) { if(Minecraft.getInstance().player!=null)Minecraft.getInstance().player.displayClientMessage(Component.literal(invalid.getMessage()),false);return; }
+        nbtOpen=true; saveStatus="";saveFailed=false;syncMainWidgets();setFocused(null);
+    }
+    private void openNestedNbt(boolean defaults) {
+        if (!editingGroup() || !storeGroupAmount() || !defaults && groupItems().isEmpty()) return;
+        var target=(defaults?pendingRequirement:groupItems().get(groupIndex).getAsJsonObject()).deepCopy();
+        target.addProperty("io-type",outputGroup()?"output":"input");
+        if(defaults)target.addProperty("item","候选组默认 NBT");
+        try { nbtPanel.open(target,true); } catch(RuntimeException invalid){saveStatus=invalid.getMessage();saveFailed=true;return;}
+        nestedNbt=defaults?2:1;editorOpen=false;setEditorVisible(false);nbtOpen=true;syncMainWidgets();setFocused(null);
+    }
+    private void closeRequirementNbt() {nbtOpen=false;nbtPanel.setVisible(false,false);boolean nested=nestedNbt!=0;nestedNbt=0;if(nested){editorOpen=true;setEditorVisible(true);}syncMainWidgets();setFocused(null);}
 
     private boolean selectorEditable(JsonObject req) {
         return recipe() != null && !isReadOnly(recipe()) && !isNewRecipe(recipe()) && req != null
@@ -469,6 +609,86 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         selectorOpen = false;
         selectorPanel.setVisible(false, false);
         syncMainWidgets(); setFocused(null);
+    }
+
+    private boolean resourceAvailable(String key) { return document.has(key) && document.get(key).getAsBoolean(); }
+    private void openResourceAmount(int index) {
+        if (recipe() == null || isReadOnly(recipe()) || menu.saves().pending()) return;
+        JsonObject req = index < 0 ? null : recipeRequirements().get(index).getAsJsonObject();
+        boolean output = req == null ? pickerOutput : "output".equals(req.get("io-type").getAsString());
+        boolean mana = resourceAvailable("manaEditorAvailable"), ember = resourceAvailable("emberEditorAvailable");
+        if (req != null && !resourceAvailable(switch(ResourceAmountEditor.modId(req)) {
+            case "botania" -> "manaEditorAvailable"; case "embers" -> "emberEditorAvailable";
+            case "bloodmagic" -> "bloodMagicEditorAvailable"; default -> "auraEditorAvailable";
+        })) return;
+        if (req != null) {
+            try { ResourceAmountEditor.validate(req); }
+            catch (RuntimeException invalid) {
+                if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(
+                        Component.literal("该资源需求请修改源文件：" + invalid.getMessage()), false);
+                return;
+            }
+        }
+        closeTypePicker(); requirementIndex = index; addingRequirement = index < 0; pendingRequirement = null;
+        resourceOpen = true; saveStatus = ""; saveFailed = false;
+        resourcePanel.open(req, output, document); syncMainWidgets(); setFocused(null);
+    }
+    private void closeResourceAmount() {
+        resourceOpen = false; addingRequirement = false; resourcePanel.setVisible(false, false); syncMainWidgets(); setFocused(null);
+    }
+    private void saveResourceAmount(JsonObject requirement) {
+        var current = recipe();
+        submitMutation(new PktMachineEditorResourceAmount(current.get("name").getAsString(), addingRequirement ? -1 : requirementIndex,
+                requirement.toString(), isNewRecipe(current) ? machine().get("name").getAsString() : "",
+                current.get("duration").getAsInt(), current.has("displayName") ? current.get("displayName").getAsString() : ""));
+    }
+
+    private void openEnvironment(int index) {
+        if (recipe() == null || isReadOnly(recipe()) || menu.saves().pending()) return;
+        JsonObject req = index < 0 ? null : recipeRequirements().get(index).getAsJsonObject();
+        try { if (req != null) EnvironmentEditor.validate(req); }
+        catch (RuntimeException invalid) { saveStatus = "环境条件无效：" + invalid.getMessage(); saveFailed = true; return; }
+        closeTypePicker(); requirementIndex = index; addingRequirement = index < 0; pendingRequirement = null;
+        environmentOpen = true; saveStatus = ""; saveFailed = false; environmentPanel.open(req); syncMainWidgets(); setFocused(null);
+    }
+    private void closeEnvironment() {
+        environmentOpen = false; addingRequirement = false; environmentPanel.setVisible(false, false); syncMainWidgets(); setFocused(null);
+    }
+    private void saveEnvironment(JsonObject requirement) {
+        var current = recipe();
+        submitMutation(new PktMachineEditorEnvironment(current.get("name").getAsString(), addingRequirement ? -1 : requirementIndex,
+                requirement.toString(), isNewRecipe(current) ? machine().get("name").getAsString() : "",
+                current.get("duration").getAsInt(), current.has("displayName") ? current.get("displayName").getAsString() : ""));
+    }
+
+    private boolean pneumaticAvailable() {
+        return document.has("pneumaticEditorAvailable") && document.get("pneumaticEditorAvailable").getAsBoolean();
+    }
+    private void openPneumatic(int index) {
+        if (!pneumaticAvailable() || recipe() == null || isReadOnly(recipe()) || menu.saves().pending()) return;
+        JsonObject req = index < 0 ? null : recipeRequirements().get(index).getAsJsonObject();
+        if (req != null) {
+            try { PneumaticEditor.validate(req); }
+            catch (RuntimeException invalid) {
+                if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(
+                        Component.literal("该气动需求请修改源文件：" + invalid.getMessage()), false);
+                return;
+            }
+        }
+        closeTypePicker(); requirementIndex = index; addingRequirement = index < 0; pendingRequirement = null;
+        pneumaticOpen = true; saveStatus = ""; saveFailed = false;
+        pneumaticPanel.open(req, req == null ? pickerOutput : "output".equals(req.get("io-type").getAsString()));
+        syncMainWidgets(); setFocused(null);
+    }
+    private void closePneumatic() {
+        pneumaticOpen = false; addingRequirement = false; pneumaticPanel.setVisible(false, false);
+        syncMainWidgets(); setFocused(null);
+    }
+    private void savePneumatic(JsonObject requirement) {
+        JsonObject current = recipe();
+        submitMutation(new PktMachineEditorPneumatic(current.get("name").getAsString(), addingRequirement ? -1 : requirementIndex,
+                requirement.toString(), isNewRecipe(current) ? machine().get("name").getAsString() : "",
+                current.get("duration").getAsInt(), current.has("displayName") ? current.get("displayName").getAsString() : ""));
     }
 
     private void openSmartInterface(int index) {
@@ -610,6 +830,12 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         fuelType.active = fuelType.visible;
         smartType.visible = visible && !pickerOutput;
         smartType.active = smartType.visible;
+        environmentType.visible = visible && !pickerOutput;
+        environmentType.active = environmentType.visible;
+        pneumaticType.visible = visible && pneumaticAvailable();
+        pneumaticType.active = pneumaticType.visible;
+        resourceType.visible = visible && (resourceAvailable("manaEditorAvailable") || !pickerOutput && resourceAvailable("emberEditorAvailable") || resourceAvailable("bloodMagicEditorAvailable") || resourceAvailable("auraEditorAvailable"));
+        resourceType.active = resourceType.visible;
         syncMainWidgets();
     }
 
@@ -672,6 +898,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void openPicker() {
+        pickerInventory=false;
         pickerScroll = 0;
         pickerOpen = true;
         editorOpen = false;
@@ -708,6 +935,26 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         pickerFluidTick = FluidTickEditor.isRate(req);
         pickerReplacing = true;
         openPicker();
+    }
+
+    private void selectInventoryStack(ItemStack stack) {
+        try {
+            String probabilityDraft = pickerReplacing && groupPickerIndex < -1 ? chance.getValue() : null;
+            boolean group=groupPickerIndex>=-1;boolean output=group?outputGroup():pickerOutput;
+            var nbt=importInventoryNbt?hellfirepvp.modularmachinery.common.editor.InventoryIngredientEditor.data(stack,output):new JsonObject();
+            selectPickerResource(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+            if(pickerOpen)return;
+            inventoryItemDraft = !group;
+            var target=group?groupItems().get(groupIndex).getAsJsonObject():pendingRequirement;
+            int count = Math.min(64, Math.max(1, stack.getCount()));
+            target.addProperty("amount",count);
+            if(group&&output){target.addProperty("minAmount",count);target.addProperty("maxAmount",count);}
+            for(String key:List.of("nbt","nbt-display")){if(nbt.has(key))target.add(key,nbt.get(key));else target.remove(key);}
+            if(group)loadGroupFields();else {
+                syncFields();
+                if (probabilityDraft != null) chance.setValue(probabilityDraft);
+            }
+        } catch(RuntimeException invalid){saveStatus=invalid.getMessage();saveFailed=true;if(Minecraft.getInstance().player!=null)Minecraft.getInstance().player.displayClientMessage(Component.literal(saveStatus),false);}
     }
 
     private void selectPickerResource(String id) {
@@ -773,10 +1020,18 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void openRequirementEditor(int index) {
+        inventoryItemDraft = false;
         JsonObject selectedRecipe = recipe();
         if (selectedRecipe == null || (selectedRecipe.has("editable") && !selectedRecipe.get("editable").getAsBoolean())) return;
+        if (EnvironmentEditor.isEnvironment(recipeRequirements().get(index).getAsJsonObject())) { openEnvironment(index); return; }
+        if (ResourceAmountEditor.isResource(recipeRequirements().get(index).getAsJsonObject())) { openResourceAmount(index); return; }
+        if (PneumaticEditor.isPneumatic(recipeRequirements().get(index).getAsJsonObject())) { openPneumatic(index); return; }
         if (SmartInterfaceEditor.isSmart(recipeRequirements().get(index).getAsJsonObject())) {
             openSmartInterface(index); return;
+        }
+        var nbtRequirement=recipeRequirements().get(index).getAsJsonObject();
+        if ((nbtRequirement.has("nbt") || nbtRequirement.has("nbt-display")) && nbtEditable(nbtRequirement)) {
+            requirementIndex=index;openRequirementNbt();return;
         }
         if (FluidTickEditor.isRate(recipeRequirements().get(index).getAsJsonObject())
                 && !FluidTickEditor.canEdit(recipeRequirements().get(index).getAsJsonObject())) {
@@ -804,7 +1059,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (!IngredientGroupEditor.canEdit(pendingRequirement)) {
                 pendingRequirement = null;
                 if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(
-                        Component.literal("该候选组包含 NBT、标签输出或编辑器暂不支持的高级条件，请修改源文件"), false);
+                        Component.literal("该候选组包含标签输出或编辑器暂不支持的高级条件，请修改源文件"), false);
                 return;
             }
             pendingRequirement = IngredientGroupEditor.draft(pendingRequirement);
@@ -847,6 +1102,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void closeCatalystModifiers() {
+        if(templateModifiers){templateModifiers=false;modifiersOpen=false;modifierPanel.setVisible(false);adapterOpen=true;adapterPanel.setVisible(true,false);syncMainWidgets();setFocused(null);return;}
         modifiersOpen = false;
         modifierPanel.setVisible(false);
         setFocused(null);
@@ -956,6 +1212,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     private void closeEditor() {
         editorOpen = false;
+        inventoryItemDraft = false;
         pendingRequirement = null;
         addingRequirement = false;
         setEditorVisible(false);
@@ -1021,6 +1278,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         groupAddItem.setX(leftPos + (output ? 304 : 238));
         groupAddTag.visible &= !output;
         groupAddTag.active &= !output;
+        candidateNbt.active &= !groupItems().isEmpty();
         groupUp.active &= groupIndex > 0;
         groupDown.active &= groupIndex + 1 < groupItems().size();
         groupUp.setTooltip(Tooltip.create(Component.literal(output ? "上移显示顺序；抽取概率由权重决定" : "上移，提高优先顺序")));
@@ -1054,6 +1312,9 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         pickerSearch.active = visible;
         pickerCancel.visible = visible;
         pickerCancel.active = visible;
+        inventoryPicker.visible=visible&&pickerType==BasicRequirementType.ITEM&&!pickerTags;
+        inventoryPicker.active=inventoryPicker.visible;inventoryPicker.setMessage(Component.literal(pickerInventory?"全部物品":"背包"));
+        inventoryNbt.visible=inventoryPicker.visible&&pickerInventory;inventoryNbt.active=inventoryNbt.visible;
         pickerCancel.setMessage(Component.literal(pickerReplacing ? "返回" : "关闭"));
         if (!visible && getFocused() == pickerSearch) setFocused(null);
         syncMainWidgets();
@@ -1087,6 +1348,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void beginRequirementDraft(String selected) {
+        inventoryItemDraft = false;
         JsonObject current = recipe();
         if (current == null) return;
         JsonObject draft = pickerFluidTick ? FluidTickEditor.create(selected, pickerOutput, 100)
@@ -1106,6 +1368,16 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     private List<ResourceLocation> pickerItems() {
         String query = pickerSearch == null ? "" : pickerSearch.getValue().trim().toLowerCase(Locale.ROOT);
+        if (pickerInventory) {
+            inventoryChoices.clear(); var player=Minecraft.getInstance().player;
+            if(player!=null)for(int slot=0;slot<player.getInventory().getContainerSize();slot++){
+                var stack=player.getInventory().getItem(slot);if(stack.isEmpty() || pickerDurability&&!stack.isDamageableItem())continue;
+                var id=BuiltInRegistries.ITEM.getKey(stack.getItem());
+                if(matchesPicker(query.isEmpty()?new String[0]:query.split("\\s+"),id,stack.getHoverName().getString().toLowerCase(Locale.ROOT),tag->stack.getTags().anyMatch(t->t.location().toString().contains(tag))))inventoryChoices.add(stack.copy());
+            }
+            pickerScroll = clampScroll(pickerScroll, inventoryChoices.size(), PICKER_ROWS);
+            return inventoryChoices.stream().map(stack->BuiltInRegistries.ITEM.getKey(stack.getItem())).toList();
+        }
         if (query.equals(cachedPickerQuery) && pickerType == cachedPickerType && pickerTags == cachedPickerTags
                 && pickerDurability == cachedPickerDurability) return cachedPickerResults;
         pickerScroll = 0;
@@ -1162,23 +1434,41 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     @Override
     protected void containerTick() {
         super.containerTick();
+        if (environmentOpen) environmentPanel.tick();
+        if (nbtOpen) nbtPanel.tick();
+        if(templateDraft!=null)return;
         var result = menu.saves().takeReady();
         if (result != null) {
             saveStatus = result.message();
             saveFailed = !result.success();
             if (result.success()) {
+                if (copyOpen) closeRecipeCopy();
                 if (colorOpen) closeControllerAppearance();
                 if (batchOpen) closeRequirementBatch();
                 if (triggerOpen) closeRequirementTrigger();
+                if (nbtOpen) closeRequirementNbt();
+                if (resourceOpen) closeResourceAmount();
+                if (environmentOpen) closeEnvironment();
+                if (pneumaticOpen) closePneumatic();
                 if (smartOpen) closeSmartInterface();
                 if (selectorOpen) closeSelectorBinding();
                 requirementIndex = savedRequirementIndex;
                 if (closeAfterSave) closeEditor();
                 refreshDocument(menu.snapshot());
+                if(adapterOpen)adapterPanel.refresh(document);
+                if (!copiedRecipeId.isEmpty()) {
+                    machineIndex = indexByName(machines(), copiedMachineId);
+                    recipeIndex = indexByName(recipes(), copiedRecipeId);
+                    if (machineIndex < machineScroll) machineScroll = machineIndex;
+                    if (machineIndex >= machineScroll + visibleRows()) machineScroll = Math.max(0, machineIndex - visibleRows() + 1);
+                    requirementIndex = inputScroll = outputScroll = 0;
+                    copiedRecipeId = ""; copiedMachineId = ""; syncFields(); syncMainWidgets();
+                }
                 ensureVisibleRequirement();
                 if (recipeIndex < recipeScroll) recipeScroll = recipeIndex;
                 if (recipeIndex >= recipeScroll + visibleRows()) recipeScroll = Math.max(0, recipeIndex - visibleRows() + 1);
             } else if (Minecraft.getInstance().player != null) {
+                copiedRecipeId = ""; copiedMachineId = "";
                 Minecraft.getInstance().player.displayClientMessage(Component.literal(result.message()), false);
             }
             syncMainWidgets();
@@ -1187,6 +1477,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             batchPanel.setVisible(batchOpen, menu.saves().pending());
             triggerPanel.setVisible(triggerOpen, menu.saves().pending());
             smartPanel.setVisible(smartOpen, menu.saves().pending());
+        adapterPanel.setVisible(adapterOpen, menu.saves().pending());
+        environmentPanel.setVisible(environmentOpen, menu.saves().pending());
+        pneumaticPanel.setVisible(pneumaticOpen, menu.saves().pending());
+        nbtPanel.setVisible(nbtOpen, menu.saves().pending());
+        resourcePanel.setVisible(resourceOpen, menu.saves().pending());
         }
         controllerAppearance.setVisible(colorOpen, menu.saves().pending());
         String snapshot = menu.snapshot();
@@ -1216,6 +1511,16 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     private void submitMutation(Object mutation) {
         if (menu.saves().pending()) return;
+        if(templateDraft!=null){
+            try{
+                var values=hellfirepvp.modularmachinery.common.network.TemplateRequirementDraft.apply(templateDraft.getAsJsonArray("requirements"),mutation,machine());
+                int selected=addingRequirement?values.size()-1:requirementIndex;
+                templateDraft.add("requirements",hellfirepvp.modularmachinery.common.network.TemplateRequirementDraft.decorate(values));
+                if(nbtOpen)closeRequirementNbt();if(environmentOpen)closeEnvironment();if(resourceOpen)closeResourceAmount();if(pneumaticOpen)closePneumatic();if(smartOpen)closeSmartInterface();if(selectorOpen)closeSelectorBinding();if(batchOpen)closeRequirementBatch();
+                if(editorOpen)closeEditor();pendingRequirement=null;addingRequirement=false;requirementIndex=Math.max(0,Math.min(selected,values.size()-1));saveStatus="已应用到模板草稿；返回后统一保存";saveFailed=false;syncFields();syncMainWidgets();ensureVisibleRequirement();
+            }catch(RuntimeException e){saveStatus=e.getMessage();saveFailed=true;}
+            return;
+        }
         var id = menu.saves().begin();
         closeAfterSave = editorOpen;
         savedRequirementIndex = addingRequirement ? recipeRequirements().size() : requirementIndex;
@@ -1228,6 +1533,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         batchPanel.setVisible(batchOpen, menu.saves().pending());
         triggerPanel.setVisible(triggerOpen, menu.saves().pending());
         smartPanel.setVisible(smartOpen, menu.saves().pending());
+        adapterPanel.setVisible(adapterOpen, menu.saves().pending());
+        environmentPanel.setVisible(environmentOpen, menu.saves().pending());
+        pneumaticPanel.setVisible(pneumaticOpen, menu.saves().pending());
+        nbtPanel.setVisible(nbtOpen, menu.saves().pending());
+        resourcePanel.setVisible(resourceOpen, menu.saves().pending());
         ModularmachineryNetwork.CHANNEL.sendToServer(new PktMachineEditorRequest(menu.containerId, id,
                 EditorSaveState.revision(menu.snapshot()), mutation));
     }
@@ -1310,6 +1620,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     private void syncFields() {
         if (amount == null || chance == null || duration == null) return;
+        syncMainWidgets();
         JsonObject selectedRecipe = recipe();
         recipeDisplayName.setValue(selectedRecipe != null && selectedRecipe.has("displayName")
                 ? MachineNameFormatting.editable(selectedRecipe.get("displayName").getAsString()) : "");
@@ -1405,6 +1716,12 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 throw new IllegalArgumentException("请输入有效数量和 0～1 的概率");
             if ("modularmachinery:item".equals(req.get("type").getAsString()) && count > 64)
                 throw new IllegalArgumentException("普通物品需求数量为 1～64，可通过批量倍率放大");
+            if (hellfirepvp.modularmachinery.common.editor.ItemRequirementEditor.isItem(req)
+                    && (addingRequirement || inventoryItemDraft || req.has("nbt") || req.has("nbt-display"))) {
+                var item=req.deepCopy();item.addProperty("amount",count);item.addProperty("chance",probability);
+                submitMutation(new hellfirepvp.modularmachinery.common.network.PktMachineEditorItem(currentRecipe.get("name").getAsString(),addingRequirement?-1:requirementIndex,item.toString(),
+                        isNewRecipe(currentRecipe)?machine().get("name").getAsString():"",currentRecipe.get("duration").getAsInt(),currentRecipe.has("displayName")?currentRecipe.get("displayName").getAsString():""));return true;
+            }
             if (addingRequirement) {
                 var type = BasicRequirementType.fromKey(req.get("type").getAsString().substring("modularmachinery:".length()));
                 String id = type == BasicRequirementType.ENERGY ? "" : req.get(type.key).getAsString();
@@ -1496,7 +1813,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         JsonObject current = recipe();
         JsonArray all = recipeRequirements();
         if (current == null || isReadOnly(current) || requirementIndex < 0 || requirementIndex >= all.size() || !current.has("name")) return;
-        if (all.size() == 1) {
+        if (all.size() == 1 && templateDraft == null) {
             if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("配方至少需要一个需求，请先添加替代需求，或删除整个配方"), true);
             return;
@@ -1508,9 +1825,14 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (adapterOpen) { adapterPanel.scroll((int)mouseX-leftPos,(int)mouseY-topPos,delta); return true; }
+        if (copyOpen) { copyPanel.scroll(delta); return true; }
         if (menu.saves().pending()) return true;
+        if (environmentOpen) { super.mouseScrolled(mouseX,mouseY,delta); return true; }
+        if (nbtOpen) { super.mouseScrolled(mouseX,mouseY,delta); return true; }
         if (batchOpen || triggerOpen) return true;
         if (recipeOptionsOpen) { recipeOptionsPanel.scroll((int) mouseX - leftPos, (int) mouseY - topPos, delta); return true; }
+        if (resourceOpen || adapterOpen || environmentOpen || pneumaticOpen) return true;
         if (smartOpen) { smartPanel.scroll(delta); return true; }
         if (selectorOpen) { selectorPanel.scroll(delta); return true; }
         if (catalystTooltipsOpen) { catalystTooltipPanel.scroll((int) mouseX - leftPos, (int) mouseY - topPos, delta); return true; }
@@ -1551,6 +1873,8 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if(adapterOpen){if(!menu.saves().pending())super.mouseClicked(mouseX,mouseY,button);return true;}
+        if (copyOpen) { if (!menu.saves().pending()) super.mouseClicked(mouseX, mouseY, button); return true; }
         if (colorOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
         if (menu.saves().pending()) return true;
         if (batchOpen || triggerOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
@@ -1558,6 +1882,10 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (button == 0 && recipeOptionsPanel.click((int) mouseX - leftPos, (int) mouseY - topPos)) return true;
             super.mouseClicked(mouseX, mouseY, button); return true;
         }
+        if (nbtOpen) { super.mouseClicked(mouseX,mouseY,button); return true; }
+        if (resourceOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
+        if (environmentOpen) { super.mouseClicked(mouseX,mouseY,button); return true; }
+        if (pneumaticOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
         if (smartOpen) {
             if (button == 0 && smartPanel.click((int) mouseX - leftPos, (int) mouseY - topPos)) return true;
             super.mouseClicked(mouseX, mouseY, button); return true;
@@ -1606,6 +1934,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         int x = (int) mouseX - leftPos;
         int y = (int) mouseY - topPos;
 
+        if(templateDraft!=null&&!pickerOpen&&!editorOpen&&!typePickerOpen&&x<REQUIREMENT_X){super.mouseClicked(mouseX,mouseY,button);return true;}
         if (pickerOpen) {
             if (x >= PICKER_X + 8 && x < PICKER_X + PICKER_W - 8 && y >= PICKER_Y + PICKER_LIST_Y
                     && y < PICKER_Y + PICKER_LIST_Y + PICKER_ROWS * PICKER_ROW_H) {
@@ -1613,7 +1942,8 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 List<ResourceLocation> items = pickerItems();
                 int index = pickerScroll + row;
                 if (index >= 0 && index < items.size()) {
-                    selectPickerResource((pickerTags ? "tag:" : "") + items.get(index));
+                    if(pickerInventory)selectInventoryStack(inventoryChoices.get(index).copy());
+                    else selectPickerResource((pickerTags ? "tag:" : "") + items.get(index));
                     return true;
                 }
             }
@@ -1721,26 +2051,34 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         if (batchOpen) batchPanel.draw(graphics, saveStatus, saveFailed);
         if (triggerOpen) triggerPanel.draw(graphics, saveStatus, saveFailed);
         if (selectorOpen) selectorPanel.draw(graphics, saveStatus, saveFailed);
+        if (nbtOpen) nbtPanel.draw(graphics, saveStatus, saveFailed);
+        if (resourceOpen) resourcePanel.draw(graphics, saveStatus, saveFailed);
+        if (environmentOpen) environmentPanel.draw(graphics, saveStatus, saveFailed);
+        if (pneumaticOpen) pneumaticPanel.draw(graphics, saveStatus, saveFailed);
         if (smartOpen) smartPanel.draw(graphics, saveStatus, saveFailed);
         if (recipeOptionsOpen) recipeOptionsPanel.draw(graphics);
+        if (adapterOpen) adapterPanel.draw(graphics,saveStatus,saveFailed);
+        if (copyOpen) copyPanel.draw(graphics, saveStatus, saveFailed);
         graphics.pose().popPose();
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || recipeOptionsOpen) return;
+        if (copyOpen || colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || recipeOptionsOpen) return;
+        if(templateDraft!=null){graphics.drawString(font,Component.literal("导入模板 · 追加需求草稿"),8,6,0xFFFFFF,false);graphics.drawString(font,Component.literal("使用右侧 + 添加输入或输出"),12,32,0xDDDDDD,false);graphics.drawString(font,Component.literal("点击需求编辑；× 删除"),12,48,0xDDDDDD,false);graphics.drawString(font,Component.literal("完成后返回模板，保存并重新生成"),12,64,0xD9C98E,false);graphics.drawString(font,Component.literal("不会修改其他源配方或生成配方"),12,80,0xB5C5D5,false);graphics.drawString(font,Component.literal(trim(saveStatus,260)),12,112,saveFailed?0xFF8888:0x9BDEAA,false);drawRequirementRows(graphics);return;}
         graphics.drawString(font, Component.literal("机器"), MACHINE_X, 6, 0xFFFFFF, false);
         graphics.drawString(font, Component.literal("配方"), RECIPE_X, 6, 0xFFFFFF, false);
         graphics.drawString(font, Component.literal("需求"), REQUIREMENT_X, 6, 0xFFFFFF, false);
         drawMachineRows(graphics);
         drawRecipeRows(graphics);
-        graphics.drawString(font, Component.literal("单击选中，双击编辑"), RECIPE_X + 3, 174, 0xFFB8C0C8, false);
+
         if (isReadOnly(recipe()))
             graphics.drawString(font, Component.literal("只读配方（悬停查看原因）"), RECIPE_X + 3, 190, 0xFF8ED6FF, false);
         drawRequirementRows(graphics);
         graphics.drawString(font, Component.literal("名称"), MACHINE_X, 218, 0xFFFFFF, false);
         graphics.drawString(font, Component.literal("颜色 &a  粗体 &l  重置 &r"), 224, 218, 0xFFB8C0C8, false);
-        graphics.drawString(font, Component.literal(trim(saveStatus, 267)), 8, 201, saveFailed ? 0xFFFF7777 : 0xFF8EFF9C, false);
+        graphics.drawString(font, Component.literal(trim(saveStatus, RECIPE_W - 8)), RECIPE_X + 4, 203,
+                saveFailed ? 0xFFFF7777 : 0xFF8EFF9C, false);
     }
 
     private void drawMachineRows(GuiGraphics graphics) {
@@ -1787,7 +2125,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         graphics.drawString(font, Component.literal("输入"), REQUIREMENT_X + 3, INPUT_HEADER_Y, 0xFF8ED6FF, false);
         graphics.drawString(font, Component.literal("输出"), REQUIREMENT_X + 3, OUTPUT_HEADER_Y, 0xFF8EFF9C, false);
         String ticks = recipe() != null && recipe().has("duration") ? recipe().get("duration").getAsString() : "?";
-        graphics.drawString(font, Component.literal("→ " + ticks + "t"), REQUIREMENT_X + 54, 104, 0xFFFFD36A, false);
+        graphics.drawString(font, Component.literal(templateDraft!=null?"追加需求":"→ " + ticks + "t"), REQUIREMENT_X + 54, 104, 0xFFFFD36A, false);
         drawRequirementSide(graphics, sideIndices(false), INPUT_TOP, inputScroll);
         drawRequirementSide(graphics, sideIndices(true), OUTPUT_TOP, outputScroll);
     }
@@ -1822,7 +2160,24 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (FluidTickEditor.isRate(req)) value = req.get("amount").getAsString() + " mB/t";
             if (SmartInterfaceEditor.isSmart(req)) value = "[" + req.get("min").getAsString() + ", "
                     + (req.has("max") ? req.get("max").getAsString() : req.get("min").getAsString()) + "]";
+            if (PneumaticEditor.isPneumatic(req)) {
+                try {
+                    var clean = PneumaticEditor.validate(req);
+                    value = PneumaticEditor.isTemperature(clean) ? clean.get("min").getAsString() + "～" + clean.get("max").getAsString() + " K"
+                            : clean.get("air").getAsString() + (PneumaticEditor.perTick(clean) ? " mL/t" : " mL")
+                            + ("input".equals(clean.get("io-type").getAsString()) ? " · " + clean.get("pressure").getAsString() + " bar" : "");
+                } catch (RuntimeException invalid) { value = "高级定义，请检查源文件"; }
+            }
+            if (ResourceAmountEditor.isResource(req)) {
+                try {
+                    var clean = ResourceAmountEditor.validate(req);
+                    value = ResourceAmountEditor.amountText(clean);
+                } catch (RuntimeException invalid) { value = "高级定义，请检查源文件"; }
+            }
             String label = ItemTagSelection.isTag(req) ? "#" + key.substring(4) : key;
+            if (EnvironmentEditor.isEnvironment(req)) { label = "环境 · " + EnvironmentEditor.label(req); try { value = EnvironmentEditor.summary(req); } catch (RuntimeException invalid) { value = "条件无效，请检查源文件"; } }
+            if (ResourceAmountEditor.isResource(req)) label = ResourceAmountEditor.label(req);
+            if (PneumaticEditor.isPneumatic(req)) label = PneumaticEditor.isTemperature(req) ? "持续温度条件" : "压缩空气";
             if (FuelEditor.isFuel(req)) label = "熔炉燃料（任意）";
             if (SmartInterfaceEditor.isSmart(req)) label = "智能接口：" + req.get("interface").getAsString();
             ResourceLocation id = ResourceLocation.tryParse(key);
@@ -1852,7 +2207,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         graphics.fill(PICKER_X, PICKER_Y, PICKER_X + PICKER_W, PICKER_Y + PICKER_H, 0xFF252A31);
         graphics.fill(PICKER_X + 8, PICKER_Y + PICKER_LIST_Y - 2, PICKER_X + PICKER_W - 8,
                 PICKER_Y + PICKER_H - 10, 0xFF30363D);
-        graphics.drawString(font, Component.literal((pickerReplacing ? "更换" : "选择") + (pickerOutput ? "输出" : "输入") + (pickerTags ? "物品标签" : pickerFluidTick ? "流体/刻" : pickerType.label)),
+        graphics.drawString(font, Component.literal((pickerReplacing ? "更换" : "选择") + (pickerOutput ? "输出" : "输入") + (pickerInventory ? "背包物品" : pickerTags ? "物品标签" : pickerFluidTick ? "流体/刻" : pickerType.label)),
                 PICKER_X + 10, PICKER_Y + 8, 0xFFFFFF, false);
         graphics.drawString(font, Component.literal(pickerTags ? "物品名 / 标签ID   @标签命名空间   #标签" : "名称 / ID   @模组ID   #标签"), PICKER_X + 8, PICKER_Y + 49, 0xFFB8C0C8, false);
         List<ResourceLocation> items = pickerItems();
@@ -1868,14 +2223,14 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 drawFluidIcon(graphics, id, PICKER_X + 14, y + 2);
                 name = new net.minecraftforge.fluids.FluidStack(BuiltInRegistries.FLUID.get(id), 1000).getDisplayName();
             } else {
-                ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(id));
+                ItemStack stack = pickerInventory ? inventoryChoices.get(pickerScroll+row) : new ItemStack(BuiltInRegistries.ITEM.get(id));
                 graphics.renderItem(stack, PICKER_X + 14, y + 2);
                 name = stack.getHoverName();
             }
             graphics.drawString(font, Component.literal(trim(name.getString(), PICKER_W - 48)), PICKER_X + 38, y + 1, 0xFFFFFF, false);
             String detail = pickerTags ? (pickerDurability
                     ? ItemTagSelection.members(id).stream().filter(DurabilityEditor::damageable).count() + " 种可扣耐久物品 · 图标仅示例"
-                    : ItemTagSelection.members(id).size() + " 种物品 · 接受任意一种（图标仅示例）") : id.toString();
+                    : ItemTagSelection.members(id).size() + " 种物品 · 接受任意一种（图标仅示例）") : pickerInventory ? id + " · x" + inventoryChoices.get(pickerScroll+row).getCount() + (inventoryChoices.get(pickerScroll+row).hasTag()?" · NBT":"") : id.toString();
             graphics.drawString(font, Component.literal(trim(detail, PICKER_W - 48)), PICKER_X + 38, y + 12, 0xFFB8C0C8, false);
         }
         if (items.isEmpty()) graphics.drawString(font, Component.literal("没有匹配结果"), PICKER_X + 14, PICKER_Y + PICKER_LIST_Y + 8, 0xFFB8C0C8, false);
@@ -2042,14 +2397,20 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             return true;
         }
         if (colorOpen && keyCode == 256) { closeControllerAppearance(); return true; }
+        if(adapterOpen&&keyCode==256){closeAdapterTemplates();return true;}
+        if (copyOpen && keyCode == 256) { closeRecipeCopy(); return true; }
         if (namePreviewOpen && keyCode == 256) {
             closeNamePreview();
             return true;
         }
         if (keyCode == 256) {
+            if (nbtOpen) { closeRequirementNbt(); return true; }
             if (triggerOpen) { closeRequirementTrigger(); return true; }
             if (batchOpen) { closeRequirementBatch(); return true; }
             if (recipeOptionsOpen) { if (!recipeOptionsPanel.escape()) closeRecipeOptions(); return true; }
+            if (resourceOpen) { closeResourceAmount(); return true; }
+            if (environmentOpen) { closeEnvironment(); return true; }
+            if (pneumaticOpen) { closePneumatic(); return true; }
             if (smartOpen) { closeSmartInterface(); return true; }
             if (selectorOpen) { closeSelectorBinding(); return true; }
             if (catalystTooltipsOpen) { if (!catalystTooltipPanel.escape()) closeCatalystTooltips(); return true; }
@@ -2057,6 +2418,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (typePickerOpen) { closeTypePicker(); return true; }
             if (pickerOpen) { closePicker(); return true; }
             if (editorOpen) { closeEditor(); return true; }
+        }
+        // Multiline editing must consume inventory/hotbar shortcuts while typing NBT.
+        if ((nbtOpen || adapterOpen || environmentOpen) && keyCode != 258) {
+            if (getFocused() != null) getFocused().keyPressed(keyCode, scanCode, modifiers);
+            return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
@@ -2075,6 +2441,13 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private static ItemStack stackFor(JsonObject req) {
+        if (EnvironmentEditor.isEnvironment(req)) return new ItemStack(hellfirepvp.modularmachinery.common.registry.RegistryBlocks.environmentDetector.get());
+        if (ResourceAmountEditor.isResource(req)) {
+            var id = ResourceLocation.tryParse(ResourceAmountEditor.isMana(req) ? "botania:mana_pearl" : ResourceAmountEditor.isEmber(req) ? "embers:ember_shard" : ResourceAmountEditor.isLife(req) ? "bloodmagic:weakbloodorb" : ResourceAmountEditor.isWill(req) ? "bloodmagic:basemonstersoul" : "naturesaura:aura_bottle");
+            return new ItemStack(BuiltInRegistries.ITEM.containsKey(id) ? BuiltInRegistries.ITEM.get(id) : net.minecraft.world.item.Items.BLAZE_POWDER);
+        }
+        if (PneumaticEditor.isTemperature(req)) return new ItemStack(net.minecraft.world.item.Items.BLAZE_POWDER);
+        if (PneumaticEditor.isAir(req)) return new ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE);
         if (SmartInterfaceEditor.isSmart(req)) return new ItemStack(net.minecraft.world.item.Items.COMPARATOR);
         if (FuelEditor.isFuel(req)) return new ItemStack(net.minecraft.world.item.Items.COAL);
         if (IngredientGroupEditor.isGroup(req) && req.has("items") && !req.getAsJsonArray("items").isEmpty())
@@ -2098,7 +2471,14 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
+        if(adapterOpen){adapterPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos);return;}
+        if (environmentOpen) { environmentPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos); return; }
+        if (copyOpen) return;
         if (recipeOptionsOpen || batchOpen || triggerOpen) return;
+        if (nbtOpen) { nbtPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos); return; }
+        if (resourceOpen) { resourcePanel.tooltip(graphics, mouseX, mouseY, mouseX - leftPos, mouseY - topPos); return; }
+        if (environmentOpen) { environmentPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos); return; }
+        if (pneumaticOpen) { pneumaticPanel.tooltip(graphics, mouseX, mouseY, mouseX - leftPos, mouseY - topPos); return; }
         if (smartOpen) {
             smartPanel.tooltip(graphics, mouseX, mouseY, mouseX - leftPos, mouseY - topPos);
             return;
@@ -2107,16 +2487,24 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             selectorPanel.tooltip(graphics, mouseX, mouseY, mouseX - leftPos, mouseY - topPos);
             return;
         }
+        if(pickerOpen&&pickerInventory){int x=mouseX-leftPos,y=mouseY-topPos;if(x>=PICKER_X+8&&x<PICKER_X+PICKER_W-8&&y>=PICKER_Y+PICKER_LIST_Y&&y<PICKER_Y+PICKER_LIST_Y+PICKER_ROWS*PICKER_ROW_H){pickerItems();int n=pickerScroll+(y-PICKER_Y-PICKER_LIST_Y)/PICKER_ROW_H;if(n<inventoryChoices.size())graphics.renderTooltip(font,inventoryChoices.get(n),mouseX,mouseY);}return;}
         renderTagTooltip(graphics, mouseX, mouseY);
         renderGroupTooltip(graphics, mouseX, mouseY);
         renderDurabilityTooltip(graphics, mouseX, mouseY);
         renderFuelTooltip(graphics, mouseX, mouseY);
         renderFluidTickTooltip(graphics, mouseX, mouseY);
         renderSmartTooltip(graphics, mouseX, mouseY);
+        renderPneumaticTooltip(graphics, mouseX, mouseY);
+        renderResourceTooltip(graphics, mouseX, mouseY);
         renderSelectorTooltip(graphics, mouseX, mouseY);
         if (!colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen) {
             int x = mouseX - leftPos;
             int y = mouseY - topPos;
+            if (templateDraft == null && !saveStatus.isBlank() && x >= RECIPE_X && x < RECIPE_X + RECIPE_W
+                    && y >= 202 && y < 215) {
+                graphics.renderTooltip(font, font.split(Component.literal(saveStatus), 280), mouseX, mouseY);
+                return;
+            }
             JsonObject hovered = null;
             if (x >= RECIPE_X && x < RECIPE_X + RECIPE_W) {
                 if (y >= LIST_TOP && y < LIST_TOP + visibleRows() * ROW_HEIGHT) {
@@ -2179,7 +2567,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void renderFluidTickTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 28) return;
         boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
@@ -2196,8 +2584,63 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
+    private void renderPneumaticTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (copyOpen || colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen
+                || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || recipeOptionsOpen) return;
+        int x = mouseX - leftPos, y = mouseY - topPos;
+        if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 18) return;
+        boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
+        if (y < top || y >= top + SIDE_ROWS * ROW_HEIGHT) return;
+        var indices = sideIndices(output); int row = (output ? outputScroll : inputScroll) + (y - top) / ROW_HEIGHT;
+        if (row >= indices.size()) return;
+        var req = recipeRequirements().get(indices.get(row)).getAsJsonObject();
+        if (!PneumaticEditor.isPneumatic(req)) return;
+        var lines = new ArrayList<Component>();
+        try {
+            var clean = PneumaticEditor.validate(req);
+            if (PneumaticEditor.isTemperature(clean)) {
+                lines.add(Component.literal("持续温度：" + clean.get("min").getAsString() + "～" + clean.get("max").getAsString() + " K（两端包含）"));
+                lines.add(Component.literal("开工和每个加工 tick 检查；不消耗温度，不随批量缩放"));
+            } else {
+                lines.add(Component.literal("压缩空气：" + clean.get("air").getAsString() + (PneumaticEditor.perTick(clean) ? " mL/t" : " mL")));
+                if (!output) lines.add(Component.literal("压力：" + (clean.get("pressure").getAsFloat() < 0 ? "≤ " : "≥ ") + clean.get("pressure").getAsString() + " bar"));
+                lines.add(Component.literal("批量仅放大空气用量；输入为 0 时仅检查压力"));
+            }
+            lines.add(Component.literal(isReadOnly(recipe()) ? "此配方只读，请修改其来源" : "单击修改；右键设置接口分组"));
+        } catch (RuntimeException invalid) { lines.add(Component.literal("请检查源文件：" + invalid.getMessage())); }
+        graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
+    }
+
+    private void renderResourceTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (copyOpen || colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen
+                || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || recipeOptionsOpen) return;
+        int x = mouseX - leftPos, y = mouseY - topPos;
+        if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 18) return;
+        boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
+        if (y < top || y >= top + SIDE_ROWS * ROW_HEIGHT) return;
+        var indices = sideIndices(output); int row = (output ? outputScroll : inputScroll) + (y - top) / ROW_HEIGHT;
+        if (row >= indices.size()) return;
+        var req = recipeRequirements().get(indices.get(row)).getAsJsonObject();
+        if (!ResourceAmountEditor.isResource(req)) return;
+        var lines = new ArrayList<Component>();
+        try {
+            var clean = ResourceAmountEditor.validate(req);
+            lines.add(Component.literal(ResourceAmountEditor.label(clean) + "：" + ResourceAmountEditor.amountText(clean)));
+            if (ResourceAmountEditor.isWill(clean)) {
+                lines.add(Component.literal("意志类型：" + clean.get("will-type").getAsString() + "；整批只算一份"));
+                lines.add(Component.literal(output ? "产出后至多 " + clean.get("max").getAsString() : "消耗后至少保留 " + clean.get("min").getAsString()));
+            } else if (ResourceAmountEditor.isAura(clean)) {
+                lines.add(Component.literal("灵气类型：" + clean.get("aura-type").getAsString()));
+                lines.add(Component.literal(output ? "产出后至多 " + clean.get("max-aura").getAsString() : "消耗后至少保留 " + clean.get("min-aura").getAsString()));
+                lines.add(Component.literal("用量受批量策略控制；阈值不放大"));
+            } else lines.add(Component.literal("单次输入开工扣除／输出完工添加；rate 按加工 tick；用量受批量策略控制"));
+            lines.add(Component.literal(isReadOnly(recipe()) ? "此配方只读，请修改其来源" : "单击修改；右键设置接口分组"));
+        } catch (RuntimeException invalid) { lines.add(Component.literal("请检查源文件：" + invalid.getMessage())); }
+        graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
+    }
+
     private void renderSmartTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 28 || y < INPUT_TOP || y >= INPUT_TOP + SIDE_ROWS * ROW_HEIGHT) return;
         var indices = sideIndices(false); int index = inputScroll + (y - INPUT_TOP) / ROW_HEIGHT;

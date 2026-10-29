@@ -86,7 +86,7 @@ public class MenuFactoryController extends AbstractContainerMenu {
     private static final int BLUEPRINT_SLOT_Y = 8;
 
     // ------------------------------------------------------------------
-    // The run list, and the bar each run draws (PLAN 693)
+     
     // ------------------------------------------------------------------
     //
     // THESE ARE HERE RATHER THAN ON THE SCREEN, for the reason the panel size and the player rows above are:
@@ -146,70 +146,70 @@ public class MenuFactoryController extends AbstractContainerMenu {
         return (int) (RECIPE_ELEMENT_WIDTH * progress);
     }
 
-    /**
-     * The text a run's progress line prints — <b>upstream's PERCENTAGE, and the only place on the factory
-     * screen a progress number becomes text</b>.
-     *
-     * <p>Upstream's own lines ({@code GuiFactoryController.drawRecipeStatus}, its U179-U183), and this is the
-     * whole of it:</p>
-     *
-     * <pre>
-     *   if (activeRecipe != null &amp;&amp; activeRecipe.getTotalTick() &gt; 0) {
-     *       int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();
-     *       fr.drawString(I18n.format("gui.controller.status.crafting.progress", progress + "%"), offsetX, offsetY, 0x222222);
-     *   }
-     * </pre>
-     *
-     * <p>An INTEGER division, then upstream's own {@code + "%"} concatenation. <b>Upstream's GUI has no
-     * {@code tick / totalTick} form anywhere</b>: the key's single argument is a percentage, so a pair of raw
-     * tick counts handed to the same key is a wrong VALUE even though it is a valid string for the
-     * placeholder — which is exactly what the client saw (its status line read {@code 进度：300 / 60 t} while
-     * every row beside it read {@code 进度：100%}). The percentage is formed in ONE place —
-     * {@link #progressPercent} — and the tick pair has no path into the key at all.</p>
-     *
-     * <p><b>Why it saturates at 100%.</b> Upstream's percentage cannot exceed 100: {@code ActiveMachineRecipe
-     * .tick} returns before its own {@code this.tick++} once {@code isCompleted()} (U83-U85, {@code tick >=
-     * totalTick}). This port reaches the same bound from the same side — {@code FactoryRecipeThread
-     * .advanceRecipe} clamps at its own duration (PLAN 708) — and the {@code min} here repeats that bound at the
-     * display, so a counter that ever ran away again would draw {@code 100%} rather than {@code 160%}. A value
-     * upstream cannot print is not a value a screen should be able to print either.</p>
-     *
-     * <p>Upstream's line is guarded by {@code activeRecipe != null &amp;&amp; getTotalTick() > 0}; the
-     * equivalent guard stays at the call site, and this method answers {@code "0%"} for a zero duration rather
-     * than dividing by it.</p>
-     *
-     * @param ticks    elapsed ticks, from the run or from the menu's own data slot
-     * @param duration that run's duration in ticks
-     * @return e.g. {@code "0%"}, {@code "50%"}, {@code "100%"}; {@code "0%"} when there is no duration
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static String progressText(int ticks, int duration) {
         return progressPercent(ticks, duration) + "%";
     }
 
-    /**
-     * The same percentage as an <b>integer in {@code [0, 100]}</b> — the form the OTHER consumer of this
-     * arithmetic needs, and the reason {@link #progressText} is now a one-line delegate rather than a second
-     * copy of the expression.
-     *
-     * <p><b>WHY A SECOND ENTRY POINT EXISTS AT ALL (PLAN 711, rule B).</b> A screen wants the TEXT
-     * ({@code "50%"}), and TheOneProbe's overlay wants the NUMBER: TOP's {@code IProbeInfo.progress(int, int,
-     * IProgressStyle)} is a value against a maximum, so upstream's own TOP provider hands it exactly
-     * {@code ((int) progress, 100)} — {@code MMInfoProvider} U205 for a factory thread and U296 for a single
-     * craft, over the {@code (tick * 100) / totalTick} it formed at U189/U274. Two callers, two types, ONE
-     * arithmetic: this method is that arithmetic and {@link #progressText} adds upstream's own {@code "%"}
-     * (U200/U291). A second expression would be the very thing this class was created to prevent, so there is
-     * exactly one {@code (ticks * 100) / duration} in the port and it is the line below.</p>
-     *
-     * <p>The saturating {@code min} is upstream's bound, not a decoration: {@code ActiveMachineRecipe.tick}
-     * returns before its own {@code this.tick++} once completed (U83-U85), so upstream can never compute a
-     * percentage above 100 — see {@link #progressText} for the full argument and PLAN 708 for the clamp that
-     * reaches the same bound on this port's side.</p>
-     *
-     * @param ticks    elapsed ticks, from a run or from the menu's own data slot
-     * @param duration that run's duration in ticks
-     * @return {@code 0} for a zero or negative duration rather than a division by it, otherwise upstream's
-     *         integer percentage, saturated at {@code 100}
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static int progressPercent(int ticks, int duration) {
         if (duration <= 0) {
             return 0;
@@ -272,6 +272,7 @@ public class MenuFactoryController extends AbstractContainerMenu {
 
     private final BlockPos controllerPos;
     private final ContainerData data;
+    private final ContainerData performanceData;
     private final IItemHandler blueprintInventory;
 
     /** Client-side constructor, invoked from the menu type's factory. */
@@ -282,11 +283,18 @@ public class MenuFactoryController extends AbstractContainerMenu {
 
     public MenuFactoryController(int windowId, Inventory playerInventory, BlockPos controllerPos,
                                  ContainerData data, IItemHandler blueprintInventory) {
+        this(windowId, playerInventory, controllerPos, data, blueprintInventory, ControllerPerformanceData.empty());
+    }
+
+    private MenuFactoryController(int windowId, Inventory playerInventory, BlockPos controllerPos,
+                                  ContainerData data, IItemHandler blueprintInventory, ContainerData performanceData) {
         super(RegistryMenus.FACTORY_CONTROLLER.get(), windowId);
         this.controllerPos = controllerPos;
         this.data = data;
         this.blueprintInventory = blueprintInventory;
+        this.performanceData = performanceData;
         addDataSlots(data);
+        addDataSlots(new IntContainerData(performanceData));
 
         // Same shape on both sides, so slot indices line up during synchronisation.
         addSlot(new SlotItemHandler(blueprintInventory, 0, BLUEPRINT_SLOT_X, BLUEPRINT_SLOT_Y));
@@ -306,15 +314,26 @@ public class MenuFactoryController extends AbstractContainerMenu {
         // Reuses the machine controller's data layout: a factory controller reports the same progress and
         // state, so a second container-data shape would be two things to keep in step for no gain.
         return new MenuFactoryController(windowId, playerInventory, controller.getBlockPos(),
-                MenuMachineController.dataFor(controller), controller.getBlueprintInventory());
+                MenuMachineController.dataFor(controller), controller.getBlueprintInventory(),
+                ControllerPerformanceData.forController(controller));
     }
+
+    public long getAveragePerformanceMicros() { return ControllerPerformanceData.tickMicros(performanceData); }
+    public long getAverageRecipeSearchMicros() { return ControllerPerformanceData.searchMicros(performanceData); }
+    public int getPerformanceSamples() { return performanceData.get(4); }
+    public int getRecipeSearchSamples() { return performanceData.get(5); }
+    public String performanceTickText() { return ControllerPerformanceData.tickText(performanceData); }
+    public String performanceSearchText() { return ControllerPerformanceData.searchText(performanceData); }
+
+    /** The port's world/recipe work currently executes on the server thread; no selectable async mode. */
+    public String workModeTranslationKey() { return "gui.factory.work_mode.sync"; }
 
     public BlockPos getControllerPos() {
         return controllerPos;
     }
 
     // ------------------------------------------------------------------
-    // The status the screen draws (PLAN 664)
+     
     // ------------------------------------------------------------------
     //
     // THE SAME SIX INDICES AND THE SAME NAMES MenuMachineController EXPOSES, over the same ContainerData
@@ -325,7 +344,7 @@ public class MenuFactoryController extends AbstractContainerMenu {
     // activeRecipes[0]).
     //
     // WITHOUT THEM THE SCREEN HAD NOTHING TO DRAW WITH: ScreenFactoryController shipped as a background blit
-    // and nothing else, so the panel's status area stayed black and the run list stayed empty (PLAN 664).
+     
 
     /** @return ticks elapsed on the first running run, as the menu's data slot reports them */
     public int getProgress() {

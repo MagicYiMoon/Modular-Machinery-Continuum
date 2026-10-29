@@ -83,18 +83,18 @@ public final class StructureMatcher {
         return match(level, controllerPos, facing, pattern, variables, resolver, java.util.List.of());
     }
 
-    /**
-     * As above, but ALSO accepting the blocks a machine's modifier replacements name at their positions.
-     *
-     * <p>This is upstream's fourth parameter to {@code BlockArray.matches} -- a
-     * {@code Map<BlockPos, List<BlockInformation>>} -- which {@code DynamicMachine.getModifiersAsMatchingReplacements()}
-     * produces (PLAN section 239). The alloy furnace declares {@code blockcasing@2} at (0,1,0) in its PARTS and
-     * {@code blockcasing@1} at the same position in its MODIFIERS: the player is meant to be able to form the
-     * machine with EITHER, and the {@code @1} one is what activates the vent bonus.
-     *
-     * <p>Without this the machine cannot form with the vent present, so the bonus can never be observed -- which
-     * is exactly what section 238 measured and section 239 explained.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     public Result match(Level level, BlockPos controllerPos, Direction facing, MachinePattern pattern,
                         MachineVariables variables, BlockStateResolver resolver,
                         java.util.List<hellfirepvp.modularmachinery.common.modifier.ModifierReplacement> replacements) {
@@ -116,7 +116,7 @@ public final class StructureMatcher {
             //    the bound elements may satisfy it — that is how one definition accepts every energy
             //    hatch tier. A bare block id accepts any state of that block; explicit metadata pins
             //    one variant. See BlockStateResolver. 1b (a modifier replacement at this position) is
-            //    the second half of the same rule and lives in the same method since PLAN 741, so the
+             
             //    in-world preview asks the identical question.
             List<BlockState> accepted = acceptedStates(part, variables, resolver, replacements);
 
@@ -170,27 +170,27 @@ public final class StructureMatcher {
         return Result.success(matched);
     }
 
-    /**
-     * The states that satisfy ONE part, in the pattern's own order.
-     *
-     * <p><b>THIS IS THE MATCHER'S PER-CELL RULE, EXTRACTED SO THE PREVIEW CAN ASK THE SAME QUESTION
-     * (PLAN 741).</b> {@link #match} resolves a part in two steps -- the elements through the variable
-     * table and the resolver, then the machine's modifier replacements at that exact offset as
-     * ALTERNATIVES (section 239) -- and the in-world preview must reach the <b>same</b> verdict per
-     * cell, because a preview that disagrees with the matcher tells the player a structure is wrong
-     * when the controller will happily form it. A second implementation of these two steps is exactly
-     * the defect class this port keeps meeting (#629), so the preview calls this method and
-     * {@code match} calls it too: one rule, two readers.
-     *
-     * <p><b>NOT A "SECOND MATCHER".</b> Nothing about the comparison lives here -- the caller compares
-     * with {@link #matchesAny}, which is still the only comparison in the mod's structure path.
-     *
-     * @param part         the declared part
-     * @param variables    the loader's variable table
-     * @param resolver     the loader's element resolver
-     * @param replacements the machine's modifier replacements, or an empty list
-     * @return every accepted state, or an empty list when the part cannot be resolved at all
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static List<BlockState> acceptedStates(MachinePattern.Part part, MachineVariables variables,
                                                   BlockStateResolver resolver,
                                                   List<hellfirepvp.modularmachinery.common.modifier.ModifierReplacement>
@@ -292,7 +292,7 @@ public final class StructureMatcher {
      * that produces a preview which does not line up with the machine it previews.
      */
     public static BlockPos toWorldOffset(BlockPos controllerPos, Direction facing, int x, int y, int z) {
-        // UPSTREAM'S ROTATION, EXACTLY (PLAN section 309).
+         
         //
         // Upstream (MiscUtils:73-75):
         //

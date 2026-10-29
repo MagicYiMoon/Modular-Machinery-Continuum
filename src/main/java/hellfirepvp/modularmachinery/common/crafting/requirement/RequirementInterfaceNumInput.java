@@ -22,81 +22,81 @@ import hellfirepvp.modularmachinery.common.tiles.TileSmartInterface;
 import hellfirepvp.modularmachinery.common.util.SmartInterfaceType;
 import net.minecraft.network.chat.Component;
 
-/**
- * Requires a smart interface to be publishing a NUMBER within a range.
- *
- * <p>Upstream {@code RequirementInterfaceNumInput.java}, 112 lines, read in full. This is the consumer end of
- * the smart interface channel (PLAN 663, B4) and it is the reason the interface needed a provider, a
- * declared-type list and a publish path at all: without a reader the whole channel is data nobody looks at.</p>
- *
- * <h2>What it READS, and what it does when the interface is absent or the type is wrong</h2>
- *
- * <p>Upstream's {@code canStartCrafting} (U75-U90) is short and every branch of it is kept:</p>
- *
- * <pre>
- * provider.getMachineData(type.getType())   U77  -- by the DECLARED TYPE's name
- * if (data == null)                          U78  -- interface absent, or publishing another type
- *         CraftCheck.failure("component.missing.modularmachinery.interface.number")
- * float value = data.getValue();             U81
- * if (value &gt;= minValue &amp;&amp; value &lt;= maxValue)  U82  -- INCLUSIVE both ends
- *         CraftCheck.success()
- * otherwise                                  U86-U89
- *         the declared type's notEqualMessage, or "craftcheck.failure.interface.number.notequal"
- * </pre>
- *
- * <p><b>SO THE ABSENT CASE AND THE WRONG-TYPE CASE ARE THE SAME CASE, and that is upstream's design rather
- * than an omission:</b> the lookup is by name, and a machine that does not declare the name never publishes
- * it (the binding walk is gated on the machine's own declared list), so "no datum" is exactly "no interface
- * is publishing this". Upstream additionally rejects the requirement EARLIER when the machine does not
- * declare the type at all — {@code RecipePrimer.addSmartInterfaceDataInput} U273-U277 logs
- * {@code "SmartInterfaceType <x> Not Found!"} and appends nothing. This port reaches the same place from the
- * other side: the JSON type factory cannot see the recipe's machine (see below), so an undeclared name is
- * simply never published, and the requirement reports the missing-interface message for ever. Both messages
- * are the upstream lang strings, read from the mod's own lang files rather than retyped.</p>
- *
- * <h2>RULE A0 — THREE DEVIATIONS, EACH FORCED BY A SIGNATURE THAT DOES NOT EXIST HERE</h2>
- *
- * <p><b>1. THE DESCRIPTOR IS NOT RESOLVED AT CONSTRUCTION.</b> Upstream U28-U33 takes the machine name and
- * resolves the {@code SmartInterfaceType} out of {@code MachineRegistry} in the constructor. This port's
- * extension point is {@code RequirementType#createRequirement(IOType, JsonObject)} — the requirement's own
- * JSON and nothing else, with no machine name and no recipe path — so the descriptor is resolved where a
- * machine IS available: {@link #resolveType(DynamicMachine)}, called from
- * {@link #describeFailure(MachineContext)} through {@link MachineContext#getMachine()} and from the JEI
- * tooltip, which receives the recipe and therefore its machine's name. What this costs: a typo in the type
- * name is caught when the recipe runs rather than when the file loads. What it does not cost: any behaviour
- * at runtime, because an undeclared name could never be published in either version.</p>
- *
- * <p><b>2. THE FAILURE MESSAGE TRAVELS ON THE PORT'S OWN CHANNEL INSTEAD OF {@code CraftCheck}.</b>
- * {@code CraftCheck} does not exist here (PLAN 521 measured its absence, and the port's substitute is
- * {@code RecipeCraftingContext.describeBlockers}), and the port's {@code Requirement} contract is boolean —
- * a requirement cannot return a message from {@code canStart}. So this class implements
- * {@code Requirement#describeFailure(MachineContext)}, which the blocker builder consults before falling back
- * to {@code describe()}. Upstream's two messages are carried VERBATIM as the payload, followed by the
- * observed value and the range — a diagnostic suffix this port adds on purpose, because
- * {@code describeBlockers} is what a player reads when a machine refuses to start and "Different values for
- * Smart Data Interface inputs!" alone does not say which value.</p>
- *
- * <p><b>3. THE IO DIRECTION IS ALWAYS INPUT, AND A FILE THAT SAYS OTHERWISE IS REJECTED RATHER THAN
- * OBEYED.</b> Upstream's three constructors all pass {@code IOType.INPUT} (U29/U36/U43); there is no output
- * form of this requirement, because reading a published value is not producing anything. The JSON still has
- * to carry {@code io-type} — this port's loader requires it for every requirement (PLAN 311) — so the type
- * factory refuses a non-input one with a message instead of building a requirement whose direction the engine
- * would then treat as a product.</p>
- *
- * <h2>FACTS ONLY THE UPSTREAM BODIES REVEALED, KEPT BECAUSE THEY ARE BEHAVIOUR</h2>
- *
- * <ul>
- *   <li><b>IT IS IMMUNE TO RECIPE MODIFIERS.</b> {@code deepCopyModified(List<RecipeModifier>)} (U98-U100)
- *       ignores its argument and returns {@code deepCopy()}. A recipe modifier targeting this requirement
- *       changes nothing upstream, so {@link #scaled} keeps the interface default — returning {@code this} —
- *       and no modifier can widen the range a pack declared.</li>
- *   <li><b>IT HAS NO JEI COMPONENT.</b> {@code provideJEIComponent()} returns {@code null} (U108-U111), so
- *       upstream's JEI presence is entirely the tooltip produced by {@code TooltipInterfaceNumberInput}. The
- *       port has the same split: no slot is added for this requirement, only text lines.</li>
- *   <li><b>THE RANGE IS INCLUSIVE AT BOTH ENDS</b> (U82), which is why the boundary values are asserted in
- *       the self-test rather than assumed.</li>
- * </ul>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class RequirementInterfaceNumInput extends hellfirepvp.modularmachinery.common.crafting.SelectorRequirement implements Requirement {
 
     /** Upstream's registry key, read from {@code RequirementTypesMM.KEY_INTERFACE_NUMBER_INPUT}. */
@@ -161,16 +161,16 @@ public final class RequirementInterfaceNumInput extends hellfirepvp.modularmachi
         return IOType.INPUT;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The read, in upstream's order: ask each of the machine's interfaces for a datum published under this
-     * requirement's type name; the FIRST one found is the subject (upstream receives exactly one provider per
-     * requirement, chosen by {@code isValidComponent} U61-U71 which asks the same question). No datum anywhere
-     * means the requirement is not satisfied, which is upstream's {@code data == null} branch.</p>
-     *
-     * <p>Once a datum is found the comparison is upstream U82 verbatim: inclusive at both ends.</p>
-     */
+    
+
+
+
+
+
+
+
+
+ 
     @Override
     public boolean canStart(MachineContext context) {
         TileSmartInterface.Data data = findData(context);

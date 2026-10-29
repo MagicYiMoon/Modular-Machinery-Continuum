@@ -5,7 +5,6 @@ package hellfirepvp.modularmachinery.integration.crafttweaker;
 
 import com.blamejared.crafttweaker.api.annotation.ZenRegister;
 import hellfirepvp.modularmachinery.common.machine.DynamicMachine;
-import hellfirepvp.modularmachinery.common.machine.MachineReloadListener;
 import hellfirepvp.modularmachinery.common.modifier.MultiBlockModifierReplacement;
 import hellfirepvp.modularmachinery.common.modifier.RecipeModifier;
 import hellfirepvp.modularmachinery.common.machine.IOType;
@@ -97,10 +96,7 @@ public final class MultiBlockModifierBuilder {
     /** Builds and attaches this condition to the live machine definition loaded by CraftTweaker. */
     @ZenCodeType.Method
     public boolean addToMachine(String machineName) {
-        DynamicMachine machine = MachineReloadListener.getLoader().findByName(machineName);
-        if (machine == null) {
-            throw new IllegalArgumentException("unknown Modular Machinery machine: " + machineName);
-        }
+        DynamicMachine machine = MachineModifierFacade.machine(machineName);
         machine.addMultiBlockModifierReplacement(build());
         return true;
     }

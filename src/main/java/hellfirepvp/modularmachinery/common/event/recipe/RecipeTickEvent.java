@@ -18,35 +18,10 @@ import hellfirepvp.modularmachinery.common.event.machine.Phase;
 import hellfirepvp.modularmachinery.common.tiles.TileController;
 
 /**
- * Fired around each tick of a running recipe (upstream RecipeTickEvent, 83 lines).
- *
- * <p><b>THIS IS THE CLASS THAT WAS HELD BACK LONGEST, AND THE REASON IS WORTH KEEPING (PLAN 505.2, 542).</b> Its
- * upstream postEvent override IS its behaviour: preventProgressing rewinds the recipe own tick counter so the craft
- * does not advance, and destructRecipe tears the running recipe down. A port that kept the FLAGS and dropped the
- * OVERRIDE would produce an event where a handler sets a flag and NOTHING HAPPENS -- the scaffolding-without-behaviour
- * pattern section 420 rejected.</p>
- *
- * <p>THE TWO THINGS THE OVERRIDE NEEDED TURNED OUT TO BE ALREADY HERE, WHICH IS WHY IT COULD FINALLY BE WRITTEN:</p>
- *
- * <pre>
- * upstream                                        this port
- * ActiveMachineRecipe.getTick()/setTick()          TileController.getRecipeTicks()/rewindRecipeTick()
- *   called in 505 as "five absent types"             the read existed; the rewind was added at D7b, and the
- *                                                    unconditional advanceRecipe() one line away gives
- *                                                    subtracting one EXACTLY the net effect upstream has
- * recipeThread.setStatus(CraftingStatus.working(..))  NOT NEEDED: the reason string is stored on the event and
- *                                                    read by the caller, and this port own diagnostics already
- *                                                    name why a craft is blocked (describeBlockers, 521.2)
- * </pre>
- *
- * <p>SO THE STATUS CLASS IS NOT REQUIRED, and only the counter write was missing. THAT IS WHAT TURNING A NAME SEARCH
- * INTO A DEPENDENCY TRACE DID (542): a five-type blocker became a three-line addition.</p>
- *
- * <p>AND ONE BEHAVIOURAL DIFFERENCE IS STATED RATHER THAN IMPLIED: upstream tears down through
- * recipeThread.setActiveRecipe(null).setContext(null).getSemiPermanentModifiers().clear(). THIS PORT HAS NO THREAD,
- * NO CONTEXT ON A THREAD, AND NO MODIFIER LIST TO CLEAR, so destruction here is controller.abandonRecipe() -- the
- * same operation the port own failure path uses. WHAT A HANDLER OBSERVES IS THE SAME (the craft is dropped); what it
- * CANNOT DO is clear state that does not exist.</p>
+ * Brackets an ordinary recipe tick. PRE runs before continuous IO; edits to the live thread's
+ * modifiers are consumed by that tick. Event context/progress observations retain their original values.
+ * preventProgressing follows the source one-tick rewind; setFailed may destroy the craft and its
+ * semi-permanent modifiers. Permanent thread and controller modifiers survive recipe completion.
  */
 @com.blamejared.crafttweaker.api.annotation.ZenRegister
 @org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.RecipeTickEvent")
@@ -78,8 +53,7 @@ public class RecipeTickEvent extends RecipeEvent {
         }
 
         if (isFailure && destructRecipe) {
-            // Upstream clears the thread state here; this port has none to clear, so the craft is simply dropped --
-            // the same operation the port own failure path performs.
+            // Dropping the craft also clears its semi-permanent thread modifiers.
             controller.abandonRecipe();
         }
     }

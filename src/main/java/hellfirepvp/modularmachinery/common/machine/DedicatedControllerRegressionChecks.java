@@ -71,6 +71,7 @@ public final class DedicatedControllerRegressionChecks {
                     var tile = (TileController) level.getBlockEntity(origin);
                     require(tile != null && tile.getType().isValid(state) && (tile instanceof TileFactoryController) == entry.factory(), "block entity type/factory mismatch");
                     require(name.equals(tile.getMachineName()), "placement must bind without a blueprint");
+                    checkToolInteraction(level, origin, name);
                     require(state.is(BlockTags.MINEABLE_WITH_PICKAXE) && state.is(BlockTags.NEEDS_STONE_TOOL)
                             && new ItemStack(Items.STONE_PICKAXE).isCorrectToolForDrops(state)
                             && !new ItemStack(Items.WOODEN_PICKAXE).isCorrectToolForDrops(state), "generated tool tags absent");
@@ -159,6 +160,11 @@ public final class DedicatedControllerRegressionChecks {
         try {
             for (var block : List.of(RegistryBlocks.blockController.get(), RegistryBlocks.blockFactoryController.get(), RegistryBlocks.blockCasing.get())) {
                 level.setBlock(pos, block.defaultBlockState(), Block.UPDATE_ALL);
+                if (block instanceof BlockController && level.getBlockEntity(pos) instanceof TileController tile) {
+                    String machine = MachineReloadListener.getLoader().getMachines().values().iterator().next().getRegistryName();
+                    tile.setMachineName(machine);
+                    checkToolInteraction(level, pos, machine);
+                }
                 var box = new net.minecraft.world.phys.AABB(pos).inflate(3);
                 var previous = new HashSet<UUID>();
                 level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, box).forEach(e -> previous.add(e.getUUID()));
@@ -172,6 +178,30 @@ public final class DedicatedControllerRegressionChecks {
                 require(count == 1, "legacy component did not drop once: " + block);
             }
         } finally { level.setBlock(pos, original, Block.UPDATE_ALL); }
+    }
+
+    private static void checkToolInteraction(ServerLevel level, BlockPos pos, String machine) {
+        var player = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "ProjectorInteraction"));
+        player.setPos(pos.getX(), pos.getY(), pos.getZ());
+        var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos), Direction.NORTH, pos, false);
+        var state = level.getBlockState(pos);
+        for (var hand : net.minecraft.world.InteractionHand.values()) {
+            for (var tool : List.of(RegistryItems.itemMachineProjector.get(), RegistryItems.CONSTRUCT_TOOL.get())) {
+                player.setItemInHand(hand, new ItemStack(tool));
+                require(state.use(level, player, hand, hit) == net.minecraft.world.InteractionResult.PASS,
+                        "controller swallowed tool interaction: " + state + "/" + hand + "/" + tool);
+                require(player.containerMenu == player.inventoryMenu, "tool click opened a controller menu");
+                if (tool == RegistryItems.itemMachineProjector.get()) {
+                    require(machine.equals(((TileController) level.getBlockEntity(pos)).getMachineName()), "projector lost binding");
+                    require(tool.useOn(new net.minecraft.world.item.context.UseOnContext(player, hand, hit)).consumesAction(),
+                            "projector rejected bound controller");
+                }
+                player.setItemInHand(hand, ItemStack.EMPTY);
+            }
+        }
+        player.setShiftKeyDown(true);
+        require(state.use(level, player, net.minecraft.world.InteractionHand.MAIN_HAND, hit) == net.minecraft.world.InteractionResult.PASS,
+                "controller swallowed sneak formation interaction");
     }
 
     private static void checkEditor(ServerLevel level, String name) throws Exception {

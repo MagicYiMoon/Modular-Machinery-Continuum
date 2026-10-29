@@ -177,10 +177,10 @@ public class ScreenBlueprint extends Screen {
         graphics.fill(left + 6, top + 26, left + 178, top + 154, 0xFF30343A);
         graphics.flush();
         graphics.enableScissor(left + 7, top + 27, left + 177, top + 153);
-        var pose = graphics.pose();
+        var pose = BlueprintPreviewScene.copyPose(graphics.pose());
         boolean depthTest = GL11.glIsEnabled(GL11.GL_DEPTH_TEST);
         boolean depthWrite = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
-        var buffers = minecraft.renderBuffers().bufferSource();
+        var buffers = scene.buffers();
         pose.pushPose();
         try {
             var bounds = scene.definition().bounds();
@@ -201,10 +201,10 @@ public class ScreenBlueprint extends Screen {
                 hovered = BlueprintRayPicker.pick(sceneToGui, mouseX, mouseY, scene, visible);
             }
             for (BlockPos pos : interaction.highlightedPositions(scene.definition(), visible)) {
-                overlay(graphics, pos, 0.15F, 0.95F, 0.3F, 0.28F);
+                BlueprintPreviewOverlays.fill(pose, buffers, pos, 0.15F, 0.95F, 0.3F, 0.28F);
             }
             var selected = interaction.selected();
-            if (selected != null && visible.contains(selected)) overlay(graphics, selected, 1, 0.15F, 0.1F, 0.38F);
+            if (selected != null && visible.contains(selected)) BlueprintPreviewOverlays.fill(pose, buffers, selected, 1, 0.15F, 0.1F, 0.38F);
             if (hovered != null && !hovered.equals(selected)) {
                 BlueprintPreviewOverlays.outline(pose, buffers, hovered);
             }
@@ -219,10 +219,6 @@ public class ScreenBlueprint extends Screen {
             else RenderSystem.disableDepthTest();
             Lighting.setupFor3DItems();
         }
-    }
-
-    private void overlay(GuiGraphics graphics, BlockPos pos, float r, float g, float b, float alpha) {
-        BlueprintPreviewOverlays.fill(graphics.pose(), minecraft.renderBuffers().bufferSource(), pos, r, g, b, alpha);
     }
 
     private void drawUpgrades(GuiGraphics graphics) {

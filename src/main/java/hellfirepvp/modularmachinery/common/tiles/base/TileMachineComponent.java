@@ -44,13 +44,13 @@ public abstract class TileMachineComponent extends TileEntityBase
 
     @Override
     public void setControllerPos(BlockPos controllerPos) {
-        // MARK ONLY ON A CHANGE, AND THAT IS LOAD-BEARING RATHER THAN TIDY (PLAN 683).
+         
         //
         // The periodic structure re-check re-binds every component of every formed machine (MachineFormation.
         // bindComponents, once per 50 ticks -- upstream's own updateComponents-on-every-check, U556), and this
         // method is what that walk calls. Marking unconditionally would make an IDLE machine that changed
         // nothing push a block-entity update and dirty a chunk for every hatch it owns, every 2.5 seconds --
-        // which is why the factory sync-cadence check (MachineSelfTest, PLAN 664) caught it: `an idle factory
+         
         // tick must leave the chunk clean`. Upstream's own idiom is the same guard one level up: its
         // distributeCasingColor only writes when `colorable.getMachineColor() != color`, and TileController.
         // setFormed only fires its events when the flag actually moves.
@@ -95,30 +95,30 @@ public abstract class TileMachineComponent extends TileEntityBase
         markForUpdate();
     }
 
-    /**
-     * @return the group this component feeds while it is configured as a group input, or -1 when it is not
-     *
-     * <p><b>UPSTREAM'S OWN RULE, READ AT THE BODY (rule A):</b> {@code TileColorableMachineComponent.java:104-108}
-     * is, verbatim,
-     *
-     * <pre>
-     *   public int getGroupId() {
-     *       if (isGroupInput()) return groupId;
-     *       return -1;
-     *   }
-     * </pre>
-     *
-     * <p>Upstream's {@code MachineGroupInput} states the same rule in words ("isGroupInput 返回 false 时，
-     * getGroupId() 应当返回 -1"), and upstream's controller reads it back at
-     * {@code TileMultiblockMachineController.java:206}, where {@code groupId < 0} is what means "belongs to no
-     * group".
-     *
-     * <p>THE PORT RETURNED THE STORED FIELD UNCONDITIONALLY, and the difference is visible in the port's own GUI
-     * rather than only in theory: {@code MenuGroupInputConfig.wireGroupSlots} sends this value through a data
-     * slot and {@code ScreenGroupInputConfig} prints it, so switching a hatch OUT of group input left the old
-     * group number on screen where upstream shows -1. Same shape as §629 -- two readers of one rule
-     * disagreeing -- except the disagreement was between this getter and the flag that gates it.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public int getGroupId() {
         return groupInput ? groupId : -1;

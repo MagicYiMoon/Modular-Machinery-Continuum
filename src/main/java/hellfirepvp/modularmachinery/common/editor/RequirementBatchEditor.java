@@ -12,7 +12,8 @@ public final class RequirementBatchEditor {
     public static final int DEFAULT = 0, FOLLOW = 1, EXEMPT = 2;
     private static final Set<String> TYPES = Set.of("modularmachinery:item", "modularmachinery:item_durability",
             "modularmachinery:fluid", "modularmachinery:fluid_pertick", "modularmachinery:energy",
-            "modularmachinery:ingredient_array_input", "modularmachinery:gas", "modularmachinery:gas_pertick");
+            "modularmachinery:ingredient_array_input", "modularmachinery:gas", "modularmachinery:gas_pertick",
+            "modularmachinery:mana", "modularmachinery:ember", "modularmachinery:compressed_air", "modularmachinery:lifeessence", "modularmachinery:aura");
     private RequirementBatchEditor() {}
     public static boolean supports(Requirement requirement) {
         return requirement instanceof Requirement.Parallelizable && !(requirement instanceof RequirementCatalyst)

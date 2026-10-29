@@ -50,133 +50,133 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * The in-game structure authoring tool's state, and its one output: a machine JSON written into the
- * machinery directory {@link ModDataHolder} owns.
- *
- * <p><b>Ported from upstream {@code hellfirepvp.modularmachinery.common.selection.
- * PlayerStructureSelectionHelper} (183 lines), read line by line.</b> Upstream's class name and package
- * are kept, and the parts of it that survive stay its own:
- * <ul>
- *   <li>{@link #purgeSelection} — upstream L62-L67, the entry removed rather than emptied;</li>
- *   <li>{@link #sendSelection} — upstream L69-L75, the sync to that one player;</li>
- *   <li>{@link #finalizeSelection} — upstream L77-L126, the empty check, the rotation, the file name
- *       and the write;</li>
- *   <li>{@link #selectionAt} — upstream L159-L179, {@code pos.subtract(center)} and the block entity
- *       tag;</li>
- *   <li>{@link #writeJson} and {@link #write} — upstream L107-L115, including the {@code " (2)"} suffix
- *       and {@code Files.write(..., StandardCharsets.UTF_8)};</li>
- * </ul>
- * plus its two statics: {@link #activeSelectionMap} (the per-player state) and {@link #clientSelection}
- * (the client mirror the box renderer reads).
- *
- * <h2>The selection is TWO CORNERS, not a set of clicked positions (PLAN 653, 655)</h2>
- *
- * <p><b>This is an alignment, not a deviation.</b> The objective names two baselines. The 1.12.2
- * source — this port's origin — is per-block: its {@code ItemConstructTool} has one arm calling
- * {@code toggleInSelection(player, pos)} for a non-controller block, and upstream's {@code StructureSelection}
- * is a {@code LinkedList} of positions. The second baseline, the Refoxed {@code neo/26.1.2} branch
- * (commit {@code 6b1321378bdde7b2d409cabc2d69cab5dd0090ae}), has
- * {@code MultiblockDetectorSelection(controllerPos, controllerFace, firstPos, secondPos)} with
- * {@code withFirst}/{@code withSecond} and an {@code isComplete()} that requires all four — <b>two
- * corners, i.e. a cuboid</b>. The user asked for that behaviour, so this class now stores two corners
- * and derives the volume between them.
- *
- * <p><b>Two deliberate differences from that Refoxed shape, both recorded here rather than implied:</b>
- * <ol>
- *   <li><b>The controller is not part of this state.</b> The Refoxed record carries
- *       {@code controllerPos}/{@code controllerFace}, but its own item never calls
- *       {@code withController} — the controller is set by some other path that was not read, and its
- *       order is not guessed here. This port keeps upstream's own rule: <b>right-click a controller to
- *       finalise</b>, which supplies the controller position and facing to {@link #finalizeSelection}
- *       directly. Recorded as a rule A0 deviation: the Refoxed's {@code useOn} has no controller arm and
- *       treats every block alike, so copying it literally would have deleted the finalise path the port
- *       already had and already checked.</li>
- *   <li><b>Row steering of the storage: still PER-PLAYER, not per item.</b> The Refoxed's javadoc says
- *       "Selection stored on the multiblock detector item stack" and it implements that with an item
- *       component ({@code ModDataComponents.MULTIBLOCK_DETECTOR_SELECTION}) plus a codec. 1.12.2 stores
- *       it in the static {@link #activeSelectionMap} and this port keeps that, for reasons that are
- *       concrete rather than habitual: the map already carries the login/logout lifecycle
- *       ({@link #onLogout}) and the sync to one player ({@link #sendSelection}), the tool's own click
- *       handlers already read it, and the item-component route on 1.20.1 would be a second
- *       representation of the same state with its own NBT round trip. <b>The one capability the per-item
- *       route has and this one does not is the tooltip</b>: {@code Item#appendHoverText} receives the
- *       stack and no player, so the Refoxed's three-line tooltip cannot read a per-player selection.
- *       That loss is accepted deliberately — the drawn box below is the feedback instead, and it shows
- *       strictly more than three coloured lines.</li>
- * </ol>
- *
- * <h2>The volume is derived, so there is nothing to keep in sync</h2>
- *
- * <p>{@link StructureSelection#positions()} computes the box between the two corners on demand, and
- * {@link #finalizeSelection} reads the world at those positions through the unchanged
- * {@link #selectionAt}. No per-position list is stored, so no list can disagree with the corners.
- *
- * <p><b>A box is unbounded in a way a click list never was</b>: two corners 30,000 blocks apart describe
- * a box of ~10^13 positions, and iterating that is not a slow machine definition but a dead server
- * thread. {@link #MAX_BOX_VOLUME} is the refusal point, it is checked before anything is iterated, and
- * a refused box is reported to the player rather than logged. The limit is this port's own — neither
- * baseline has one, because upstream could only ever hold clicked blocks and the Refoxed's export path
- * was not read.
- *
- * <p><b>Air inside the box is skipped, which preserves upstream's semantics.</b> Upstream could only
- * ever contain blocks a player had clicked, so a hollow machine's interior never reached the file. A
- * box read from the world contains it, so {@link #selectionAt} logs-and-skips positions the world has
- * nothing nameable at — see its javadoc; air is not nameable in a way that helps a matcher, and a
- * pattern demanding air would refuse to form inside any machine whose interior something else occupies.
- *
- * <h2>What this writes, and why it is not upstream's bytes</h2>
- *
- * <p>Upstream's {@code BlockArray.serializeAsMachineJson()} (upstream L395-L443) emits
- * {@code {"parts":[{"x":..,"y":..,"z":..,"elements":["modid:block@meta"]}]}} — the pattern and
- * <b>nothing else</b>. On 1.12.2 that was a whole machine definition. <b>On this port it is not</b>:
- * the loader reads {@code registryname} (MachineLoader:280) and falls back to the file's basename, so
- * upstream's key set written here would produce a machine named after a timestamp. The key set emitted
- * below is therefore the port's own shipped machine files' key set, which is the only shape the loader
- * this port actually has can read. The two extra keys are load-bearing, not decorative — the
- * round-trip check in {@code MachineSelfTest} fails if either is missing.
- *
- * <p><b>Three element forms exist; this writes the bare id.</b> Upstream wrote
- * {@code blockId + "@" + meta} from {@code getMetaFromState}. 1.20.1 has no metadata (see
- * {@link hellfirepvp.modularmachinery.common.machine.BlockStateShim}), so the choice here is between
- * {@code id} and {@code id@0}. The bare {@code id} is what
- * {@link hellfirepvp.modularmachinery.common.machine.BlockStateResolver} reads as "any state of this
- * block" (its L100-L109), and that is what the author drew: the blocks that are <i>there</i>.
- * {@code @0} would mean "the default variant specifically", and for any block whose variant is not one
- * of the shim's curated entries that narrowing is silent — the machine would simply refuse to form on
- * the variants most of the world uses. The metadata form only survives on this port for references the
- * shim has an entry for, which is a static set the tool cannot consult.
- *
- * <p><b>The controller is excluded from the file, deliberately.</b> Upstream does not exclude it: its
- * {@code compressAsArray} (upstream L159-L179) writes {@code pos.subtract(center)} for every selected
- * position and the controller is one of them, so upstream's output carries its own controller at
- * {@code (0,0,0)}. Because that offset is the origin and {@code rotateYCCW} is a rotation with no
- * translation, the part stays at {@code (0,0,0)} through upstream's rotation loop as well. It is
- * harmless on 1.12.2, where that position holds the controller anyway. It is <b>wrong here</b>:
- * nothing in this port's loader or matcher holds the controller out of a pattern, so a machine formed
- * from such a file would demand a {@code modularmachinery:blockcontroller} at its controller's own
- * position — the definition would be asking for itself. And with a box selection this is no longer a
- * corner case: the controller stands <i>inside</i> the box a player draws around their machine.
- * Recorded as a difference because it is one.
- *
- * <p><b>Block entity data is written, as upstream's is (upstream L168).</b> The tag is saved and its
- * {@code x}/{@code y}/{@code z} removed, which is upstream's own {@code cmp.removeTag(...)} triple.
- * <b>Nothing reads it back yet, and that is stated rather than implied:</b> this port's matcher has no
- * NBT constraint, so a machine authored with a configured block entity loads with that constraint
- * dropped. The key is emitted anyway, for upstream's reason — a configured block entity silently lost
- * is worse than a key this port cannot yet honour, and the key is the only record of the configuration.
- *
- * <p><b>The player's name is made safe for a resource path.</b> Upstream L104 puts the player's name in
- * the file name, which was free on 1.12.2. Here the file name becomes a {@code ResourceLocation} path
- * (MachineLoader:305), which accepts only {@code [a-z0-9/._-]} — so a name as ordinary as {@code Steve}
- * would produce a file the loader reads and rejects while the player is told it saved. Measured, not
- * supposed: see {@link #machineFileName}.
- *
- * <h2>Not here</h2>
- *
- * <p>No creative/operator gate, which is the same decision {@code ItemConstructTool} already records:
- * the gate was read, understood, and left out on purpose.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class PlayerStructureSelectionHelper {
 
     /** Per-player selection state. Upstream L55, a {@code Map<UUID, StructureSelection>}. */
@@ -289,7 +289,7 @@ public final class PlayerStructureSelectionHelper {
     }
 
     // ------------------------------------------------------------------
-    // The box (derived, PLAN 655.2)
+     
     // ------------------------------------------------------------------
 
     /** @return the component-wise smaller of the two corners, so callers need no min/max per axis. */
@@ -437,7 +437,7 @@ public final class PlayerStructureSelectionHelper {
         // Upstream looped `out = out.rotateYCCW(); face = face.rotateYCCW();` until the face reached
         // NORTH, adding 90 to a degree counter each time. This port has no BlockArray to rotate:
         // StructureMatcher.toWorldOffset maps a pattern offset through the controller's facing, and
-        // NORTH is its identity — verified against upstream's own BlockArrayCache:78-80 in PLAN 309. So
+         
         // a position stored relative to the controller on the NORTH axis is exactly the offset, and all
         // the loop has to decide is which facing that is and what to report. `getCounterClockWise()` is
         // 1.20.1's name for the same Y rotation upstream's `rotateYCCW()` performs.
@@ -473,7 +473,7 @@ public final class PlayerStructureSelectionHelper {
         }
 
         // THE NAME IS THE FILE'S, AND IT IS READ FROM THE FILE FOR THE SAME REASON (the warning in the
-        // (a) plan): a literal that happens to be valid is still the wrong value. The loader keys a
+         
         // machine by its file's basename (MachineLoader.nameOf), so the registryname written inside the
         // file and the basename are made the same string from one source rather than from two literals
         // that agree today.
@@ -585,7 +585,7 @@ public final class PlayerStructureSelectionHelper {
             // The file's basename IS the machine's identity in this loader, so the localised name cannot
             // be a translation key: nothing has an entry for a name nobody has written down yet. Writing
             // the same string is what makes a generated machine's title its own name in the GUI instead
-            // of a raw key — the failure PLAN section 190 was about.
+             
             sb.append(move).append("\"localizedname\": \"").append(localizedName).append("\",")
                     .append(newline);
         }
@@ -626,26 +626,26 @@ public final class PlayerStructureSelectionHelper {
     // The file (upstream L103-L124)
     // ------------------------------------------------------------------
 
-    /**
-     * Upstream L103-L104 verbatim: {@code machine-<player>-<yyyy-MM-dd_HH.mm.ss>}, without the extension so
-     * a collision suffix lands before it. {@code getScoreboardName()} is 1.20.1's
-     * {@code EntityPlayer#getName()}, the name upstream formatted in.
-     *
-     * <p><b>The name is made safe for a resource path, and that is a real difference with a real
-     * failure behind it.</b> On 1.12.2 a machine's identity was the string in its JSON and a file name
-     * could be anything. Here the loader keys a machine by its file's basename and builds a
-     * {@code ResourceLocation} from it (MachineLoader:305), and a resource path accepts only
-     * {@code [a-z0-9/._-]} — every uppercase letter, and every other character, is a
-     * {@code ResourceLocationException}. A name like {@code Steve} or {@code [Minecraft]} therefore
-     * produces a file the loader reads, rejects and logs, and <b>the player is told it saved</b>. That was
-     * measured, not imagined: the first run of the round-trip check used the default fake-player name and
-     * the loader answered
-     * <pre>Non [a-z0-9/._-] character in path of location:
-     * modularmachinery:machine-[Minecraft]-2026-10-05_21.30.17</pre>
-     * Anything outside the accepted set becomes {@code _} rather than being dropped, so the file name
-     * stays the same length as the name the player saw reported and a later collision or rename is still
-     * readable against the message that announced it.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static String machineFileName(Player player) {
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date());
         return "machine-" + safeForResourcePath(player.getScoreboardName()) + "-" + timestamp;
@@ -817,7 +817,7 @@ public final class PlayerStructureSelectionHelper {
             return firstCorner != null && secondCorner != null;
         }
 
-        /** True when no corner has been marked at all — the state {@code ItemConstructTool} treats as "form". */
+        /** True when no corner has been marked; the authoring tool reports an empty selection. */
         public boolean isEmpty() {
             return firstCorner == null && secondCorner == null;
         }

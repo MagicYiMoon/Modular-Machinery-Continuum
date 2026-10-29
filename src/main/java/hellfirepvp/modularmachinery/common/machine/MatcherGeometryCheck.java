@@ -64,13 +64,13 @@ final class MatcherGeometryCheck {
         for (Direction facing : HORIZONTAL) {
             // 1. The pattern's forward axis (+Z) must map to the REAR of the controller -- i.e. to -facing.
             //
-            //    THIS ASSERTION WAS WRONG AND IT FAILED DETERMINISTICALLY FOR ALL FOUR FACINGS (PLAN section 408).
+             
             //    It expected `facing`, which is a different rotation from the one StructureMatcher implements, so the
             //    check reported "structures will match incorrectly" on every call in every configuration -- while the
             //    rotation itself was already correct.
             //
             //    The expectation is derived from the mapping, not guessed at it. StructureMatcher's rotation makes NORTH
-            //    the IDENTITY because upstream's BlockArrayCache starts there unrotated (PLAN section 309), so:
+             
             //
             //        +Z -> NORTH (0,1)  WEST (1,0)  SOUTH (0,-1)  EAST (-1,0)
             //

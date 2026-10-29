@@ -85,20 +85,20 @@ public abstract class BlockBus extends BlockVariantComponent<ItemBusSize> {
     @Override
     protected abstract BlockEntity createBlockEntity(ItemBusSize variant, BlockPos pos, BlockState state);
 
-    /**
-     * Ticks a bus so it can move items to and from its neighbours (PLAN section 371).
-     *
-     * <p><b>The port returned no ticker at all, so no bus ever moved anything.</b> Upstream delivered this through
-     * {@code ITickable} on the tile, which called {@code doRestrictedTick}; 1.20.1 has no such mechanism and a block
-     * must opt in per block-entity type. Section 365 measured it as the root fact behind defect 6.
-     *
-     * <p><b>The client-side check belongs HERE, not in the tile.</b> Returning {@code null} on the client means the
-     * ticker is never installed and the call never happens, rather than happening and then being discarded -- and 1.20.1
-     * hands the ticker {@code (level, pos, state, blockEntity)}, so this method is the first place that knows the side.
-     *
-     * <p>Dispatch is on the {@code BlockEntityType} because this class is the shared parent of both directions: one
-     * override covers {@code BlockInputBus} and {@code BlockOutputBus}, and the direction is the tile's business.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Nullable
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(
@@ -125,7 +125,7 @@ public abstract class BlockBus extends BlockVariantComponent<ItemBusSize> {
         }
         // Both item directions are now live. The energy and fluid hatches are separate work: the energy output hatch
         // pushes FE, and upstream's version is 288 lines against the port's 37, so it is a behaviour to reconstruct
-        // rather than a method to copy (PLAN section 365.2).
+         
         return null;
     }
 
@@ -152,7 +152,7 @@ if (!level.isClientSide
                         buffer.writeBlockPos(pos);
                         // The TIER, not the slot count: a tier carries the count AND the grid geometry, so the
                         // client cannot build the right number of slots in the wrong places.
-                        // FROM THE HANDLER, the same source MenuItemBus.forBus uses (PLAN section 276).
+                         
                         //
                         // This read the BLOCKSTATE while the menu read the TIER FROM THE HANDLER, so the two
                         // could disagree -- and when they did, the client built a different number of bus slots

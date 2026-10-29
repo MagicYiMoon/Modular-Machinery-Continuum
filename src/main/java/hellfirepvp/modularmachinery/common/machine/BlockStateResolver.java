@@ -137,7 +137,8 @@ public final class BlockStateResolver {
             return null;
         }
         Block block = ForgeRegistries.BLOCKS.getValue(key);
-        return block == Blocks.AIR ? null : block;
+        // AIR is also Forge's fallback for missing keys; explicitly declared air is a real structure cell.
+        return block == Blocks.AIR && !key.equals(new ResourceLocation("minecraft", "air")) ? null : block;
     }
 
     /**

@@ -29,40 +29,40 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Factory controller block entity: MANY recipe runs on ONE structure.
- *
- * <p>This was a stub until factory mode landed (PLAN 662). The block, the menu and the screen already existed,
- * so what was missing was the thing the class is named after: a controller that holds more than one run. A
- * normal {@link TileController} carries ONE craft's state in its own fields; this one carries a LIST of
- * {@link FactoryRecipeThread}s and is driven by {@link FactoryTicker} instead of {@link MachineTicker}.</p>
- *
- * <h2>What the single-craft fields inherited from TileController now mean</h2>
- *
- * <p>THEY ARE NOT USED, AND THE READERS ARE OVERRIDDEN RATHER THAN LEFT TO LIE. A factory controller never
- * calls {@code beginRecipe}; the inherited {@code recipeName}/{@code recipeTicks}/{@code recipeDuration}
- * therefore stay null/0, and a GUI reading them would show a factory that is always idle however much work it
- * is doing. So {@code hasActiveRecipe}, {@code getRecipeName}, {@code getRecipeTicks},
- * {@code getRecipeDuration}, {@code getParallelism} and {@code getMaxParallelism} report the FIRST RUNNING RUN
- * -- which is upstream's own answer, since its {@code getActiveRecipe()} returns
- * {@code getActiveRecipeList()[0]} and that list is built in thread order (upstream TileFactoryController
- * U675-U699). The MVC data slots the machine screen reads
- * ({@code MenuMachineController.liveData}) therefore show a factory's first run without the menu knowing
- * anything changed.</p>
- *
- * <p>A SECOND ENGINE CANNOT PICK THIS TILE UP BY ACCIDENT: {@code MachineTicker.tick} refuses a
- * {@code TileFactoryController} outright, because a tile that reports its state from its threads would make the
- * single-craft engine find "idle", take a craft and consume its inputs on EVERY tick without ever appearing to
- * run one. The block hands out this class's own ticker (see {@code BlockFactoryController.getTicker}).</p>
- *
- * <h2>Family bookkeeping</h2>
- *
- * <p>{@link FactoryControllerFamily} holds the live controllers per machine definition -- the port's answer to
- * upstream's {@code BlockFactoryController.FACTORY_CONTROLLERS}, for the reason recorded on that class (a
- * block per machine cannot be registered on 1.20.1, because the registries are frozen long before this port
- * reads its machine definitions). Registration follows this tile's own lifecycle: on formation, on a machine
- * binding change, and on every factory tick; removal on {@code setRemoved} and on unforming.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class TileFactoryController extends TileController {
 
     /**
@@ -73,28 +73,21 @@ public class TileFactoryController extends TileController {
      */
     private final List<FactoryRecipeThread> recipeThreads = new ArrayList<>();
 
-    /**
-     * Ticks this controller has been alive, counted by the ticker.
-     *
-     * <p>Upstream keeps {@code ticksExisted} on the tile and gates two behaviours on it: the core-thread refresh
-     * every 20 ticks (U484-U486) and the idle-thread cleanup (U515-U517). The port's single-craft ticker uses
-     * {@code level.getGameTime()} for its one cadence check instead -- but that is NOT usable for the factory,
-     * because a self-test drives ticks without the world's clock moving, and a cadence nothing can reach is a
-     * branch nothing can verify (PLAN 338 recorded exactly that trap). A counter on the tile is driven by the
-     * caller of the tick and therefore works in the harness.</p>
-     */
-    private long ticksExisted;
+    /** Existing work-only search/cleanup clock; independent of the source-compatible lifetime getter. */
+    private long factoryWorkTicks;
 
-    /**
-     * The machine definition's factory thread ceiling, mirrored once per tick by {@link FactoryTicker}.
-     *
-     * <p>Upstream reads {@code foundMachine.getMaxThreads()} on demand (U455-U457) because its tile holds the
-     * machine object. This port's tile deliberately does not hold the definition -- the definition is resolved
-     * by the ticker from the reload listener, and a tile that reached for it would be PLAN 599.2's dependency
-     * direction reversed. Zero means "no tick has happened yet", which is honest: the ceiling belongs to the
-     * definition, and until one is bound there is nothing to run.</p>
-     */
+    
+
+
+
+
+
+
+
+ 
     private int maxThreads;
+    /** Source runtime delta to the dynamic pool; core presets remain independent. */
+    private int extraThreadCount;
 
     /**
      * The machine's parallelism ceiling, mirrored once per tick by {@link FactoryTicker} -- upstream's
@@ -116,9 +109,9 @@ public class TileFactoryController extends TileController {
     // The contract with FactoryTicker
     // ------------------------------------------------------------------
 
-    /** Counts this tick. See {@link #ticksExisted} for what reads it. */
+    /** Advances the existing work-only scheduling clock, not the script's controller lifetime. */
     public void countFactoryTick() {
-        this.ticksExisted++;
+        this.factoryWorkTicks++;
     }
 
     public int currentRecipeSearchDelay() {
@@ -129,17 +122,17 @@ public class TileFactoryController extends TileController {
     }
 
     public boolean isRecipeSearchDue() {
-        return searchRecipeImmediately || ticksExisted >= nextRecipeSearchTick;
+        return searchRecipeImmediately || factoryWorkTicks >= nextRecipeSearchTick;
     }
 
     public void recordRecipeSearchResult(boolean started) {
         searchRecipeImmediately = false;
         if (started) {
             recipeSearchRetryCounter = 0;
-            nextRecipeSearchTick = ticksExisted + 1;
+            nextRecipeSearchTick = factoryWorkTicks + 1;
         } else {
             recipeSearchRetryCounter = Math.min(recipeSearchRetryCounter + 1, 130);
-            nextRecipeSearchTick = ticksExisted + currentRecipeSearchDelay();
+            nextRecipeSearchTick = factoryWorkTicks + currentRecipeSearchDelay();
         }
     }
 
@@ -157,7 +150,7 @@ public class TileFactoryController extends TileController {
      */
     public void resetRecipeSearchState() {
         recipeSearchRetryCounter = 0;
-        nextRecipeSearchTick = ticksExisted;
+        nextRecipeSearchTick = factoryWorkTicks;
         searchRecipeImmediately = true;
     }
 
@@ -174,12 +167,16 @@ public class TileFactoryController extends TileController {
     /**
      * Takes this tick's copy of the machine's limits.
      *
-     * @param maxThreads         how many runs may exist at once (upstream {@code getMaxThreads()}, U455-U457)
+     * @param maxThreads         definition's base dynamic capacity, before the runtime extra-thread delta
      * @param machineParallelism the machine's parallelism ceiling (upstream {@code getMaxParallelism()})
      */
     public void setFactoryCeiling(int maxThreads, int machineParallelism) {
-        this.maxThreads = Math.max(0, maxThreads);
-        this.machineParallelism = Math.max(1, machineParallelism);
+        int threads = Math.max(0, maxThreads), parallel = Math.max(1, machineParallelism);
+        if (this.maxThreads != threads || this.machineParallelism != parallel) {
+            this.maxThreads = threads;
+            this.machineParallelism = parallel;
+            markForUpdate();
+        }
     }
 
     /**
@@ -189,7 +186,7 @@ public class TileFactoryController extends TileController {
      * method itself, which is why the gate is here rather than at the caller -- the caller runs every tick.</p>
      */
     public void cleanIdleThreads() {
-        if (ticksExisted % 20 != 0) {
+        if (factoryWorkTicks % 20 != 0) {
             return;
         }
         recipeThreads.removeIf(thread -> !thread.isPresetThread()
@@ -217,7 +214,8 @@ public class TileFactoryController extends TileController {
             count++;
             if (thread.hasActiveRecipe()) active++;
         }
-        return active < maxThreads && (count < maxThreads || active < count);
+        int ceiling = getMaxThreads();
+        return active < ceiling && (count < ceiling || active < count);
     }
 
     /**
@@ -276,13 +274,21 @@ public class TileFactoryController extends TileController {
     /** Finds an idle thread that can run this recipe, creating a dynamic thread when allowed. */
     public FactoryRecipeThread claimThreadFor(hellfirepvp.modularmachinery.common.crafting.MachineRecipe recipe) {
         if (recipe == null) return null;
+        FactoryRecipeThread existing = findIdleThreadFor(recipe);
+        if (existing != null) return existing;
+        // A recipe pinned to a core thread must never spill into an unnamed dynamic thread.
+        if (!recipe.matchesThreadName("")) return null;
+        return claimThread();
+    }
+
+    /** Select without allocating or marking an idle factory dirty when no candidate can be paid for. */
+    FactoryRecipeThread findIdleThreadFor(hellfirepvp.modularmachinery.common.crafting.MachineRecipe recipe) {
+        if (recipe == null) return null;
         for (FactoryRecipeThread thread : getFactoryRecipeThreadList()) {
             if (!thread.isPresetThread() && !hasIdleDynamicThread()) continue;
             if (thread.isIdle() && thread.acceptsRecipe(recipe)) return thread;
         }
-        // A recipe pinned to a core thread must never spill into an unnamed dynamic thread.
-        if (!recipe.matchesThreadName("")) return null;
-        return claimThread();
+        return null;
     }
 
     /** @return whether this recipe has an idle compatible thread or room for a dynamic one */
@@ -310,9 +316,48 @@ public class TileFactoryController extends TileController {
         return List.copyOf(ordered);
     }
 
+    @Override
+    public hellfirepvp.modularmachinery.common.machine.RecipeThread[] getRecipeThreadList() {
+        return getFactoryRecipeThreadList().stream()
+                .map(thread -> new hellfirepvp.modularmachinery.common.machine.RecipeThread(this, thread))
+                .toArray(hellfirepvp.modularmachinery.common.machine.RecipeThread[]::new);
+    }
+
+    @Override public void addModifier(String key, hellfirepvp.modularmachinery.common.modifier.RecipeModifier modifier) {
+        if (!canChangeRuntimeModifiers()) return;
+        for (FactoryRecipeThread thread : getFactoryRecipeThreadList()) thread.addSemiPermanentModifier(key, modifier);
+    }
+    @Override public void removeModifier(String key) {
+        if (!canChangeRuntimeModifiers()) return;
+        for (FactoryRecipeThread thread : getFactoryRecipeThreadList()) thread.removeSemiPermanentModifier(key);
+    }
+    @Override protected void refreshRuntimeModifierContexts() {
+        super.refreshRuntimeModifierContexts();
+        for (FactoryRecipeThread thread : getFactoryRecipeThreadList()) {
+            var run = thread.getRuntimeRecipeContext();
+            if (run != null) thread.observeRuntimeRecipeContext(MachineTicker.refreshRuntimeModifiers(this, thread, run));
+        }
+        requestImmediateRecipeSearch();
+    }
+
     /** @return how many runs exist, running or not (upstream's {@code getFactoryRecipeThreadList().size()}) */
     public int getThreadCount() {
         return recipeThreads.size();
+    }
+
+    /** Core presets have their own slots and do not count against the dynamic-thread ceiling. */
+    public int getDynamicThreadCount() {
+        int count = 0;
+        for (FactoryRecipeThread thread : recipeThreads) if (!thread.isPresetThread()) count++;
+        return count;
+    }
+
+    public java.util.List<net.minecraft.network.chat.Component> factoryParallelismReadoutLines() {
+        int parallel = getFactoryParallelism();
+        if (parallel <= 1 || getFactoryMaxParallelism() <= 1) return java.util.List.of();
+        return java.util.List.of(
+                net.minecraft.network.chat.Component.translatable(PARALLELISM_KEY, parallel),
+                net.minecraft.network.chat.Component.translatable(MAX_PARALLELISM_KEY, getFactoryMaxParallelism()));
     }
 
     /** @return how many runs are advancing, for the family's "threads running" figure */
@@ -326,9 +371,25 @@ public class TileFactoryController extends TileController {
         return running;
     }
 
-    /** @return the mirrored ceiling; see {@link #maxThreads} */
+    /** Source isWorking checks every core and dynamic thread, not only the first occupied run. */
+    @Override
+    public boolean isWorking() {
+        return isFormed() && !isRedstoneStopped() && getRunningThreadCount() > 0;
+    }
+
+    /** @return the base dynamic capacity plus the runtime delta, clamped to a nonnegative int */
     public int getMaxThreads() {
-        return maxThreads;
+        // Keep the signed source delta, but do not let addition wrap the scheduling capacity.
+        return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, (long) maxThreads + extraThreadCount));
+    }
+
+    @Override public int getExtraThreadCount() { return extraThreadCount; }
+
+    @Override public void setExtraThreadCount(int value) {
+        if (!(getIWorld() instanceof net.minecraft.server.level.ServerLevel) || extraThreadCount == value) return;
+        extraThreadCount = value;
+        requestImmediateRecipeSearch();
+        markForUpdate();
     }
 
     /** Controller-wide batch budget; getMaxParallelism() describes only the first occupied thread. */
@@ -429,24 +490,24 @@ public class TileFactoryController extends TileController {
         return thread == null ? 1 : thread.getMaxParallelism();
     }
 
-    /**
-     * Whether the run this tile REPORTS is advancing — upstream's per-thread {@code thread.getStatus()
-     * .isCrafting()}, which its TheOneProbe provider asks at {@code MMInfoProvider} U174 to choose between the
-     * running colours and the three FAILURE colours (U171-U181), and which its factory GUI asks at
-     * {@code GuiFactoryController} U126.
-     *
-     * <p><b>IT IS OVERRIDDEN FOR THE SAME REASON {@code getRecipeTicks} IS (PLAN 711).</b> The inherited
-     * single-craft fields stay unused here, so the inherited {@code TileController.isCrafting()} would answer
-     * from {@code statusMessage} — a field this tile never writes, because a factory run's reason lives on its
-     * thread — and would therefore report "crafting" for a run the engine has already HELD. That is the exact
-     * defect the HUD is being fixed for, one layer down.</p>
-     *
-     * <p><b>NO NEW SIGNAL.</b> The question is put to the same run whose progress this tile reports
-     * ({@link #firstActiveThread}, the walk upstream gets from {@code getActiveRecipeList()[0]}) through the
-     * same predicate the engine's reason feeds ({@link FactoryRecipeThread#isWorking()}, i.e.
-     * {@code hasActiveRecipe() && blockedReason == null}, written by {@code FactoryTicker} at U479, U493 and
-     * U526). The reason, the writer and the predicate are all pre-existing; this method only names the run.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public boolean isCrafting() {
         FactoryRecipeThread thread = firstActiveThread();
@@ -475,7 +536,12 @@ public class TileFactoryController extends TileController {
     public void setFormed(boolean formed) {
         boolean changed = isFormed() != formed;
         if (!formed) {
+            if (extraThreadCount != 0) {
+                extraThreadCount = 0; // Independent of the custom-data clearing option, as in resetMachine(true).
+                markForUpdate();
+            }
             FactoryControllerFamily.unregister(this);
+            for (FactoryRecipeThread thread : recipeThreads) thread.observeRuntimeRecipeContext(null);
         }
         super.setFormed(formed);
         if (changed) resetRecipeSearchState();
@@ -531,10 +597,10 @@ public class TileFactoryController extends TileController {
                 }
             }
         }
-        // A LOADED CONTROLLER IS NOT TICKED YET, so the mirrored ceiling stays at zero until the ticker hands
-        // one over -- and a run restored from NBT therefore cannot be mistaken for one that may start on the
-        // strength of a ceiling nothing has read.
-        this.maxThreads = 0;
+        // The client displays this snapshot; the server refreshes it from the definition before scheduling.
+        this.maxThreads = Math.max(0, tag.getInt("factoryMaxThreads"));
+        this.extraThreadCount = tag.getInt("extraThreadCount");
+        this.machineParallelism = Math.max(1, tag.getInt("factoryMaxParallelism"));
         this.recipeSearchRetryCounter = 0;
         this.nextRecipeSearchTick = 0;
         this.searchRecipeImmediately = true;
@@ -544,14 +610,15 @@ public class TileFactoryController extends TileController {
     /**
      * Writes the runs out (upstream {@code writeCustomNBT}, U638-U660).
      *
-     * <p>Upstream also writes its {@code status} and {@code totalParallelism}; this port's status is the runs
-     * themselves (there is no CraftingStatus to write -- PLAN 521) and the parallelism ceiling is the machine
-     * definition's, which is read back from the definition rather than persisted (persisting it would let a
-     * saved ceiling outlive the machine file that declared it).</p>
+     * <p>The limits accompany the existing client update tag. On the server they are refreshed from the
+     * live machine definition before scheduling, so saved limits cannot override an edited definition.</p>
      */
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
+        tag.putInt("factoryMaxThreads", maxThreads);
+        tag.putInt("extraThreadCount", extraThreadCount);
+        tag.putInt("factoryMaxParallelism", machineParallelism);
         if (!recipeThreads.isEmpty()) {
             ListTag list = new ListTag();
             for (FactoryRecipeThread thread : recipeThreads) {

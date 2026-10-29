@@ -68,6 +68,18 @@ public final class GeoMachineModelRegistry {
         return modelName == null ? null : definitions.models.get(modelName);
     }
 
+    /** One selection rule for geometry, texture, animation resources and animation predicates. */
+    public static MachineGeoModel selectedForController(TileController controller) {
+        if (controller == null) return null;
+        MachineGeoModel base = getForController(controller);
+        if (base == null) return null;
+        var event = new hellfirepvp.modularmachinery.common.event.machine.ControllerModelGetEvent(
+                controller, base.getMachineName());
+        event.postEvent();
+        MachineGeoModel selected = getForController(controller, event.getModelName());
+        return selected == null ? base : selected;
+    }
+
     public static long revision() { return revision; }
 
     public static void clear() {
@@ -96,7 +108,11 @@ public final class GeoMachineModelRegistry {
     }
 
     public static void dispatchAnimation(String machineName, ControllerModelAnimationEvent event) {
-        if (machineName == null || FAILED_HANDLERS.contains(machineName)) return;
+        if (machineName == null) return;
+        if (FAILED_HANDLERS.contains(machineName)) {
+            event.setPlayState(1);
+            return;
+        }
         try {
             for (var callback : HANDLERS.getOrDefault(machineName, List.of())) callback.accept(event);
         } catch (RuntimeException failure) {

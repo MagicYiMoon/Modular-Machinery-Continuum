@@ -250,18 +250,18 @@ public class ScreenMEItemOutputBus extends AbstractContainerScreen<MenuMEItemOut
                 STACK_SIZE_LABEL_X + font.width(label) + VALUE_GAP, STACK_SIZE_LABEL_Y, 0x404040, false);
     }
 
-    /**
-     * Runs the frame and then the tooltip pass.
-     *
-     * <h2>Why this override is here rather than copied from a working screen</h2>
-     *
-     * <p><b>On 1.20.1 {@code AbstractContainerScreen.render} does NOT invoke {@code renderTooltip}</b> — measured with
-     * {@code javap -p -c} over the mapped 47.3.0 jar, which is what PLAN 745 recorded. Vanilla's
-     * {@code ContainerScreen.render} is the caller. A screen whose {@code renderTooltip} has no {@code render} that
-     * calls it draws nothing at all, and this class was written in the same round that fixed that defect in two other
-     * screens (audit row 45): the fix is applied here from the start, and the suite's own check sweeps the package for a
-     * screen that forgets it.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);

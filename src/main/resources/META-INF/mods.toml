@@ -1,13 +1,13 @@
 modLoader="javafml"
 loaderVersion="${loader_version_range}"
 license="${mod_license}"
-issueTrackerURL="https://github.com/HellFirePvP/ModularMachinery/issues"
+issueTrackerURL="https://github.com/MagicYiMoon/Modular-Machinery-Continuum/issues"
 
 [[mods]]
 modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
-displayURL="https://github.com/HellFirePvP/ModularMachinery"
+displayURL="https://github.com/MagicYiMoon/Modular-Machinery-Continuum"
 authors="${mod_authors}"
 credits="HellFirePvP (original code & design), wiiv (models & textures), KasumiNova, youyihj, ikexing (Community Edition). Ported to Forge 1.20.1 by the Modular Machinery: Continuum (MMC) project."
 description='''${mod_description}'''
@@ -95,6 +95,13 @@ mandatory=false
 ordering="AFTER"
 side="BOTH"
 
+[[dependencies.${mod_id}]]
+modId="pneumaticcraft"
+versionRange="[6.0.23,6.1)"
+mandatory=false
+ordering="AFTER"
+side="BOTH"
+
 # Botania mana and Blood Magic life-essence/demon-will providers become functional
 # with their respective optional mod installed; IDs remain available without it.
 #
@@ -124,6 +131,42 @@ side="BOTH"
 [[dependencies.${mod_id}]]
 modId="naturesaura"
 versionRange="[39.4,40)"
+mandatory=false
+ordering="AFTER"
+side="BOTH"
+
+# The normal-part adapter targets the audited GTCEu Modern 7.5 API.
+[[dependencies.${mod_id}]]
+modId="embers"
+versionRange="[1.20.1-1.4.7,1.20.1-1.5)"
+mandatory=false
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="gtceu"
+versionRange="[7.5.3,7.6)"
+mandatory=false
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="tconstruct"
+versionRange="[3.12.1,3.13)"
+mandatory=false
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="thermal_expansion"
+versionRange="[11.0.1,11.1)"
+mandatory=false
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="nuclearcraft"
+versionRange="[1.2.36,1.3)"
 mandatory=false
 ordering="AFTER"
 side="BOTH"

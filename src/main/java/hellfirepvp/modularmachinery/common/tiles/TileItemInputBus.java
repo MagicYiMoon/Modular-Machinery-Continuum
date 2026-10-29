@@ -37,16 +37,16 @@ public class TileItemInputBus extends TileItemBus {
         super(RegistryBlockEntities.ITEM_INPUT_BUS, pos, state, IOType.INPUT, slotsOf(state));
     }
 
-    /**
-     * Pulls from every accepted neighbour, once per random 5..60 tick interval (PLAN section 370).
-     *
-     * <p>Upstream's {@code doRestrictedTick} called {@code inputFromExternal} per neighbour after its own guard and
-     * face walk; those six rules now live in {@link TileItemBus#forEachNeighbourHandler} so this bus and the output bus
-     * cannot drift apart on the ones that are easy to get wrong -- most of all that <b>buses do not chain</b>.
-     *
-     * @param level the level, always server-side when this is reached
-     * @param pos this bus's position
-     */
+    
+
+
+
+
+
+
+
+
+ 
     public void step(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
         forEachNeighbourHandler(this::inputFromExternal);
     }

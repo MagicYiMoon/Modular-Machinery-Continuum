@@ -96,7 +96,7 @@ public final class DurabilityEditorRegressionChecks {
             }
             var bad = valid.deepCopy(); bad.addProperty("io-type", "output"); save(player, edit(id, bad), false);
             for (String key : List.of("nbt", "nbt-display")) {
-                bad = valid.deepCopy(); bad.add(key, new JsonObject()); save(player, edit(id, bad), false);
+                bad = valid.deepCopy(); bad.addProperty(key, "[invalid"); save(player, edit(id, bad), false);
             }
             save(player, new ModularmachineryNetwork.PktMachineEditorEdit(id, 0, 2, 1, "minecraft:stone"), false);
             var group = IngredientGroupEditor.empty(); group.getAsJsonArray("items").add(IngredientGroupEditor.candidate("minecraft:iron_ingot"));
@@ -107,7 +107,7 @@ public final class DurabilityEditorRegressionChecks {
             require(Files.readString(file).equals(before), "invalid edits and alternative packet routes cannot alter source");
             save(player, new PktMachineEditorDurability(id + "_invalid", -1, "{}", machine, 20, ""), false);
             require(!Files.exists(invalidFile), "invalid first save creates no file");
-            for (String field : List.of("nbt", "nbt-display", "ordinary", "group", "legacy")) {
+            for (String field : List.of("ordinary", "group", "legacy")) {
                 var advanced = JsonParser.parseString(before).getAsJsonObject();
                 var reqs = advanced.getAsJsonArray("requirements");
                 var req = reqs.get(0).getAsJsonObject();

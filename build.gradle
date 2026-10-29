@@ -69,7 +69,7 @@ repositories {
         name = 'CurseMaven'
         url = 'https://cursemaven.com/'
     }
-    // Modrinth's maven (PLAN section 406). Added for GuideME, which AE2 REQUIRES and which is on neither
+     
     // CurseMaven nor modmaven. The `content` filter keeps this repo from being consulted for anything else,
     // so a future dependency cannot silently start resolving from here.
     maven {
@@ -92,7 +92,19 @@ minecraft {
     copyIdeResources = true
     runs {
         client {
-            workingDirectory project.file('run')
+            workingDirectory project.file(project.findProperty('clientRunDir') ?: 'run')
+            if (project.hasProperty('clientVisualTest')) {
+                jvmArgs '-Dmodularmachinery.clientVisualTest=true'
+                if (project.hasProperty('editorCopyVisualTest')) jvmArgs '-Dmodularmachinery.editorCopyVisualTest=true'
+                if (project.hasProperty('editorPneumaticVisualTest')) jvmArgs '-Dmodularmachinery.editorPneumaticVisualTest=true'
+                if (project.hasProperty('editorExpandedVisualTest')) jvmArgs '-Dmodularmachinery.editorExpandedVisualTest=true'
+                if (project.hasProperty('editorOptionalVisualTest')) jvmArgs '-Dmodularmachinery.editorOptionalVisualTest=true'
+                if (project.hasProperty('releaseGallery')) jvmArgs '-Dmodularmachinery.releaseGallery=true'
+                if (project.hasProperty('editorNbtVisualTest')) jvmArgs '-Dmodularmachinery.editorNbtVisualTest=true'
+                if (project.hasProperty('editorBloodAuraVisualTest')) jvmArgs '-Dmodularmachinery.editorBloodAuraVisualTest=true'
+                if (project.hasProperty('editorResourcesVisualTest')) jvmArgs '-Dmodularmachinery.editorResourcesVisualTest=true'
+                args '--quickPlaySingleplayer', 'MMC-Visual-Fixture', '--width', '1280', '--height', '800'
+            }
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
             arg '-mixin.config=mixins.mmce_minecraft.json'
@@ -137,6 +149,17 @@ dependencies {
     }
 
     // --- Optional integrations -------------------------------------------------------------
+    ['task.optional:tconstruct:3.12.1.231', 'task.optional:mantle:1.11.117',
+     'task.optional:thermal-expansion:11.0.1', 'task.optional:thermal-foundation:11.0.6',
+     'task.optional:cofh-core:11.0.2', 'task.optional:nuclearcraft:1.2.36'].each { coordinate ->
+        compileOnly fg.deobf(coordinate)
+        if (project.hasProperty('withRecipeIntegrations')
+                || (coordinate.contains('tconstruct') || coordinate.contains('mantle')) && project.hasProperty('withTinkersIntegration')
+                || (coordinate.contains('thermal') || coordinate.contains('cofh-core')) && project.hasProperty('withThermalIntegration')
+                || coordinate.contains('nuclearcraft') && project.hasProperty('withNuclearIntegration')) runtimeOnly fg.deobf(coordinate)
+    }
+    // Foundation supplies this same official nested jar at runtime; do not load it twice.
+    compileOnly fg.deobf('task.optional:thermal-core:11.0.6')
     // compileOnly, never implementation: every integration here is a SOFT dependency. The mod must
     // load and run with none of them present, so their plugin classes are never referenced from code
     // Forge touches unconditionally -- they are loaded only by the other mod.
@@ -147,6 +170,7 @@ dependencies {
     // IRecipeCategory, IRecipeLayoutBuilder) are NOT in it, while jei-1.20.1-forge is 2.2 MB and has
     // them. Compiling against the -api artifact produces "cannot find symbol" for every JEI type.
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
+    testImplementation fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
 
     // The One Probe. Note this integration has NO 1.16 reference to port from -- it exists in the
     // 1.12.2 original (ModIntegrationTOP) but is absent from the 1.16 branch entirely -- so it is
@@ -171,6 +195,17 @@ dependencies {
     compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}")
 
     // Optional Flux Networks long-amount capability. Never bundle the external mod.
+    // Use GTCEu's official slim artifact; dev runs need its dependencies explicitly remapped.
+    // tools/prepare_gtceu.py obtains the pinned official files without repackaging them into MMC.
+    ["task.optional:gtceu:${gtceu_version}:slim",
+     'task.optional:ldlib-forge-1.20.1:1.0.40.b',
+     'task.optional:Registrate:MC1.20-1.3.11',
+     'task.optional:configuration-forge-1.20.1:2.2.0',
+     'task.optional:mixinextras-forge:0.5.3'].each { coordinate ->
+        compileOnly fg.deobf(coordinate)
+        if (project.hasProperty('withGTCEuIntegration')) runtimeOnly fg.deobf(coordinate)
+    }
+
     compileOnly fg.deobf("curse.maven:flux-networks-${fluxnetworks_project}:${fluxnetworks_file}")
     if (project.hasProperty('withFluxIntegration')) {
         runtimeOnly fg.deobf("curse.maven:flux-networks-${fluxnetworks_project}:${fluxnetworks_file}")
@@ -179,6 +214,15 @@ dependencies {
     // Applied Mekanistics supplies AE2's chemical keys/cells; AE2 alone has no gas storage channel.
     compileOnly fg.deobf("maven.modrinth:applied-mekanistics:${appmek_version}")
     compileOnly fg.deobf("maven.modrinth:botania:${botania_version}")
+    compileOnly fg.deobf("maven.modrinth:pneumaticcraft-repressurized:${pneumaticcraft_version}")
+    compileOnly fg.deobf("maven.modrinth:embers:${embers_version}")
+    if (project.hasProperty('withEmbersIntegration')) {
+        runtimeOnly fg.deobf("maven.modrinth:embers:${embers_version}")
+    }
+    if (project.hasProperty('withPneumaticIntegration')) {
+        runtimeOnly fg.deobf("maven.modrinth:pneumaticcraft-repressurized:${pneumaticcraft_version}")
+        runtimeOnly fg.deobf("maven.modrinth:patchouli:${patchouli_version}")
+    }
     compileOnly fg.deobf("maven.modrinth:blood-magic:${bloodmagic_version}")
     compileOnly fg.deobf("maven.modrinth:natures-aura:${naturesaura_version}")
     compileOnly fg.deobf("task.optional:astralsorcery:${astral_community_version}")
@@ -206,7 +250,7 @@ dependencies {
     }
 
     // ---------------------------------------------------------------------------------------------
-    // THE SAME FIVE AS RUNTIME DEPENDENCIES, BEHIND A FLAG (PLAN section 405).
+     
     //
     // Every integration above is `compileOnly`, which makes "it compiles" actively misleading: the API
     // is on the compile classpath and deliberately NOT on the runtime one, so nothing that actually
@@ -226,6 +270,11 @@ dependencies {
     // Neither alone is enough. Standalone alone never runs the integration code; integrated alone hides
     // every class-not-found failure, which is the failure a player without the mod would hit.
     // ---------------------------------------------------------------------------------------------
+    if (project.hasProperty('withClientTools') && !project.hasProperty('withIntegrations')) {
+        runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
+        runtimeOnly fg.deobf("curse.maven:the-one-probe-${top_project}:${top_file}")
+        runtimeOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-1.20.1:${crafttweaker_version}")
+    }
     if (project.hasProperty('withIntegrations')) {
         runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
         runtimeOnly fg.deobf("curse.maven:the-one-probe-${top_project}:${top_file}")
@@ -234,7 +283,7 @@ dependencies {
         runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}")
         // GuideME, and it is not optional: AE2 15.4.11 declares a MANDATORY dependency on guideme
         // [20.1.7,20.2.0), and without it Forge's own ModSorter refuses to start the game. Found by running the
-        // integrated configuration (PLAN section 405.2) -- the compileOnly build, the standalone run and the
+         
         // whole self-test are all blind to it, because none of them loads an AE2 class.
         runtimeOnly fg.deobf("maven.modrinth:guideme:${guideme_version}")
     }
@@ -328,3 +377,24 @@ tasks.register('checkProjectionRenderState', JavaExec) {
     mainClass = 'hellfirepvp.modularmachinery.client.preview.WorldProjectionRenderStateChecks'
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
 }
+
+tasks.register('checkJeiLayout', JavaExec) {
+    group = 'verification'
+    description = 'Checks bounded JEI ingredient grids and scrolling/hit targets without a game window.'
+    dependsOn 'testClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'hellfirepvp.modularmachinery.integration.jei.RecipeRequirementWidgetChecks'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
+tasks.register('checkFactoryThreadList', JavaExec) {
+    group = 'verification'
+    description = 'Checks factory thread scrolling, scrollbar dragging and visible-row hit targets.'
+    dependsOn 'testClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'hellfirepvp.modularmachinery.common.menu.FactoryThreadViewportChecks'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}
+
+// Disposable visual fixtures are excluded from ordinary compilation and release artifacts.
+if (project.hasProperty("clientVisualTest")) sourceSets.main.java.srcDir "src/visualTest/java"

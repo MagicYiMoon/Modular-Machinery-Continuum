@@ -35,12 +35,12 @@ public class TileItemOutputBus extends TileItemBus {
         super(RegistryBlockEntities.ITEM_OUTPUT_BUS, pos, state, IOType.OUTPUT, slotsOf(state));
     }
 
-    /**
-     * Pushes to every accepted neighbour, once per random 5..60 tick interval (PLAN section 372).
-     *
-     * <p>The neighbour walk is inherited -- see {@link TileItemBus#forEachNeighbourHandler} for the six rules it carries,
-     * including that buses do not chain. Only the body differs between this bus and the input bus.
-     */
+    
+
+
+
+
+ 
     public void step(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
         forEachNeighbourHandler(this::outputToExternal);
     }

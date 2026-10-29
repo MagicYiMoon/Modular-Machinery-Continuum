@@ -46,6 +46,7 @@ public class SimpleDynamicMachineUpgrade extends DynamicMachineUpgrade {
 
     @ZenCodeType.Getter("itemData")
     public IData getItemData() {
+        if (runtimeAccess != null) return runtimeItemData();
         return TagToDataConverter.convert(itemData);
     }
 
@@ -59,7 +60,7 @@ public class SimpleDynamicMachineUpgrade extends DynamicMachineUpgrade {
 
     @ZenCodeType.Getter("customData")
     public IData getCustomDataValue() {
-        return TagToDataConverter.convert(customData);
+        return scriptCustomData();
     }
 
     @ZenCodeType.Setter("customData")
@@ -72,7 +73,7 @@ public class SimpleDynamicMachineUpgrade extends DynamicMachineUpgrade {
 
     @ZenCodeType.Getter("parentStack")
     public IItemStack getParentStackCT() {
-        return IItemStack.of(parentStack);
+        return IItemStack.of(getParentStack());
     }
 
     @ZenCodeType.Getter("valid")

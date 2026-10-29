@@ -215,13 +215,13 @@ public class MenuMEItemOutputBus extends AbstractContainerMenu {
         return busPos;
     }
 
-    /**
-     * @return whether {@code menu} is an ME item output bus menu looking at {@code pos}
-     *
-     * <p>Present for the same reason {@code MenuMEFluidInputBus.isOpenFor} is: the question "is this the menu the player
-     * actually has open" belongs in one place, and naming it here removes a packet's need to name the menu TYPE — a
-     * reference that would pull an AE2-gated registry through a class that loads without AE2 (PLAN 478).</p>
-     */
+    
+
+
+
+
+
+ 
     public static boolean isOpenFor(@Nullable AbstractContainerMenu menu, BlockPos pos) {
         return menu instanceof MenuMEItemOutputBus busMenu && busMenu.getBusPos().equals(pos);
     }

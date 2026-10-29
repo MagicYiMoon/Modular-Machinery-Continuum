@@ -37,6 +37,12 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
         else if (packet.mutation instanceof PktMachineEditorRequirementBatch edit) { buffer.writeByte(12); PktMachineEditorRequirementBatch.encode(edit, buffer); }
         else if (packet.mutation instanceof PktMachineEditorRequirementTrigger edit) { buffer.writeByte(13); PktMachineEditorRequirementTrigger.encode(edit, buffer); }
         else if (packet.mutation instanceof PktMachineEditorControllerSettings edit) { buffer.writeByte(14); PktMachineEditorControllerSettings.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorPneumatic edit) { buffer.writeByte(15); PktMachineEditorPneumatic.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorResourceAmount edit) { buffer.writeByte(16); PktMachineEditorResourceAmount.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorRequirementNbt edit) { buffer.writeByte(17); PktMachineEditorRequirementNbt.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorEnvironment edit) { buffer.writeByte(18); PktMachineEditorEnvironment.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorItem edit) { buffer.writeByte(19); PktMachineEditorItem.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorTemplate edit) { buffer.writeByte(20); PktMachineEditorTemplate.encode(edit, buffer); }
         else throw new IllegalArgumentException("Unknown editor operation");
     }
     public static PktMachineEditorRequest decode(FriendlyByteBuf buffer) {
@@ -59,6 +65,12 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
             case 12 -> PktMachineEditorRequirementBatch.decode(buffer);
             case 13 -> PktMachineEditorRequirementTrigger.decode(buffer);
             case 14 -> PktMachineEditorControllerSettings.decode(buffer);
+            case 15 -> PktMachineEditorPneumatic.decode(buffer);
+            case 16 -> PktMachineEditorResourceAmount.decode(buffer);
+            case 17 -> PktMachineEditorRequirementNbt.decode(buffer);
+            case 18 -> PktMachineEditorEnvironment.decode(buffer);
+            case 19 -> PktMachineEditorItem.decode(buffer);
+            case 20 -> PktMachineEditorTemplate.decode(buffer);
             default -> throw new IllegalArgumentException("Unknown editor operation");
         };
         return new PktMachineEditorRequest(window, id, revision, mutation);
@@ -97,24 +109,37 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
             else if (packet.mutation instanceof PktMachineEditorFuel edit) error = PktMachineEditorFuel.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorSelector edit) error = PktMachineEditorSelector.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorSmartInterface edit) error = PktMachineEditorSmartInterface.apply(player, edit);
+            else if (packet.mutation instanceof PktMachineEditorResourceAmount edit) error = PktMachineEditorResourceAmount.apply(player, edit);
+            else if (packet.mutation instanceof PktMachineEditorPneumatic edit) error = PktMachineEditorPneumatic.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorFluidTick edit) error = PktMachineEditorFluidTick.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorRecipeOptions edit) error = PktMachineEditorRecipeOptions.apply(player, edit);
+            else if (packet.mutation instanceof PktMachineEditorTemplate edit) error = PktMachineEditorTemplate.apply(player, edit);
+            else if (packet.mutation instanceof PktMachineEditorItem edit) error = PktMachineEditorItem.apply(player, edit);
+            else if (packet.mutation instanceof PktMachineEditorEnvironment edit) error = PktMachineEditorEnvironment.apply(player, edit);
+            else if (packet.mutation instanceof PktMachineEditorRequirementNbt edit) error = PktMachineEditorRequirementNbt.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorRequirementBatch edit) error = PktMachineEditorRequirementBatch.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorRequirementTrigger edit) error = PktMachineEditorRequirementTrigger.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorAction edit) {
                 if (edit.action != PktMachineEditorAction.DELETE_MACHINE && edit.action != PktMachineEditorAction.DELETE_RECIPE
-                        && edit.action != PktMachineEditorAction.DELETE_REQUIREMENT) return failure(packet, "不支持的编辑操作");
+                        && edit.action != PktMachineEditorAction.DELETE_REQUIREMENT
+                        && edit.action != PktMachineEditorAction.COPY_RECIPE) return failure(packet, "不支持的编辑操作");
                 error = PktMachineEditorAction.apply(player, edit);
             } else return failure(packet, "不支持的编辑操作");
             if (error != null) return failure(packet, error);
             // apply() reloads on the server thread before returning; check the target is still usable.
-            String recipeId = packet.mutation instanceof PktMachineEditorRequirementAdd add ? add.recipeId()
+            String recipeId = packet.mutation instanceof PktMachineEditorAction edit && edit.action == PktMachineEditorAction.COPY_RECIPE ? edit.value
+                    : packet.mutation instanceof PktMachineEditorRequirementAdd add ? add.recipeId()
                     : packet.mutation instanceof PktMachineEditorIngredientGroup edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorDurability edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorFuel edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorSelector edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorSmartInterface edit ? edit.recipeId()
+                    : packet.mutation instanceof PktMachineEditorResourceAmount edit ? edit.recipeId()
+                    : packet.mutation instanceof PktMachineEditorPneumatic edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorFluidTick edit ? edit.recipeId()
+                    : packet.mutation instanceof PktMachineEditorItem edit ? edit.recipeId()
+                    : packet.mutation instanceof PktMachineEditorEnvironment edit ? edit.recipeId()
+                    : packet.mutation instanceof PktMachineEditorRequirementNbt edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorRequirementBatch edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorRequirementTrigger edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorRecipeOptions edit ? edit.recipeId()

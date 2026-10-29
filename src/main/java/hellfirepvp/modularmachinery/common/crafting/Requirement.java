@@ -53,6 +53,13 @@ import hellfirepvp.modularmachinery.common.machine.MachineContext;
  */
 public interface Requirement {
 
+    int PRIORITY_WEIGHT_ENERGY = 50_000_000;
+    int PRIORITY_WEIGHT_ITEM = 50_000;
+    int PRIORITY_WEIGHT_FLUID = 100;
+
+    /** Source ComponentRequirement contract. Wrappers do not inherit the wrapped requirement's weight. */
+    default int getSortingWeight() { return 0; }
+
     /** Tick at which this requirement is triggered; zero means the normal recipe start/finish phase. */
     default int getTriggerTime() { return 0; }
 
@@ -109,7 +116,7 @@ public interface Requirement {
     }
 
     // ================================================================================================
-    // STAGE 1 of the crafting rework (PLAN §228-§229): a type identity and a scaler.
+     
     //
     // `RecipeModifier` -- the machine-modifier system the shipped JSON already uses -- needs exactly two
     // things of a requirement, and until now this interface exposed neither:
@@ -173,75 +180,75 @@ public interface Requirement {
         return getClass().getSimpleName();
     }
 
-    /**
-     * Why this requirement is refusing, in the requirement's own words, or {@code null} for "no specific one".
-     *
-     * <p><b>RULE A0 — THIS IS THE PORT'S SUBSTITUTE FOR UPSTREAM'S {@code CraftCheck} MESSAGE, AND IT EXISTS
-     * BECAUSE THE PORT'S CONTRACT IS BOOLEAN.</b> Upstream's
-     * {@code ComponentRequirement.canStartCrafting(...)} returns a {@code CraftCheck} that carries either
-     * success or a FAILURE MESSAGE, which is how {@code RequirementInterfaceNumInput} reports
-     * "Different values for Smart Data Interface inputs!" (upstream U87-U89) and how half a dozen other
-     * requirements report their own reasons. Neither {@code ComponentRequirement} nor {@code CraftCheck} exists
-     * in this port (PLAN 521 measured the second one's absence), and {@link #canStart(MachineContext)} returns
-     * a boolean, so a requirement that knows WHY it failed had nowhere to say so.</p>
-     *
-     * <p><b>THE READER IS THE PORT'S OWN DIAGNOSTIC CHANNEL:</b>
-     * {@code RecipeCraftingContext.describeBlockers(MachineContext)} — which is what a failing machine shows
-     * and what {@code RecipeFailureEvent}'s cause carries — consults this FIRST and falls back to
-     * {@link #describe()} when it returns {@code null}. The default is {@code null}, so the three existing
-     * requirements keep exactly the text they had and only a requirement that has something better to say
-     * changes.</p>
-     *
-     * @param context the machine as it stands right now; a requirement may re-read it, which is the point —
-     *                the reason for a failure usually depends on the CURRENT contents
-     * @return the message, or {@code null} to fall back to {@link #describe()}
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     default String describeFailure(MachineContext context) {
         return null;
     }
 
-    /**
-     * Whether the machine can take the <b>whole</b> output this requirement is about to produce, at the
-     * parallelism the craft was actually granted.
-     *
-     * <h2>Why this is separate from {@link #canFinish} (PLAN 683.2 fact 8, closed here)</h2>
-     *
-     * <p>{@link #canFinish} is a <b>pre-start</b> question and is asked before a parallelism exists -- the
-     * port's own javadoc says so ("could this recipe run to completion given current contents ... before
-     * stealing any input"). At that moment the requirement carries its default multiplier of one, so a room
-     * check written against it asks for room for ONE copy. That is the right question at start and the wrong
-     * one at completion, where the craft has already been granted N and {@code MachineTicker.emitOutputs}
-     * places N copies.</p>
-     *
-     * <p><b>UPSTREAM ASKS IT WITH THE MULTIPLIER BAKED IN, TWICE.</b>
-     * {@code RequirementItem.canStartCrafting} (upstream U266-U270) and {@code RequirementFluid}'s
-     * counterpart (U141-U144) both funnel into {@code doItemIO} / {@code doFluidIO}, which call
-     * {@code doItemIOInternal(..., parallelism, ...)} (U286-U287 / U166-U167) and return
-     * {@code craftcheck.failure.item.output.space} / {@code craftcheck.failure.fluid.output.space} when
-     * FEWER THAN {@code parallelism} copies fit (U288-U292 / U167-U177). {@code RecipeCraftingContext
-     * .canFinishCrafting} (U498-U500) filters to OUTPUT requirements and asks exactly that question before
-     * {@code RecipeThread.onFinished} (U73-U78) allows {@code context.finishCrafting()}. The port's
-     * completion gate asked the single-copy question, so a parallel craft could complete with somewhere to
-     * put one copy and no room for the rest -- and the rest was reported as lost.
-     *
-     * <p><b>THE MULTIPLIER IS A PARAMETER, NOT THE REQUIREMENT'S OWN FIELD, AND THAT IS DELIBERATE.</b>
-     * Upstream's {@code parallelism} lives on the requirement because upstream's context copies the
-     * requirement instances per run; this port's requirements are shared by every machine running the
-     * definition, so a field read here could belong to another craft. Both port call sites already hold the
-     * granted value (the controller's and the factory thread's) and already pass it to
-     * {@code emitOutputs}, so passing it here makes the check and the emission read <b>the same number</b>,
-     * which is the property that matters.
-     *
-     * <p><b>THE DEFAULT IS {@link #canFinish} BECAUSE THAT IS THE SAFE NO-OP FOR EVERY OTHER KIND.</b> Only
-     * an OUTPUT that is placed at completion needs this question: energy is drawn per tick rather than
-     * emitted ({@code RequirementEnergy} has no completion write at all), and an INPUT requirement's output
-     * space is nothing. Defaulting to {@code false} instead would veto any requirement that does not produce,
-     * which is a worse failure than the one this method exists to prevent.</p>
-     *
-     * @param context     the machine as it stands right now
-     * @param parallelism how many copies the craft was granted; a value below one is treated as one
-     * @return true when the full batch fits, i.e. when this requirement must not block the emission
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     default boolean canEmit(MachineContext context, int parallelism) {
         if (getIOType() == IOType.OUTPUT && isIgnoreOutputCheck()) return true;
         return canFinish(context);
@@ -271,42 +278,42 @@ public interface Requirement {
         default boolean isBatchPerTick() { return false; }
     }
 
-    /**
-     * A requirement that can be asked to run several times at once (upstream ComponentRequirement.Parallelizable).
-     *
-     * <p><b>RULE A0 -- ONE PARAMETER IS DROPPED, AND THE THREE PARTS ARE HERE BECAUSE THE SIGNATURE CHANGED.</b></p>
-     *
-     * <ol>
-     *   <li><b>upstream method</b> -- {@code int getMaxParallelism(List<ProcessingComponent<?>> components,
-     *       RecipeCraftingContext context, int maxParallelism)} at ComponentRequirement U295-U297.</li>
-     *   <li><b>why not here</b> -- THE TYPE DOES NOT EXIST IN THIS PORT: a project-wide search for
-     *       {@code ProcessingComponent} returns zero hits. It is upstream abstraction for a RESOLVED COMPONENT
-     *       INSTANCE that a requirement may copy and test against; this port requirements work directly against
-     *       MachineContext own capability lookups instead, so there is no such list to pass and no such type to
-     *       name. THIS IS NOT A SIMPLIFICATION, IT IS A SHAPE THAT HAS NOTHING TO BIND THE PARAMETER TO.</li>
-     *   <li><b>the alternative</b> -- {@code getMaxParallelism(MachineContext, int)}. THE DIFFERENCE IS WHERE THE
-     *       CANDIDATE COMPONENTS COME FROM: upstream receives a pre-copied list and may damage it freely; this port
-     *       requirement asks the machine what it holds. A requirement that NEEDED the copy would have to say so,
-     *       and none of the three does.</li>
-     * </ol>
-     *
-     * <p><b>AND THE CONTRACT IS UPSTREAM OWN, QUOTED FROM U301-U310 RATHER THAN PARAPHRASED:</b> the number of
-     * parallels must be strictly adhered to when checking or working, "and you should not increase or decrease the
-     * number of parallels on your own". THE REQUIREMENT IS TOLD WHAT TO MULTIPLY BY AND MUST NOT SECOND-GUESS IT --
-     * which is why the third method below is a setter and not a hint.</p>
-     *
-     * <p><b>RULE A0 -- AND THE THIRD PARAMETER IS UPSTREAM'S FIRST ONE, RETURNED FOR A MEASURED REASON
-     * (PLAN §715).</b> Upstream's first parameter is the list of the recipe's own resolved components, and the
-     * reason a requirement receives it is that a requirement's answer can depend on what its SIBLINGS will do:
-     * two fluid outputs share one set of tanks, so "how many copies can I supply" is not a per-requirement
-     * question at all. The port dropped that parameter because {@code ProcessingComponent} does not exist here
-     * (part 2 above) -- and for four rounds nothing noticed, because the port's fluid grant was computed for one
-     * fluid at a time. The multi-fluid check measured the consequence: two fluid outputs of the SAME emission
-     * were each told the other's room was available, the grant came out at two copies for a batch the tanks
-     * physically cannot hold (320 mB into 200 mB), and the emission gate -- which DOES per-tank reserve -- then
-     * held the craft forever. Passing {@code recipe.requirements()} restores the missing input in the port's own
-     * vocabulary: no such type as upstream's, but the list the requirement needs to answer honestly.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     interface Parallelizable extends Requirement {
 
         /**

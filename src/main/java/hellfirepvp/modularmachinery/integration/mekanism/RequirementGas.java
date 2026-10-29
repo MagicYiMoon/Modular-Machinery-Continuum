@@ -13,6 +13,7 @@ import java.util.*;
 
 /** One-time gas IO: consume at start, produce at completion, through ordinary hybrid hatches. */
 public final class RequirementGas extends SelectorRequirement implements Requirement.Parallelizable, BatchIORequirement {
+    @Override public int getSortingWeight() { return PRIORITY_WEIGHT_FLUID; }
     private final IOType ioType;
     private final String rawId;
     private final int amount;

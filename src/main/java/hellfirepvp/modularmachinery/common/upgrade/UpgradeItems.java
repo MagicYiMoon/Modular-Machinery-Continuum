@@ -104,48 +104,48 @@ public final class UpgradeItems {
     private UpgradeItems() {
     }
 
-    /**
-     * Registers the four upgrade ITEMS with the mod's item registry.
-     *
-     * <h2>⚠️ WHAT THIS METHOD MUST NOT DO, AND WHY THE FIRST VERSION WAS A CRASH</h2>
-     *
-     * <p>Called from {@code RegistryItems}' static initialiser — i.e. while the mod's own classes are being loaded,
-     * long before Forge fires {@code RegisterEvent}. A {@link RegistryObject} is created immediately by
-     * {@code DeferredRegister#register} but is **not bound** until {@code RegisterEvent} runs, and reading one in
-     * that window does not return {@code null}: Forge throws. The first version of this method called
-     * {@code speedItem.get()} right here to hand the item to {@link RegistryMachineUpgrade}, and the result was
-     * this, verbatim, on mod construction:
-     *
-     * <pre>
-     * Failed to create mod instance. ModID: modularmachinery, class hellfirepvp.modularmachinery.Modularmachinery
-     * java.lang.ExceptionInInitializerError: null
-     *   at hellfirepvp.modularmachinery.Modularmachinery.&lt;init&gt;(Modularmachinery.java:77)
-     * Caused by: java.lang.NullPointerException: Registry Object not present: modularmachinery:upgrade_speed
-     *   at net.minecraftforge.registries.RegistryObject.get(RegistryObject.java:204)
-     *   at hellfirepvp.modularmachinery.common.upgrade.UpgradeItems.register(UpgradeItems.java:129)
-     *   at hellfirepvp.modularmachinery.common.registry.RegistryItems.&lt;clinit&gt;(RegistryItems.java:…)
-     * </pre>
-     *
-     * <p><b>THE TWO HALVES THEREFORE HAVE TO HAPPEN AT DIFFERENT TIMES, AND THAT IS THE DESIGN:</b>
-     * <ol>
-     *   <li>the item REGISTRATIONS happen here, at class-load time, because that is what fills
-     *       {@code DeferredRegister}'s map before it is attached to the mod event bus — and because
-     *       {@code RegistryCreativeTabs} and the checks read these fields;</li>
-     *   <li>the {@link RegistryMachineUpgrade} entries happen in {@link #bindUpgrades()}, which the mod calls from
-     *       the <b>registry event</b>, when {@code .get()} is legal.</li>
-     * </ol>
-     * The two are split rather than merged because merging them is exactly what crashed, and because an
-     * item-without-its-upgrade is the failure mode this whole unit exists to prevent — so the second half is a
-     * separate, deliberately-late step rather than something that happens "whenever".
-     *
-     * <p><b>The ITEM OBJECTS are constructed inside the suppliers and not here</b>, matching every other item in
-     * {@code RegistryItems}: {@code new Item.Properties()} touches {@code BuiltInRegistries.ITEM}, and an item
-     * constructed after the registry is frozen throws. The deferred supplier is what keeps construction at the
-     * registry event instead of at class initialisation.
-     *
-     * <p><b>Registration is not idempotent, on purpose.</b> A second call would mean two items for one type, and
-     * {@link RegistryMachineUpgrade#register} throws rather than letting the second one silently win.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static void register(DeferredRegister<net.minecraft.world.item.Item> items) {
         if (registered) {
             return;

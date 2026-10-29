@@ -21,33 +21,33 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Map;
 
-/**
- * Maps 1.12.2 {@code item@metadata} item ids to their 1.20.1 item.
- *
- * <h2>A third id scheme, not covered by the other two tables</h2>
- *
- * <p>The port now has three distinct legacy id forms, each flattened away differently in 1.13:
- *
- * <ul>
- *   <li><b>renamed ids</b> — {@code minecraft:wool} → {@code minecraft:white_wool}. Handled by
- *       {@link RequirementItem}'s alias table.</li>
- *   <li><b>ore-dictionary names</b> — {@code ore:ingotIron} → the {@code forge:ingots/iron} tag.
- *       Handled by {@link ItemTagShim}.</li>
- *   <li><b>metadata-carrying ids</b> — {@code minecraft:dye@3} → {@code minecraft:cocoa_beans}.
- *       Handled here.</li>
- * </ul>
- *
- * <p>This third form was <b>not</b> anticipated in the plan, which only predicted block metadata in
- * machine patterns and ore-dictionary names in recipes. It surfaced from a load-time report:
- * {@code centrifuge_centrifuge_grass: item requirement names 'minecraft:dye@3'}. It is listed
- * separately from the rename aliases because the cause is different — the item still exists, but the
- * <i>variant</i> that metadata used to select is now a distinct item.
- *
- * <p>Only entries that can be stated with confidence are mapped. {@code minecraft:dye} is the notable
- * one: 1.12.2 had a single {@code dye} item whose metadata selected the colour, and 1.13 split it into
- * {@code white_dye}, {@code orange_dye}, … with <b>different metadata numbering</b>, so the mapping is
- * a table and not an offset.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class ItemMetadataShim {
 
     /**

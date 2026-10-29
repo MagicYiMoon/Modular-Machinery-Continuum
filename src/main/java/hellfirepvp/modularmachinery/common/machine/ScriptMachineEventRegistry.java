@@ -23,7 +23,11 @@ public final class ScriptMachineEventRegistry {
     /** Dispatches the exact source event class, preserving registration order. */
     public static void dispatch(MachineEvent event) {
         if (event == null || event.getController() == null) return;
-        String machineName = event.getController().getMachineName();
+        dispatchToMachine(event.getController().getMachineName(), event);
+    }
+    /** Publication can precede writing the newly recognized machine identity onto the controller. */
+    public static void dispatchToMachine(String machineName, MachineEvent event) {
+        if (event == null || event.getController() == null) return;
         if (machineName == null || machineName.isBlank()) return;
         List<Consumer<Object>> callbacks;
         synchronized (ScriptMachineEventRegistry.class) {

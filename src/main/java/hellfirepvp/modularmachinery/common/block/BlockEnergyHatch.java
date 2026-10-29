@@ -126,18 +126,18 @@ public abstract class BlockEnergyHatch extends BlockVariantComponent<EnergyHatch
     @Override
     protected abstract BlockEntity createBlockEntity(EnergyHatchData variant, BlockPos pos, BlockState state);
 
-    /**
-     * Ticks the OUTPUT hatch so it can give its buffer to neighbours (PLAN section 383).
-     *
-     * <p><b>Only the output direction is installed, and that is the difference from {@code BlockBus}.</b> There both
-     * directions move items -- one pulls and one pushes -- so that override dispatches twice. Here the input hatch has
-     * nothing to do on a tick: energy reaches it through its capability, which is how the machine fills it. Installing a
-     * ticker for it would spend a call per tick per hatch to run a method that returns immediately.
-     *
-     * <p>And note the hatch's own {@code step} is NOT throttled, unlike the item buses' random 5..60 tick walk: upstream
-     * pushes every tick, capped by the storage's transfer limit. A power hatch delivering a fraction of its rated
-     * throughput because it was given the buses' cadence is exactly the kind of error that looks like a balance problem.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     @Nullable
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(

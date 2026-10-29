@@ -38,10 +38,10 @@ import java.util.List;
  * {@link LazyOptional} which may have been <b>invalidated</b> since it was obtained, and a machine whose
  * contents are queried every tick must not re-resolve — and must not hold a stale handler either.
  *
- * <p>So this class resolves each component's capability <b>once per inspection</b>, keeps the
- * {@link LazyOptional} for the duration, and returns it. Callers use the value and drop it; nothing
- * caches across ticks. A component that is removed invalidates its optional, and the next inspection
- * simply does not find it — which is the behaviour the 1.12.2 code got wrong by holding raw handlers.
+ * <p>Each inspection looks up the current block entity and resolves its capability. Native internal
+ * energy/fluid adapters are cached by tile identity for this context's lifetime, so requirements can
+ * reserve against one stable handler. Replacing a tile at the same coordinate yields a new adapter;
+ * callers must not retain handlers beyond their inspection.
  *
  * <h2>Ordering</h2>
  *
@@ -62,7 +62,10 @@ public final class MachineContext {
     private String selectorTag;
     private java.util.Set<BlockPos> selectedPositions;
     private final java.util.Map<String, MachineContext> selectorViews = new java.util.HashMap<>();
-    private final java.util.Map<BlockPos, net.minecraftforge.fluids.capability.IFluidHandler> fluidInputViews = new java.util.HashMap<>();
+    private final java.util.Map<hellfirepvp.modularmachinery.common.tiles.base.TileFluidTank,
+            net.minecraftforge.fluids.capability.IFluidHandler> fluidInputViews = new java.util.IdentityHashMap<>();
+    private final java.util.Map<hellfirepvp.modularmachinery.common.tiles.base.TileEnergyHatch,
+            net.minecraftforge.energy.IEnergyStorage> energyViews = new java.util.IdentityHashMap<>();
     /** The source mod's combination-component group currently selected for this inspection. */
     private String isolationGroupKey;
 
@@ -74,16 +77,16 @@ public final class MachineContext {
      */
     private List<BlockPos> componentPositions;
 
-    /**
-     * @param pattern <b>THE PATTERN THIS CONTEXT RESOLVES COMPONENTS FROM — THE ONE THE MACHINE WAS FORMED WITH,
-     *                NOT THE DEFINITION'S.</b> The two differ whenever the machine declares
-     *                {@code dynamic-patterns}: the formed pattern is the definition's parts with its sections
-     *                merged in (PLAN §750), and the shipped {@code assembly_line} keeps its input bus, its fluid
-     *                and ME hatches and its output bus <b>only</b> in the sections. Passing
-     *                {@code machine.getPattern()} here compiles, reads as correct, and silently hands the recipe
-     *                layer a machine with no busses — which is why the parameter is explicit rather than
-     *                defaulted.
-     */
+    
+
+
+
+
+
+
+
+
+ 
     public MachineContext(ServerLevel level, BlockPos controllerPos, Direction facing,
                           DynamicMachine machine, MachineVariables variables, MachinePattern pattern) {
         this.level = level;
@@ -144,18 +147,18 @@ public final class MachineContext {
         return root.isolationGroupKey;
     }
 
-    /**
-     * @return the definition this machine was formed from.
-     *
-     * <p><b>KEPT BECAUSE A REQUIREMENT NEEDS IT AND HAD NO OTHER WAY TO ASK (PLAN 663, B4).</b> Upstream's
-     * {@code RequirementInterfaceNumInput} resolves its {@code SmartInterfaceType} descriptor out of the
-     * machine at CONSTRUCTION time and reads the descriptor's {@code notEqualMessage} when a value is out of
-     * range (upstream U86-U89). This port's requirement type factory receives only the requirement's own JSON
-     * (see {@code RequirementType#createRequirement}), so the machine is not available where upstream had it —
-     * but it IS available on every evaluation, because the context is built from it. Exposing it here keeps
-     * the descriptor lookup on the same object upstream read it from instead of inventing a second registry
-     * of declared types.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     public DynamicMachine getMachine() {
         return machine;
     }
@@ -195,7 +198,7 @@ public final class MachineContext {
     }
 
     private List<BlockPos> resolveComponents() {
-        List<BlockPos> found = new ArrayList<>();
+        java.util.Set<BlockPos> found = new java.util.LinkedHashSet<>();
         for (MachinePattern.Part part : pattern.getParts()) {
             BlockPos worldPos = StructureMatcher.toWorldOffset(
                     controllerPos, facing, part.x(), part.y(), part.z());
@@ -207,11 +210,12 @@ public final class MachineContext {
                 continue;
             }
             BlockEntity be = level.getBlockEntity(worldPos);
-            if (be instanceof MachineComponentTile) {
+            if (be instanceof MachineComponentTile ||
+                    hellfirepvp.modularmachinery.common.machine.component.MachineComponentProxyRegistry.INSTANCE.proxy(be) != null) {
                 found.add(worldPos);
             }
         }
-        return found;
+        return List.copyOf(found);
     }
 
     /**
@@ -300,25 +304,25 @@ public final class MachineContext {
         return found;
     }
 
-    /**
-     * Collects this machine's SMART INTERFACES, for the requirement that reads a published value (PLAN 663, B4).
-     *
-     * <p>The same "internal" channel {@link #internalEnergyHatches()} and {@link #internalFluidTanks()} use,
-     * and for the same reason: a capability is the <b>external</b> contract, and a smart interface's value is
-     * not a capability at all — it is state on the tile that the machine's own recipe requirements read. There
-     * is nothing to resolve through {@code getCapability}, so the tile is returned.</p>
-     *
-     * <p><b>THIS IS THE PORT'S EQUIVALENT OF "THE PROVIDER IS A MACHINE COMPONENT".</b> Upstream's
-     * {@code SmartInterfaceProvider} is a {@code MachineComponent}, so the recipe machinery hands it to a
-     * requirement and {@code RequirementInterfaceNumInput} reads
-     * {@code provider.getMachineData(type)} (upstream U76-U77). The port has no {@code MachineComponent} type,
-     * so the reachability comes from the other half of upstream's shape: the interface block entity implements
-     * {@code MachineComponentTile} and this class resolves exactly those tiles out of the pattern — which the
-     * same formation walk populated {@code setControllerPos} on. From the tile the requirement asks for
-     * {@code provideComponent()}, which is upstream's own call site in the packet handler and the screen.</p>
-     *
-     * @return the smart interfaces among this machine's components, in declaration order
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public List<hellfirepvp.modularmachinery.common.tiles.TileSmartInterface> smartInterfaces() {
         List<hellfirepvp.modularmachinery.common.tiles.TileSmartInterface> found = new ArrayList<>();
         for (BlockPos pos : getComponentPositions()) {
@@ -361,9 +365,26 @@ public final class MachineContext {
         return capabilities(net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER, ComponentKind.OUTPUT, true);
     }
 
+    /** Native hatches use their owning-machine channel; proxies supply an explicit internal energy view. */
+    public List<net.minecraftforge.energy.IEnergyStorage> internalEnergyStorages(ComponentKind filter) {
+        return capabilities(net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY, filter, true);
+    }
+
+    private net.minecraftforge.energy.IEnergyStorage internalEnergyView(
+            hellfirepvp.modularmachinery.common.tiles.base.TileEnergyHatch hatch) {
+        return root.energyViews.computeIfAbsent(hatch, ignored -> new net.minecraftforge.energy.IEnergyStorage() {
+            public int getEnergyStored() { return hatch.getStoredEnergy(); }
+            public int getMaxEnergyStored() { return hatch.getCapacity(); }
+            public boolean canExtract() { return hatch.getIOType() == IOType.INPUT; }
+            public boolean canReceive() { return hatch.getIOType() == IOType.OUTPUT; }
+            public int extractEnergy(int amount, boolean simulate) { return canExtract() ? hatch.consumeInternal(amount, simulate) : 0; }
+            public int receiveEnergy(int amount, boolean simulate) { return canReceive() ? hatch.produceInternal(amount, simulate) : 0; }
+        });
+    }
+
     public net.minecraftforge.fluids.capability.IFluidHandler internalFluidView(BlockPos pos,
             hellfirepvp.modularmachinery.common.tiles.base.TileFluidTank tank) {
-        return root.fluidInputViews.computeIfAbsent(pos, ignored -> new net.minecraftforge.fluids.capability.IFluidHandler() {
+        return root.fluidInputViews.computeIfAbsent(tank, ignored -> new net.minecraftforge.fluids.capability.IFluidHandler() {
                     public int getTanks() { return tank.getTank().getTanks(); }
                     public net.minecraftforge.fluids.FluidStack getFluidInTank(int index) { return tank.getTank().getFluidInTank(index); }
                     public int getTankCapacity(int index) { return tank.getTank().getTankCapacity(index); }
@@ -388,11 +409,11 @@ public final class MachineContext {
      * requirement only indirectly, and would fail for a reason (structure assembly) unrelated to what is
      * being checked.
      *
-     * <p>Not used by the engine: {@link #getComponentPositions()} is otherwise derived from the
-     * controller's bound components during structure assembly.
+     * <p>The engine supplies the positions confirmed at formation to avoid scanning every casing on
+     * each tick. As in {@link #resolveComponents()}, unloaded chunks must not be forced to load.
      */
     public void overrideComponentPositions(List<BlockPos> positions) {
-        this.componentPositions = new ArrayList<>(positions);
+        this.componentPositions = positions.stream().filter(level::isLoaded).map(BlockPos::immutable).distinct().toList();
     }
 
     /**
@@ -406,17 +427,30 @@ public final class MachineContext {
         return capabilities(capability, filter, false);
     }
 
-    private <T> List<T> capabilities(Capability<T> capability, ComponentKind filter, boolean internalFluidInput) {
+    private <T> List<T> capabilities(Capability<T> capability, ComponentKind filter, boolean internalAccess) {
         List<T> handlers = new ArrayList<>();
         for (BlockPos pos : getComponentPositions()) {
+            if (!level.isLoaded(pos)) continue;
             BlockEntity be = level.getBlockEntity(pos);
             if (!(be instanceof MachineComponentTile component)) {
+                var proxy = hellfirepvp.modularmachinery.common.machine.component.MachineComponentProxyRegistry.INSTANCE.proxy(be);
+                if (proxy != null && filter.accepts(proxy.getIOType())) {
+                    T handler = proxy.getCapability(capability);
+                    if (handler != null) handlers.add(handler);
+                }
                 continue;
             }
             if (!filter.accepts(component)) {
                 continue;
             }
-            if (internalFluidInput && be instanceof hellfirepvp.modularmachinery.common.tiles.base.TileFluidTank tank) {
+            if (internalAccess && capability == net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY
+                    && be instanceof hellfirepvp.modularmachinery.common.tiles.base.TileEnergyHatch hatch) {
+                @SuppressWarnings("unchecked") T typed = (T) internalEnergyView(hatch);
+                handlers.add(typed);
+                continue;
+            }
+            if (internalAccess && capability == net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER
+                    && be instanceof hellfirepvp.modularmachinery.common.tiles.base.TileFluidTank tank) {
                 @SuppressWarnings("unchecked") T typed = (T) internalFluidView(pos, tank);
                 handlers.add(typed);
                 continue;
@@ -507,6 +541,10 @@ public final class MachineContext {
         ANY;
 
         boolean accepts(MachineComponentTile component) {
+            return accepts(component.getIOType());
+        }
+
+        boolean accepts(IOType type) {
             if (this == ANY) {
                 return true;
             }
@@ -514,7 +552,6 @@ public final class MachineContext {
             // public method on a subclass of a package-private class, which threw
             // IllegalAccessException; the catch treated that as "no direction", so every component was
             // directionless, INPUT matched nothing, and requirements could never find their hatches.
-            IOType type = component.getIOType();
             if (type == null) {
                 return true;
             }

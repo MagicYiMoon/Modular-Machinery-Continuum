@@ -90,7 +90,7 @@ public abstract class BlockFluidHatch extends BlockVariantComponent<FluidHatchSi
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
                                  InteractionHand hand, BlockHitResult hit) {
-        // A HELD FLUID CONTAINER ACTS ON THE TANK FIRST (PLAN section 251).
+         
         //
         // The client reported that a bucket could not be used on the fluid input bus: this method went
         // straight to openScreen, so a bucket in hand did nothing at all.
@@ -103,7 +103,7 @@ public abstract class BlockFluidHatch extends BlockVariantComponent<FluidHatchSi
         // The signature is taken from the Forge 1.20.1 sources, not from memory:
         //   interactWithFluidHandler(Player, InteractionHand, Level, BlockPos, @Nullable Direction) -> boolean
         //
-        // AND WITH PLAYER ACCESS OPEN (PLAN section 260).
+         
         //
         // The drain gate on the tank refuses external drain on an INPUT hatch so a neighbouring machine cannot
         // steal what the owner is collecting. That is a rule about automation, and the client found its edge:

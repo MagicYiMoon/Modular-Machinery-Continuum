@@ -66,11 +66,14 @@ public abstract class TileFluidTank extends TileMachineComponent implements GasT
             @Override
             protected void onContentsChanged() {
                 setChanged();
+                if (level != null && !level.isClientSide && getControllerPos() != null
+                        && level.getBlockEntity(getControllerPos()) instanceof hellfirepvp.modularmachinery.common.tiles.TileController controller)
+                    controller.requestNormalRecipeSearch();
             }
 
             @Override
             public boolean isFluidValid(FluidStack stack) {
-                // AN OUTPUT HATCH ACCEPTS NO EXTERNAL FILL; THE MACHINE PUSHES INTO IT DIRECTLY (PLAN §714).
+                 
                 //
                 // THIS PREDICATE IS THE GATE THAT ACTUALLY REFUSED, and finding the second one took a run:
                 // Forge's FluidTank.fill refuses at its own first line -- `if (resource.isEmpty() ||
@@ -81,7 +84,7 @@ public abstract class TileFluidTank extends TileMachineComponent implements GasT
                 // returned 0 from one gate or the other and the whole fluid-output path was dead: the pre-start
                 // room question answered 0, getMaxParallelism answered 0, and a craft could never start.
                 // Invisible for as long as it was, because no check in this suite had ever driven a fluid OUTPUT
-                // through the tick (PLAN 699.7 / 704.9:1, closed by the fluid-output-allocation check).
+                 
                 //
                 // THE EXTERNAL CONTRACT IS UNCHANGED: a neighbour, a pipe and a player's bucket get `false` here
                 // and 0 from fill, exactly as the output hatch's own javadoc promises ("externally drainable,

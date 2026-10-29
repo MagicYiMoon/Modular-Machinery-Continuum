@@ -75,6 +75,7 @@ public final class RegistryMachineUpgrade {
     private static final Map<UpgradeType, MachineUpgradeItem> ITEM_BY_TYPE = new LinkedHashMap<>();
 
     private static final String STACK_UPGRADES = "modularmachinery_upgrades";
+    private static final String DYNAMIC_BINDINGS = "modularmachinery_dynamic_upgrade_bindings";
 
     private record Binding(ItemStack match, MachineUpgrade prototype) {
         boolean matches(ItemStack stack) {
@@ -161,21 +162,24 @@ public final class RegistryMachineUpgrade {
     public static List<MachineUpgrade> upgradesFor(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return Collections.emptyList();
         List<Binding> bindings = ITEMS.get(stack.getItem());
-        if (bindings == null || bindings.stream().noneMatch(binding -> binding.matches(stack))) {
+        if (bindings == null) {
             // The source attaches the upgrade capability only to an item that has a matching UpgradeInfo.  A
             // forged modularmachinery_upgrades tag on an unrelated item therefore cannot install an upgrade.
             return Collections.emptyList();
         }
+        boolean matchesRegistration = bindings.stream().anyMatch(binding -> binding.matches(stack));
         List<MachineUpgrade> result = new ArrayList<>();
+        java.util.Set<String> added = new java.util.HashSet<>();
         if (stack.hasTag()) {
             ListTag encoded = stack.getTag().getList(STACK_UPGRADES, Tag.TAG_STRING);
             for (int i = 0; i < encoded.size(); i++) {
                 MachineUpgrade prototype = PROTOTYPES.get(encoded.getString(i));
-                if (prototype != null) result.add(copyForStack(prototype, stack));
+                if (prototype != null && (matchesRegistration || persistedUpgrade(stack, bindings, prototype.getType().getName()))
+                        && added.add(prototype.getType().getName())) result.add(copyForStack(prototype, stack));
             }
         }
         for (Binding binding : bindings) {
-            if (binding.prototype() != null && binding.matches(stack)) {
+            if (binding.prototype() != null && binding.matches(stack) && added.add(binding.prototype().getType().getName())) {
                 result.add(copyForStack(binding.prototype(), stack));
             }
         }
@@ -187,6 +191,8 @@ public final class RegistryMachineUpgrade {
             DynamicMachineUpgrade dynamicCopy = dynamic.copy(owner);
             CompoundTag tag = owner.getTag();
             dynamicCopy.readItemNBT(tag == null ? new CompoundTag()
+                    : tag.contains(DynamicMachineUpgrade.ITEM_DATA_BY_TYPE_TAG, Tag.TAG_COMPOUND)
+                    ? tag.getCompound(DynamicMachineUpgrade.ITEM_DATA_BY_TYPE_TAG).getCompound(prototype.getType().getName())
                     : tag.getCompound(DynamicMachineUpgrade.ITEM_DATA_TAG));
             return dynamicCopy;
         } else {
@@ -198,7 +204,39 @@ public final class RegistryMachineUpgrade {
     public static boolean supportsUpgrade(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         List<Binding> bindings = ITEMS.get(stack.getItem());
-        return bindings != null && bindings.stream().anyMatch(binding -> binding.matches(stack));
+        if (bindings == null) return false;
+        if (bindings.stream().anyMatch(binding -> binding.matches(stack))) return true;
+        if (!stack.hasTag()) return false;
+        for (String type : stack.getTag().getCompound(DYNAMIC_BINDINGS).getAllKeys())
+            if (persistedUpgrade(stack, bindings, type)) return true;
+        return false;
+    }
+
+    /** Source capability identity survives wear; a saved identity still requires a matching item registration. */
+    private static boolean persistedUpgrade(ItemStack stack, List<Binding> bindings, String type) {
+        if (!PROTOTYPES.containsKey(type) || !stack.hasTag()) return false;
+        CompoundTag saved = stack.getTag().getCompound(DYNAMIC_BINDINGS);
+        if (!saved.contains(type, Tag.TAG_INT)) return false;
+        int originalDamage = saved.getInt(type);
+        return bindings.stream().anyMatch(binding -> (binding.prototype() == null || type.equals(binding.prototype().getType().getName()))
+                && (binding.match() == null || binding.match().getDamageValue() == originalDamage));
+    }
+
+    /** Called on authoritative dynamic-item writes, before changing damage. Ordinary registry reads stay pure. */
+    public static ItemStack preserveDynamicIdentity(ItemStack input, String type) {
+        ItemStack result = addUpgradeToStack(input, type);
+        CompoundTag tag = result.getOrCreateTag(); var saved = tag.getCompound(DYNAMIC_BINDINGS);
+        if (!saved.contains(type, Tag.TAG_INT)) saved.putInt(type, input.getDamageValue());
+        tag.put(DYNAMIC_BINDINGS, saved);
+        return result;
+    }
+
+    /** Preserve every attached upgrade before wear changes fixed item/damage matching, as capability NBT does. */
+    public static ItemStack preserveUpgradeIdentities(ItemStack input) {
+        ItemStack result = input.copy();
+        for (MachineUpgrade installed : upgradesFor(input))
+            result = preserveDynamicIdentity(result, installed.getType().getName());
+        return result;
     }
 
     /** @return the registered prototype for a type name, or {@code null} — upstream's {@code getUpgrade} (U57-U59) */

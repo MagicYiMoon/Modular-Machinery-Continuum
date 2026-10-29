@@ -134,7 +134,7 @@ public final class IngredientGroupEditorRegressionChecks {
             save(player, new PktMachineEditorIngredientGroup(id + "_invalid", -1, "{}", machine, 20, ""), false);
             require(!Files.exists(rejectedFile), "invalid initial group cannot create a recipe file");
 
-            for (String field : List.of("nbt", "nbt-display", "minAmount", "chance")) {
+            for (String field : List.of("minAmount", "chance")) {
                 var advanced = JsonParser.parseString(before).getAsJsonObject();
                 var candidate = advanced.getAsJsonArray("requirements").get(0).getAsJsonObject().getAsJsonArray("items").get(0).getAsJsonObject();
                 candidate.add(field, JsonParser.parseString(field.startsWith("nbt") ? "{\"quality\":\"3\"}" : field.equals("chance") ? "0.5" : "1"));

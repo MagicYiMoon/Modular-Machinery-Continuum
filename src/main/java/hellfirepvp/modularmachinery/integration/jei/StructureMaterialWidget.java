@@ -22,12 +22,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import org.lwjgl.glfw.GLFW;
 import java.util.*;
+import static hellfirepvp.modularmachinery.integration.jei.StructurePreviewLayout.*;
 
 /** Native JEI slots provide configured recipe/use/bookmark input for a changing material view. */
 final class StructureMaterialWidget implements ISlottedRecipeWidget, IJeiGuiEventListener {
     static final String PREFIX = "preview_material_";
-    private static final int SUMMARY_Y = 180, SELECTED_X = 5, PRIMARY_Y = 40, ALTERNATIVE_Y = 62;
-    private static final int SUMMARY_SLOTS = BlueprintMaterialState.COLUMNS * BlueprintMaterialState.ROWS;
+    private static final int SELECTED_X = 5;
+    private static final int SUMMARY_SLOTS = BlueprintMaterialState.COLUMNS * SUMMARY_ROWS;
+    private static final int SUMMARY_HEIGHT = 18 * SUMMARY_ROWS, SUMMARY_THUMB = 9;
+    private static final int SUMMARY_TRAVEL = SUMMARY_HEIGHT - SUMMARY_THUMB;
     private final StructurePreviewEntry entry;
     private final List<IRecipeSlotDrawable> slots;
     private final List<ItemStack> displayed = new ArrayList<>();
@@ -43,7 +46,7 @@ final class StructureMaterialWidget implements ISlottedRecipeWidget, IJeiGuiEven
 
     static void addSlots(IRecipeLayoutBuilder builder) {
         var renderer = new MaterialRenderer();
-        for (int i = 0; i < SUMMARY_SLOTS + 1 + BlueprintMaterialState.ALTERNATIVE_ROWS; i++) {
+        for (int i = 0; i < SUMMARY_SLOTS + 1 + ALTERNATIVE_ROWS; i++) {
             int x = i < SUMMARY_SLOTS ? 5 + i % BlueprintMaterialState.COLUMNS * 18 : SELECTED_X;
             int y = i < SUMMARY_SLOTS ? SUMMARY_Y + i / BlueprintMaterialState.COLUMNS * 18
                     : i == SUMMARY_SLOTS ? PRIMARY_Y : ALTERNATIVE_Y + (i - SUMMARY_SLOTS - 1) * 18;
@@ -54,11 +57,11 @@ final class StructureMaterialWidget implements ISlottedRecipeWidget, IJeiGuiEven
     }
 
     @Override public ScreenPosition getPosition() { return new ScreenPosition(0, 0); }
-    @Override public ScreenRectangle getArea() { return new ScreenRectangle(0, 0, 180, 220); }
+    @Override public ScreenRectangle getArea() { return new ScreenRectangle(0, 0, WIDTH, HEIGHT); }
 
-    static boolean overSummary(double x, double y) { return x >= 5 && x < 178 && y >= SUMMARY_Y && y < SUMMARY_Y + 36; }
+    static boolean overSummary(double x, double y) { return x >= 5 && x < 178 && y >= SUMMARY_Y && y < SUMMARY_Y + SUMMARY_HEIGHT; }
     static boolean overSelected(StructurePreviewEntry entry, double x, double y) {
-        return entry.interaction.selected() != null && x >= 3 && x < 30 && y >= 38 && y < 118;
+        return entry.interaction.selected() != null && x >= 3 && x < 30 && y >= UPGRADE_Y && y < SCENE_BOTTOM;
     }
 
     private void sync() {
@@ -78,17 +81,11 @@ final class StructureMaterialWidget implements ISlottedRecipeWidget, IJeiGuiEven
         if (draggingScrollbar && GLFW.glfwGetMouseButton(Minecraft.getInstance().getWindow().getWindow(),
                 GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) draggingScrollbar = false;
         sync();
-        var font = Minecraft.getInstance().font;
         var selected = entry.interaction.selected();
         if (selected != null) {
-            g.fill(3, 38, 30, 118, 0xE0202328);
-            g.pose().pushPose();
-            g.pose().translate(5, 25, 0);
-            g.pose().scale(.65F, .65F, 1);
-            g.drawString(font, "(" + selected.getX() + ", " + selected.getY() + ", " + selected.getZ() + ")", 0, 0, 0xEEEEEE, false);
-            g.pose().popPose();
+            g.fill(3, UPGRADE_Y, 30, SCENE_BOTTOM, 0xE0202328);
             if (entry.materials.maxAlternativeScroll() > 0) {
-                int thumb = ALTERNATIVE_Y + 36 * entry.materials.alternativeScroll() / entry.materials.maxAlternativeScroll();
+                int thumb = ALTERNATIVE_Y + 18 * entry.materials.alternativeScroll() / entry.materials.maxAlternativeScroll();
                 g.fill(25, thumb, 28, thumb + 18, 0xFFBBBBBB);
             }
         }
@@ -98,10 +95,10 @@ final class StructureMaterialWidget implements ISlottedRecipeWidget, IJeiGuiEven
             g.fill(rect.getX() - 1, rect.getY() - 1, rect.getX() + 17, rect.getY() + 17, 0x80404040);
             slots.get(i).draw(g, false);
         }
-        g.fill(169, SUMMARY_Y, 177, SUMMARY_Y + 36, 0xFF555555);
+        g.fill(169, SUMMARY_Y, 177, SUMMARY_Y + SUMMARY_HEIGHT, 0xFF555555);
         int max = entry.materials.maxMaterialScroll();
-        int thumb = SUMMARY_Y + (max == 0 ? 0 : 23 * entry.materials.materialScroll() / max);
-        g.fill(169, thumb, 177, thumb + 13, max == 0 ? 0xFF777777 : 0xFFBBBBBB);
+        int thumb = SUMMARY_Y + (max == 0 ? 0 : SUMMARY_TRAVEL * entry.materials.materialScroll() / max);
+        g.fill(169, thumb, 177, thumb + SUMMARY_THUMB, max == 0 ? 0xFF777777 : 0xFFBBBBBB);
     }
 
     @Override public Optional<RecipeSlotUnderMouse> getSlotUnderMouse(double x, double y) {
@@ -142,7 +139,7 @@ final class StructureMaterialWidget implements ISlottedRecipeWidget, IJeiGuiEven
         return true;
     }
     private void scrollTo(double y) {
-        entry.materials.scrollMaterialTo((y - SUMMARY_Y - 6.5) / 23);
+        entry.materials.scrollMaterialTo((y - SUMMARY_Y - SUMMARY_THUMB / 2.0) / SUMMARY_TRAVEL);
         sync();
     }
 

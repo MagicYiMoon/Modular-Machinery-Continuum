@@ -54,6 +54,14 @@ public class FactoryRecipeFailureEvent extends FactoryRecipeEvent {
         this.destructRecipe = destructRecipe;
     }
 
+    public FactoryRecipeFailureEvent(FactoryRecipeThread recipeThread, TileController controller,
+                                     String cause, boolean destructRecipe,
+                                     hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext context) {
+        super(recipeThread, controller, context);
+        this.cause = cause;
+        this.destructRecipe = destructRecipe;
+    }
+
     /** @return why the run is not crafting; upstream passes the thread's status message, this port a reason string */
     @org.openzen.zencode.java.ZenCodeType.Getter("cause")
     public String getCause() {

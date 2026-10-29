@@ -87,6 +87,27 @@ public final class RecipeAdapterRegistry {
             return;
         }
         registered = true;
+        if (net.minecraftforge.fml.ModList.get().isLoaded("pneumaticcraft"))
+            for (String family : java.util.List.of("pressure_chamber", "assembly", "refinery")) {
+                var adapter = new hellfirepvp.modularmachinery.integration.pneumatic.PneumaticRecipeAdapter(family);
+                register(adapter.getRegistryName(), adapter);
+            }
+        if (net.minecraftforge.fml.ModList.get().isLoaded("tconstruct")) {
+            for (boolean melting : java.util.List.of(false, true)) {
+                var adapter = new hellfirepvp.modularmachinery.integration.recipes.TinkersRecipeAdapter(melting);
+                register(adapter.getRegistryName(), adapter);
+            }
+        }
+        if (net.minecraftforge.fml.ModList.get().isLoaded("thermal_expansion")) {
+            var adapter = new hellfirepvp.modularmachinery.integration.recipes.ThermalRecipeAdapter();
+            register(adapter.getRegistryName(), adapter);
+            register(new ResourceLocation("thermalexpansion", "insolator"), adapter);
+        }
+        if (net.minecraftforge.fml.ModList.get().isLoaded("nuclearcraft"))
+            for (String processor : java.util.List.of("alloy_smelter", "chemical_reactor", "fluid_infuser", "melter")) {
+                var adapter = new hellfirepvp.modularmachinery.integration.recipes.NuclearRecipeAdapter(processor);
+                register(adapter.getRegistryName(), adapter);
+            }
         register(AdapterMinecraftFurnace.NAME, new AdapterMinecraftFurnace());
         register(AdapterMinecraftCooking.BLASTING,
                 new AdapterMinecraftCooking<>(AdapterMinecraftCooking.BLASTING,
@@ -98,9 +119,8 @@ public final class RecipeAdapterRegistry {
                 new AdapterMinecraftCooking<>(AdapterMinecraftCooking.CAMPFIRE,
                         net.minecraft.world.item.crafting.RecipeType.CAMPFIRE_COOKING, 600));
 
-        // Source-compatible extension point for optional 1.20.1 integrations.  The base jar never names
-        // IC2, NuclearCraft, TConstruct or Thermal classes; an addon that has a current API can register its
-        // own adapter here without making those mods mandatory for every MMCE installation.
+        // Extension point for additional recipe families. Built-in foreign adapters above are loaded
+        // only when their optional dependency is present; none of the external mods is mandatory.
         MinecraftForge.EVENT_BUS.post(new RegisterRecipeAdaptersEvent());
     }
 
@@ -164,6 +184,11 @@ public final class RecipeAdapterRegistry {
         return name == null ? null : ADAPTERS.get(name);
     }
 
+    /** Removes only the expected registration, so temporary extensions cannot remove a replacement. */
+    public static synchronized boolean unregister(ResourceLocation name, RecipeAdapter expected) {
+        return ADAPTERS.remove(name, expected);
+    }
+
     /** @return every registered adapter, in registration order; the loader lists these when one is unknown */
     public static synchronized List<ResourceLocation> names() {
         return List.copyOf(ADAPTERS.keySet());
@@ -192,6 +217,13 @@ public final class RecipeAdapterRegistry {
     public static Collection<MachineRecipe> createRecipesFor(ResourceLocation adapterKey, String owningMachine,
                                                              List<RecipeModifier> modifiers,
                                                              List<Requirement> additionalRequirements) {
+        return createRecipesFor(adapterKey, null, owningMachine, modifiers, additionalRequirements);
+    }
+
+    @Nullable
+    public static Collection<MachineRecipe> createRecipesFor(ResourceLocation adapterKey, String templateScope,
+                                                             String owningMachine, List<RecipeModifier> modifiers,
+                                                             List<Requirement> additionalRequirements) {
         registerBuiltIns();
         RecipeAdapter adapter = get(adapterKey);
         if (adapter == null) {
@@ -199,8 +231,9 @@ public final class RecipeAdapterRegistry {
                     + "registered: " + names());
             return null;
         }
-        Collection<MachineRecipe> recipes = adapter.createRecipesFor(owningMachine, modifiers,
-                additionalRequirements);
+        Collection<MachineRecipe> recipes = templateScope == null
+                ? adapter.createRecipesFor(owningMachine, modifiers, additionalRequirements)
+                : adapter.createRecipesFor(templateScope, owningMachine, modifiers, additionalRequirements);
         if (recipes == null || recipes.isEmpty()) {
             // NOT ONLY the null case: the shipped adapter records its own reason (no recipe manager, a
             // non-finite modifier value) before returning empty, so this line must not overwrite it with a

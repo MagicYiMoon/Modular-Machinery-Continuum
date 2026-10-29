@@ -14,19 +14,19 @@ package hellfirepvp.modularmachinery.common.crafting.requirement.type;
 
 import com.google.gson.JsonObject;
 
-/**
- * Reads the keys shared by more than one requirement type.
- *
- * <h2>Why these moved out of {@code RecipeLoader}</h2>
- *
- * <p>They were private helpers of the loader, called from inside its three-case {@code switch}. PLAN section 377 recorded
- * why moving each branch into a {@link RequirementType} implementation could not leave them behind: an implementation
- * outside {@code RecipeLoader} cannot reach a private method, and the branch's specific message -- which key was required
- * and missing -- is exactly what §313 spent a round establishing the value of.
- *
- * <p><b>Each method keeps the reasoning comment it had</b>, because the reasoning is about the RULE and not about where it
- * is called from. A helper that arrives here stripped to its code would be a net loss even though it compiles.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class RequirementKeys {
 
     private RequirementKeys() {

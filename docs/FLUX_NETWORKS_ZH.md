@@ -55,4 +55,4 @@ enable-fluxnetworks-integration = true
 
 编译依赖固定为 CurseMaven `curse.maven:flux-networks-248020:5234697`。用 `-PwithFluxIntegration` 把正式外部模组加入开发运行环境；它始终不进入 Jar-in-Jar。
 
-测试代码会验证实际 FN 连接器、所有能源仓等级与朝向、模拟与实际传输、数值边界、存档、配置回退、能力失效，以及真实插头／网络／节点之间的能量守恒。隔离服务端运行方法见 [VERIFY.md](../VERIFY.md)。
+测试代码会验证实际 FN 连接器、所有能源仓等级与朝向、模拟与实际传输、数值边界、存档、配置回退、能力失效，以及真实插头／网络／节点之间的能量守恒。隔离服务端运行方法见 [功能范围与测试说明](../TESTING.md)。

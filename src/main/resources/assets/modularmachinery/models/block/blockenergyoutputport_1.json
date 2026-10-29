@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "modularmachinery:block/blockcasing_plain",
+    "down": "modularmachinery:block/blockcasing_plain",
+    "up": "modularmachinery:block/blockcasing_plain",
+    "east": "modularmachinery:block/blockcasing_plain",
+    "west": "modularmachinery:block/blockcasing_plain",
+    "south": "modularmachinery:block/blockcasing_plain",
+    "north": "minecraft:block/observer_front"
+  }
+}

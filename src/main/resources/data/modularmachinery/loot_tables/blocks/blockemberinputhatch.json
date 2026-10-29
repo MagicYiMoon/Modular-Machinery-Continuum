@@ -1,0 +1,39 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "modularmachinery:blockemberinputhatch"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "functions": [
+        {
+          "function": "minecraft:copy_state",
+          "block": "modularmachinery:blockemberinputhatch",
+          "properties": [
+            "size"
+          ]
+        },
+        {
+          "function": "minecraft:copy_nbt",
+          "source": "block_entity",
+          "ops": [
+            {
+              "source": "ember",
+              "target": "storedEmber",
+              "op": "replace"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

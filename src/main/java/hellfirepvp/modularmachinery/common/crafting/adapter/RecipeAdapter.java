@@ -43,18 +43,11 @@ import java.util.List;
  * registry that replaces upstream's {@code RegistriesMM.ADAPTER_REGISTRY} is
  * {@link RecipeAdapterRegistry}.</p>
  *
- * <p><b>2. The two CraftTweaker parameters are dropped, and they are not "most" of the signature -- they are
- * every remaining one.</b> Upstream's fourth parameter is a map of {@code IEventHandler<RecipeEvent>} (a
- * CraftTweaker type, because upstream's recipe events ARE script events) and the fifth is a list of tooltip
- * strings a script builder supplies. This port has no script API (PLAN 664's finding about
- * {@code RecipePrimer}), and the port's recipe-level events are posted by {@code MachineTicker} from
- * {@code RecipeStartEvent}/{@code RecipeFailureEvent}, which an adapter cannot attach to a single recipe. A
- * parameter this port cannot fill is a parameter that could only ever be empty, which is the shape PLAN 587
- * removed elsewhere. {@code additionalRequirements} is KEPT: it is the recipe's own {@code requirements}
- * array, which upstream merges into every generated recipe, and the port's loader has that array in hand.
- * It must be applied through {@link #withModifiers} rather than added raw -- upstream merges the
- * requirements through {@code createRecipeShell} and then explicitly applies the adapter's modifiers to the
- * result, see {@link #expand}.</p>
+ * <p><b>2. Script metadata is outside this generator signature.</b> The current port has a
+ * CraftTweaker builder and per-recipe event callbacks, held in {@code ScriptRecipeRegistry}; they are
+ * not parameters of this Java adapter interface. Template additional requirements are appended to
+ * each generated recipe as configured. Source-derived amounts and time are scaled once by the adapter.
+ * This does not imply that every upstream adapter-specific event is already implemented.</p>
  *
  * <p><b>3. {@code owningMachineName} is the machine's {@code registryName} STRING, not a
  * {@code ResourceLocation}.</b> This port keys its machines by the bare name a controller stores
@@ -68,12 +61,9 @@ public abstract class RecipeAdapter {
     /**
      * Upstream's {@code protected int incId = 0} (U35), incremented once per {@link #createRecipesFor} call.
      *
-     * <p>Its job is name uniqueness across reloads: a furnace adapter regenerates its recipes from the
-     * vanilla recipe manager every time the definitions reload, and without the counter two reloads produce
-     * the same names, which the recipe registry then reports as duplicates. {@code resetIncId} is upstream's
-     * (U77-U79) and is not called by the port's loader, deliberately: it exists upstream so a script-driven
-     * re-expansion can restart the numbering, and restarting it here would make that collision certain
-     * instead of impossible.</p>
+     * <p>Legacy adapters use this to distinguish template invocations. The loader clears its recipe map
+     * on reload, so this counter does not provide stable reload identities. Existing legacy naming is
+     * retained; new foreign adapters use the explicit template scope overload instead.</p>
      */
     protected int incId = 0;
 
@@ -98,6 +88,13 @@ public abstract class RecipeAdapter {
     public abstract Collection<MachineRecipe> createRecipesFor(String owningMachine,
                                                               List<RecipeModifier> modifiers,
                                                               List<Requirement> additionalRequirements);
+
+    /** Stable template identity supplied by the loader; legacy adapters retain their existing naming. */
+    public Collection<MachineRecipe> createRecipesFor(String templateScope, String owningMachine,
+                                                     List<RecipeModifier> modifiers,
+                                                     List<Requirement> additionalRequirements) {
+        return createRecipesFor(owningMachine, modifiers, additionalRequirements);
+    }
 
     /**
      * An empty requirement list for {@link #createRecipeShell} to add to.
@@ -204,26 +201,26 @@ public abstract class RecipeAdapter {
         return Math.max(0, Math.round(value));
     }
 
-    /**
-     * The recipe duration after the template's duration modifiers, rounded the way upstream rounds it.
-     *
-     * <p>Upstream: {@code Math.round(Math.max(1, applyModifiers(modifiers,
-     * RequirementTypesMM.REQUIREMENT_DURATION, null, 120, false)))} at {@code AdapterMinecraftFurnace} U60.
-     * The port had no duration target at all (PLAN 750.1 records {@code REQUIREMENT_DURATION} as a zero-hit
-     * search), so this is where the key starts working rather than a re-derivation of it.</p>
-     *
-     * <p><b>IS THERE A DOUBLE APPLICATION? This was checked, because the port also applies a machine's own
-     * duration modifiers at tick time ({@code MachineTicker.effectiveRecipeDuration}).</b> There is not: the
-     * adapter's duration modifier belongs to the TEMPLATE and the tick-time one belongs to the MACHINE's
-     * structure modifier -- the two sources upstream has, applied at the two points upstream applies them
-     * (generation U60, and {@code MachineRecipe.copy} U250 per run). The shipped
-     * {@code alloy_smelter_furnaces.adapter.json} declares the template's; nothing declares a duration
-     * modifier on {@code alloy_furnace}'s own pattern.</p>
-     *
-     * @param base      the adapter's own default duration in ticks, 120 for the furnace
-     * @param modifiers the template's modifiers
-     * @return at least one tick -- a generated recipe of zero length could never complete
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Nullable
     protected static Integer durationWithModifiers(int base, List<RecipeModifier> modifiers) {
         Integer ticks = scaledValue(base, modifiers, DURATION_TARGET, null);

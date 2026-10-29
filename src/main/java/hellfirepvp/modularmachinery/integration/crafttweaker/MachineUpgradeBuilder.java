@@ -5,7 +5,6 @@ package hellfirepvp.modularmachinery.integration.crafttweaker;
 
 import com.blamejared.crafttweaker.api.annotation.ZenRegister;
 import hellfirepvp.modularmachinery.common.machine.IOType;
-import hellfirepvp.modularmachinery.common.machine.MachineReloadListener;
 import hellfirepvp.modularmachinery.common.modifier.RecipeModifier;
 import hellfirepvp.modularmachinery.common.upgrade.RegistryMachineUpgrade;
 import hellfirepvp.modularmachinery.common.upgrade.SimpleMachineUpgrade;
@@ -86,11 +85,8 @@ public final class MachineUpgradeBuilder {
         if (names == null) return;
         for (String name : names) {
             if (name == null || name.isBlank()) continue;
-            var machine = MachineReloadListener.getLoader().findByName(name.contains(":")
+            var machine = MachineModifierFacade.machine(name.contains(":")
                     ? name.substring(name.indexOf(':') + 1) : name);
-            if (machine == null) {
-                throw new IllegalArgumentException("unknown Modular Machinery machine: " + name);
-            }
             if (compatible) upgrade.getType().addCompatibleMachine(machine.getRegistryName());
             else upgrade.getType().addIncompatibleMachine(machine.getRegistryName());
         }

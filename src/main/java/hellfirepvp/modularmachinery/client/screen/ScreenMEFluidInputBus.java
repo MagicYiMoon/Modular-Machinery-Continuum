@@ -70,7 +70,7 @@ public class ScreenMEFluidInputBus extends AbstractContainerScreen<MenuMEFluidIn
     /** The original texture is 176px wide; the upgrade rail extends the vanilla screen to the right. */
     private static final int SCREEN_WIDTH = 220;
 
-    /** Upstream U22, verbatim — the same path this port already ships. */
+     
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(Modularmachinery.MODID, "textures/gui/mefluidinputbus.png");
 
@@ -186,25 +186,25 @@ public class ScreenMEFluidInputBus extends AbstractContainerScreen<MenuMEFluidIn
                 MenuMEFluidInputBus.PANEL_WIDTH + 3, 3, 0x404040, false);
     }
 
-    /**
-     * Runs the frame and then the tooltip pass.
-     *
-     * <h2>Why this four-line override is the difference between a tooltip and none at all</h2>
-     *
-     * <p><b>On 1.20.1 {@code AbstractContainerScreen.render} does NOT call {@code renderTooltip}.</b> Measured with
-     * {@code javap -p -c} over the mapped 47.3.0 jar: the class declares it and calls {@code GuiGraphics.renderTooltip}
-     * inside its own body, and invokes it from nowhere; vanilla's {@code ContainerScreen.render} is the caller, in the
-     * order {@code renderBackground}, {@code super.render}, {@code invokevirtual renderTooltip}. Upstream's 1.12.2
-     * {@code GuiUpgradeable} inherited that call from the {@code GuiScreen} hook vanilla called by itself.</p>
-     *
-     * <p><b>So the override below this method — the one whose own javadoc says a configuration without it "would be
-     * recognisable only by colour" — was never executed.</b> The clause below it, {@code super.renderTooltip}, is the
-     * parent's item-tooltip pass, so nothing was shown over this screen at all. Same fix, same order, as
-     * {@code ScreenMEPatternProvider} (PLAN 745) and {@link ScreenMEItemInputBus} (rule B).</p>
-     *
-     * <p>{@code renderBackground} is deliberately NOT called: it is not part of the missing call, no screen in this
-     * port calls it, and adding it here would dim the world behind this panel alone.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);

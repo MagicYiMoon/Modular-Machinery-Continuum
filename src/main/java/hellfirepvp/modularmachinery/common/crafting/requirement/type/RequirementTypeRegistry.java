@@ -21,28 +21,28 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * The registry a recipe's {@code "type": "modularmachinery:item"} is resolved against.
- *
- * <h2>What this replaces, and why a map rather than a Forge registry</h2>
- *
- * <p>PLAN section 374: {@code RecipeLoader} had a three-case {@code switch} on the type string. The switch could not be
- * extended from outside the class, which is why the five upstream types this port does not implement were collected into a
- * list and reported instead of loaded, and why §374 called the missing extension point the shared root of three separate
- * gaps -- the five types, the twenty {@code modularmagic} placeholders, and any addon at all.
- *
- * <p>Upstream registers these through {@code RegistriesMM.REQUIREMENT_TYPE_REGISTRY}, a
- * {@code ForgeRegistry<RequirementType<?, ?>>} looked up with {@code getValue} at {@code MachineRecipe:452}. <b>1.20.1 has no
- * {@code IForgeRegistryEntry}</b>, so the entries could not carry a registry name that Forge assigns; a
- * {@link ResourceLocation}-keyed map is what that registry becomes on this version. That is the era's mapping, and it is
- * also why this class is small.
- *
- * <h2>Ordering, and why it is not incidental</h2>
- *
- * <p>The map is a {@link LinkedHashMap} so {@link #names()} reports types in registration order. The error message a pack
- * author reads when they typo a type name lists what IS available, and a stable order means the message does not change
- * between runs for reasons that have nothing to do with their recipe.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class RequirementTypeRegistry {
 
     private static final Map<ResourceLocation, RequirementType> TYPES = new LinkedHashMap<>();

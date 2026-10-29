@@ -104,6 +104,7 @@ public final class Config {
     private static final ForgeConfigSpec.IntValue MANA_PROVIDER_CAPACITY;
     private static final ForgeConfigSpec.BooleanValue ENABLE_SECURITY_SYSTEM;
     private static final ForgeConfigSpec.BooleanValue ENABLE_FLUX_NETWORKS;
+    private static final ForgeConfigSpec.IntValue ENERGY_OUTPUT_PORT_RANGE;
     private static final ForgeConfigSpec.BooleanValue CLEAN_CUSTOM_DATA_ON_STRUCTURE_FAILURE;
     private static final ForgeConfigSpec.ConfigValue<String> DEFAULT_FAILURE_ACTION;
 
@@ -207,6 +208,10 @@ public final class Config {
                         "Creative players bypass this check.")
                 .push("general");
         ENABLE_SECURITY_SYSTEM = builder.define("enable-security-system", false);
+        ENERGY_OUTPUT_PORT_RANGE = builder
+                .comment("Directional energy output port range in blocks (gugu-utils default: 3).",
+                        "The first block entity or occluding block stops the ray; unloaded chunks are never loaded.")
+                .defineInRange("energy-output-port-range", 3, 1, 256);
         ENABLE_FLUX_NETWORKS = builder
                 .comment("Expose the Flux Networks energy capability on ordinary FE hatches.",
                         "Shares the existing FE buffer and respects its direction, capacity and transfer limit.",
@@ -270,8 +275,9 @@ public final class Config {
                             (long) Integer.MAX_VALUE));
             ENERGY_HATCH_LIMIT.put(tier, builder
                     .comment("Maximum FE moved per tick by the " + tier.getSerializedName() + " energy hatch.",
-                            "Default " + tier.getDefaultMaxTransfer() + " is the jar's own value for this tier.")
-                    .defineInRange(key("limit." + tier.name()), (long) tier.getDefaultMaxTransfer(), 1L,
+                            "0 (default) = 10% of configured capacity, rounded down, at least 1 FE.",
+                            "Positive values are explicit limits; existing settings are preserved.")
+                    .defineInRange(key("limit." + tier.name()), 0L, 0L,
                             (long) Integer.MAX_VALUE));
         }
         builder.pop();
@@ -493,11 +499,11 @@ public final class Config {
 
     /**
      * @param tier the energy hatch tier being asked about
-     * @return the configured transfer limit in FE/t, or the tier's own default when the spec is not loaded
+     * @return the explicit transfer limit, or 10% of configured capacity (minimum 1 FE) for zero
      */
     public static int energyHatchTransfer(EnergyHatchData tier) {
-        Long configured = read(ENERGY_HATCH_LIMIT.get(tier), (long) tier.getDefaultMaxTransfer());
-        return configured.intValue();
+        Long configured = read(ENERGY_HATCH_LIMIT.get(tier), 0L);
+        return configured == 0L ? Math.max(1, energyHatchCapacity(tier) / 10) : configured.intValue();
     }
 
     /**
@@ -570,6 +576,9 @@ public final class Config {
     public static boolean enableFluxNetworksIntegration() {
         return read(ENABLE_FLUX_NETWORKS, true);
     }
+
+    public static int energyOutputPortRange() { return read(ENERGY_OUTPUT_PORT_RANGE, 3); }
+    public static ForgeConfigSpec.IntValue energyOutputPortRangeSetting() { return ENERGY_OUTPUT_PORT_RANGE; }
 
     public static ForgeConfigSpec.BooleanValue entryForFluxNetworksIntegration() {
         return ENABLE_FLUX_NETWORKS;

@@ -1,0 +1,38 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "embers"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          " C ",
+          "RHR",
+          " C "
+        ],
+        "key": {
+          "C": {
+            "item": "embers:copper_cell"
+          },
+          "R": {
+            "item": "minecraft:redstone"
+          },
+          "H": {
+            "type": "forge:nbt",
+            "item": "modularmachinery:blockenergyinputhatch",
+            "nbt": "{BlockStateTag:{size:\"normal\"}}"
+          }
+        },
+        "result": {
+          "item": "modularmachinery:blockemberinputhatch",
+          "nbt": "{BlockStateTag:{size:\"medium\"}}"
+        }
+      }
+    }
+  ]
+}

@@ -33,7 +33,6 @@ import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -49,7 +48,8 @@ public final class MachineAssembly {
     private final ServerLevel level;
     private final BlockPos controllerPos;
     private final ServerPlayer player;
-    private final List<Task> tasks = new ArrayList<>();
+    private final java.util.Deque<Task> tasks = new java.util.ArrayDeque<>();
+    private boolean paidWithFluid;
     private int ticks;
 
     private MachineAssembly(ServerLevel level, BlockPos controllerPos, ServerPlayer player) {
@@ -140,12 +140,14 @@ public final class MachineAssembly {
             return null;
         }
 
-        if (Config.autoAssemblyNeedAll() && !assembly.hasAllMaterials()) {
-            player.displayClientMessage(Component.translatable("message.assembly.tip.required"), false);
-            return null;
-        }
-        if (!Config.autoAssemblyNeedAll()) {
-            player.displayClientMessage(Component.translatable("message.assembly.tip.partial_assembly"), false);
+        // Source AssemblyEventHandler takes the creative path before inspecting inventory.
+        if (!creative) {
+            List<Task> missing = assembly.missingMaterials();
+            if (!missing.isEmpty()) {
+                assembly.reportMaterials(missing);
+                if (Config.autoAssemblyNeedAll()) return null;
+                player.displayClientMessage(Component.translatable("message.assembly.tip.partial_assembly"), false);
+            }
         }
         return assembly;
     }
@@ -191,7 +193,7 @@ public final class MachineAssembly {
         ticks = 0;
         if (tasks.isEmpty()) return;
 
-        Task task = tasks.remove(0);
+        Task task = tasks.removeFirst();
         if (level.isOutsideBuildHeight(task.pos())) {
             player.displayClientMessage(Component.translatable("message.assembly.tip.too_high",
                     task.pos().toShortString()), false);
@@ -203,14 +205,16 @@ public final class MachineAssembly {
         if (isReplaceable(level, task.pos(), current)) {
             Candidate candidate = chooseCandidate(task.candidates());
             if (candidate == null) {
-                reportMissing(task.pos());
+                reportMissing(task);
             } else if (consume(candidate)) {
                 BlockState previous = current;
                 BlockSnapshot snapshot = BlockSnapshot.create(level.dimension(), level, task.pos());
                 level.setBlock(task.pos(), candidate.state(), net.minecraft.world.level.block.Block.UPDATE_ALL);
                 BlockEvent.EntityPlaceEvent placeEvent = new BlockEvent.EntityPlaceEvent(snapshot, previous, player);
                 if (MinecraftForge.EVENT_BUS.post(placeEvent)) {
-                    snapshot.restore();
+                    // The current block is the new placement. Forge's non-forced restore refuses
+                    // a changed state, leaving a free block behind while its payment is refunded.
+                    snapshot.restore(true);
                     refund(candidate);
                     reportSkipped(task.pos(), "placement event cancelled");
                 } else {
@@ -221,7 +225,7 @@ public final class MachineAssembly {
                             SoundSource.BLOCKS, 1.0F, 1.0F);
                 }
             } else {
-                reportMissing(task.pos());
+                reportMissing(task);
             }
         } else {
             reportSkipped(task.pos(), "occupied by " + current.getBlock().getName().getString());
@@ -239,25 +243,30 @@ public final class MachineAssembly {
         return candidates.get(0);
     }
 
-    private boolean hasAllMaterials() {
+    private List<Task> missingMaterials() {
         List<ItemStack> simulated = new ArrayList<>();
         for (ItemStack stack : player.getInventory().items) simulated.add(stack.copy());
+        List<Task> missing = new ArrayList<>();
         for (Task task : tasks) {
-            if (!consumeFrom(simulated, task.candidates())) return false;
+            if (!consumeFrom(simulated, task.candidates())) missing.add(task);
         }
-        return true;
+        return missing;
     }
 
     private boolean consume(Candidate candidate) {
+        paidWithFluid = false;
         if (!candidate.material().isEmpty() && consumeItem(candidate.material(), player.getInventory().items)) {
+            player.getInventory().setChanged();
             return true;
         }
-        return candidate.fluid() != null && consumeFluid(candidate.fluid(), player.getInventory().items);
+        paidWithFluid = candidate.fluid() != null && consumeFluid(candidate.fluid(), player.getInventory().items);
+        if (paidWithFluid) player.getInventory().setChanged();
+        return paidWithFluid;
     }
 
     /** Restores a consumed ingredient when a Forge placement protection event rejects the block. */
     private void refund(Candidate candidate) {
-        if (!candidate.material().isEmpty()) {
+        if (!paidWithFluid && !candidate.material().isEmpty()) {
             player.getInventory().add(candidate.material().copy());
             return;
         }
@@ -265,7 +274,7 @@ public final class MachineAssembly {
     }
 
     private void returnContainer(Candidate candidate) {
-        if (candidate.fluid() == null || !(candidate.material().getItem() instanceof BucketItem)) return;
+        if (paidWithFluid || candidate.fluid() == null || !(candidate.material().getItem() instanceof BucketItem)) return;
         ItemStack empty = BucketItem.getEmptySuccessItem(candidate.material().copyWithCount(1), player);
         if (!empty.isEmpty() && !player.getInventory().add(empty)) player.drop(empty, false);
     }
@@ -273,7 +282,7 @@ public final class MachineAssembly {
     private boolean canConsume(Candidate candidate) {
         if (!candidate.material().isEmpty()) {
             for (ItemStack stack : player.getInventory().items) {
-                if (ItemStack.isSameItemSameTags(stack, candidate.material())
+                if (matchesMaterial(stack, candidate.material())
                         && stack.getCount() >= candidate.material().getCount()) return true;
             }
         }
@@ -282,12 +291,36 @@ public final class MachineAssembly {
 
     private static boolean consumeItem(ItemStack wanted, List<ItemStack> inventory) {
         for (ItemStack stack : inventory) {
-            if (ItemStack.isSameItemSameTags(stack, wanted) && stack.getCount() >= wanted.getCount()) {
+            if (matchesMaterial(stack, wanted) && stack.getCount() >= wanted.getCount()) {
                 stack.shrink(wanted.getCount());
                 return true;
             }
         }
         return false;
+    }
+
+    /** Flattened component tiers replace source metadata; an untagged base-tier item is still valid. */
+    private static boolean matchesMaterial(ItemStack supplied, ItemStack wanted) {
+        if (!supplied.is(wanted.getItem())) return false;
+        if (!(net.minecraft.world.level.block.Block.byItem(wanted.getItem()) instanceof
+                hellfirepvp.modularmachinery.common.block.BlockMachineComponent block))
+            return ItemStack.isSameItemSameTags(supplied, wanted);
+        var actual = supplied.getTagElement("BlockStateTag");
+        var required = wanted.getTagElement("BlockStateTag");
+        for (var property : block.defaultBlockState().getProperties()) {
+            String name = property.getName();
+            if (!hellfirepvp.modularmachinery.common.block.BlockMachineComponent.VARIANT_PROPERTY_NAMES.contains(name)) continue;
+            String fallback = propertyValue(block.defaultBlockState(), property);
+            String a = actual != null && actual.contains(name) ? actual.getString(name) : fallback;
+            String b = required != null && required.contains(name) ? required.getString(name) : fallback;
+            if (!a.equals(b)) return false;
+        }
+        return true;
+    }
+
+    private static <T extends Comparable<T>> String propertyValue(BlockState state,
+            net.minecraft.world.level.block.state.properties.Property<T> property) {
+        return property.getName(state.getValue(property));
     }
 
     private static boolean consumeFrom(List<ItemStack> inventory, List<Candidate> candidates) {
@@ -307,12 +340,18 @@ public final class MachineAssembly {
     }
 
     private static boolean drainFluid(FluidStack wanted, List<ItemStack> inventory, FluidAction action) {
-        for (ItemStack stack : inventory) {
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack stack = inventory.get(i);
             IFluidHandlerItem handler = FluidUtil.getFluidHandler(stack).resolve().orElse(null);
             if (handler == null) continue;
-            FluidStack drained = handler.drain(wanted.copy(), action);
+            // Never execute a partial drain while searching other containers.
+            FluidStack drained = handler.drain(wanted.copy(), FluidAction.SIMULATE);
             if (drained != null && drained.getAmount() >= wanted.getAmount()
                     && drained.isFluidEqual(wanted)) {
+                if (action.execute()) {
+                    handler.drain(wanted.copy(), FluidAction.EXECUTE);
+                    inventory.set(i, handler.getContainer());
+                }
                 return true;
             }
         }
@@ -320,10 +359,15 @@ public final class MachineAssembly {
     }
 
     private static boolean fillFluid(FluidStack wanted, List<ItemStack> inventory) {
-        for (ItemStack stack : inventory) {
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack stack = inventory.get(i);
             IFluidHandlerItem handler = FluidUtil.getFluidHandler(stack).resolve().orElse(null);
             if (handler == null) continue;
-            if (handler.fill(wanted.copy(), FluidAction.EXECUTE) >= wanted.getAmount()) return true;
+            if (handler.fill(wanted.copy(), FluidAction.SIMULATE) >= wanted.getAmount()) {
+                handler.fill(wanted.copy(), FluidAction.EXECUTE);
+                inventory.set(i, handler.getContainer());
+                return true;
+            }
         }
         return false;
     }
@@ -342,9 +386,45 @@ public final class MachineAssembly {
         return state.isAir() || state.canBeReplaced() || !state.getFluidState().isEmpty();
     }
 
-    private void reportMissing(BlockPos pos) {
-        player.displayClientMessage(Component.translatable("message.assembly.tip.missing", pos.toShortString()), false);
-        reportSkipped(pos, "missing material");
+    private void reportMissing(Task task) {
+        player.displayClientMessage(Component.translatable("message.assembly.tip.missing", task.pos().toShortString()), false);
+        reportMaterials(List.of(task));
+        reportSkipped(task.pos(), "missing material");
+    }
+
+    /** Source PktAssemblyReport lists every outstanding group, including alternatives and fluid amounts. */
+    private void reportMaterials(List<Task> missing) {
+        player.displayClientMessage(Component.translatable("message.assembly.tip.required"), false);
+        var groups = new java.util.LinkedHashMap<String, List<Task>>();
+        for (Task task : missing) {
+            String key = task.candidates().stream().map(candidate -> candidate.material().save(new net.minecraft.nbt.CompoundTag())
+                    + ":" + (candidate.fluid() == null ? "" : candidate.fluid().writeToNBT(new net.minecraft.nbt.CompoundTag())))
+                    .distinct().collect(java.util.stream.Collectors.joining("|"));
+            groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(task);
+        }
+        for (List<Task> group : groups.values()) {
+            var alternatives = new java.util.LinkedHashMap<String, Component>();
+            for (Candidate candidate : group.get(0).candidates()) {
+                Component line;
+                String key;
+                if (candidate.fluid() != null) {
+                    key = candidate.fluid().writeToNBT(new net.minecraft.nbt.CompoundTag()).toString();
+                    line = Component.literal((long) group.size() * candidate.fluid().getAmount() + " mB ")
+                            .append(candidate.fluid().getDisplayName());
+                } else {
+                    key = candidate.material().save(new net.minecraft.nbt.CompoundTag()).toString();
+                    line = Component.literal((long) group.size() * candidate.material().getCount() + "x ")
+                            .append(candidate.material().getHoverName());
+                }
+                alternatives.putIfAbsent(key, line);
+            }
+            var line = Component.empty();
+            for (Component choice : alternatives.values()) {
+                if (!line.getSiblings().isEmpty()) line.append(" ").append(Component.translatable("message.assembly.tip.or")).append(" ");
+                line.append(choice);
+            }
+            player.displayClientMessage(line, false);
+        }
     }
 
     private void reportSkipped(BlockPos pos, String reason) {

@@ -55,13 +55,14 @@ public final class DurabilityEditor {
 
     public static JsonObject validate(JsonObject json) {
         if (!isDurability(json) || !json.has("io-type") || !"input".equals(json.get("io-type").getAsString())
-                || json.has("nbt") || json.has("nbt-display") || !json.has("item")
+                || !json.has("item")
                 || !json.get("item").isJsonPrimitive() || !json.getAsJsonPrimitive("item").isString())
-            throw new IllegalArgumentException("仅支持无 NBT 的耐久输入；高级条件请修改源文件");
+            throw new IllegalArgumentException("仅支持耐久输入；高级条件请修改源文件");
         if (json.has("chance") && (!json.get("chance").isJsonPrimitive() || !json.getAsJsonPrimitive("chance").isNumber()))
             throw new IllegalArgumentException("扣耐久概率必须为 0～1 的数字");
         float chance = json.has("chance") ? json.get("chance").getAsFloat() : 1F;
-        return create(json.get("item").getAsString(), integer(json, "amount", 1), integer(json, "consumeDurability", 0), chance);
+        var clean=create(json.get("item").getAsString(), integer(json, "amount", 1), integer(json, "consumeDurability", 0), chance);
+        IngredientGroupEditor.copyNbt(json,clean,false);return clean;
     }
 
     public static JsonObject merge(JsonObject source, JsonObject edited) {
@@ -71,6 +72,7 @@ public final class DurabilityEditor {
             throw new IllegalArgumentException("请保持具体工具或标签类型，更改类型请另建需求");
         var result = source == null ? clean : source.deepCopy();
         for (String key : List.of("item", "amount", "chance", "consumeDurability")) result.add(key, clean.get(key));
+        IngredientGroupEditor.copyNbt(clean,result,false);
         return result;
     }
 

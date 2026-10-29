@@ -4,6 +4,7 @@
 package hellfirepvp.modularmachinery.client.preview;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import hellfirepvp.modularmachinery.Modularmachinery;
 import hellfirepvp.modularmachinery.client.geo.ControllerGeoRenderer;
@@ -27,7 +28,6 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.RenderTypeHelper;
 import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.client.model.pipeline.VertexConsumerWrapper;
 import java.util.*;
 
 /** A read-only scene. Its block entities are never attached to, registered in, or ticked by ClientLevel. */
@@ -37,6 +37,8 @@ public final class BlueprintPreviewScene implements BlockAndTintGetter, Blueprin
     private final Map<BlockPos, BlockState> states = new LinkedHashMap<>();
     private final Map<BlockPos, BlockEntity> entities = new HashMap<>();
     private final ControllerGeoRenderer geoRenderer = new ControllerGeoRenderer();
+    // Never drain unrelated GUI/world geometry using the preview's camera, scissor or depth state.
+    private final MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(new BufferBuilder(65536));
     private final Set<Block> failedEntities = new HashSet<>();
     private final Set<Block> failedRenderers = new HashSet<>();
     private final Set<Block> failedFallbacks = new HashSet<>();
@@ -56,6 +58,7 @@ public final class BlueprintPreviewScene implements BlockAndTintGetter, Blueprin
     }
 
     public BlueprintSceneDefinition definition() { return definition; }
+    public MultiBufferSource.BufferSource buffers() { return buffers; }
     @Override public long revision() { return revision; }
     @Override public ItemStack materialStack(BlockPos pos, BlockState state) {
         return BlueprintPreviewDetails.materialStack(this, pos, state);
@@ -126,12 +129,13 @@ public final class BlueprintPreviewScene implements BlockAndTintGetter, Blueprin
     public void render(PoseStack pose, MultiBufferSource.BufferSource buffers, boolean allLayers,
                        int layer, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
+        BlockAndTintGetter renderView = allLayers ? this : new BlueprintLayerView(this, layer);
         for (BlockPos pos : visiblePositions(allLayers, layer)) {
             BlockState state = getBlockState(pos);
             pose.pushPose();
             try {
                 pose.translate(pos.getX(), pos.getY(), pos.getZ());
-                renderModel(pos, state, pose, buffers, allLayers, layer);
+                renderModel(pos, state, pose, buffers, renderView);
                 BlockEntity entity = entities.get(pos);
                 boolean rendered = entity != null && !(entity instanceof TileController)
                         && renderBlockEntity(entity, partialTick, pose, buffers);
@@ -147,44 +151,36 @@ public final class BlueprintPreviewScene implements BlockAndTintGetter, Blueprin
                 try {
                     pose.translate(pos.getX() - (pos.getX() & 15), pos.getY() - (pos.getY() & 15),
                             pos.getZ() - (pos.getZ() & 15));
-                    VertexConsumer fluidBuffer = buffers.getBuffer(ItemBlockRenderTypes.getRenderLayer(state.getFluidState()));
-                    var transform = pose.last();
-                    mc.getBlockRenderer().renderLiquid(pos, this, new VertexConsumerWrapper(fluidBuffer) {
-                        @Override public VertexConsumer vertex(double x, double y, double z) {
-                            parent.vertex(transform.pose(), (float) x, (float) y, (float) z);
-                            return this;
-                        }
-                        @Override public VertexConsumer normal(float x, float y, float z) {
-                            parent.normal(transform.normal(), x, y, z);
-                            return this;
-                        }
-                    }, state, state.getFluidState());
+                    // Terrain render types use chunk shader uniforms, which are stale inside a GUI.
+                    RenderType fluidType = PreviewFluidVertexConsumer.renderType(state.getFluidState());
+                    mc.getBlockRenderer().renderLiquid(pos, renderView,
+                            new PreviewFluidVertexConsumer(buffers.getBuffer(fluidType), pose.last()),
+                            state, state.getFluidState());
                 } finally { pose.popPose(); }
             }
         }
         if (formed && (allLayers || layer == 0) && entities.get(BlockPos.ZERO) instanceof TileController controller) {
-            geoRenderer.render(controller, partialTick, pose, buffers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            geoRenderer.render(controller, partialTick, copyPose(pose), buffers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         }
         buffers.endBatch();
     }
 
     private void renderModel(BlockPos pos, BlockState state, PoseStack pose, MultiBufferSource buffers,
-                             boolean allLayers, int layer) {
+                             BlockAndTintGetter renderView) {
         if (state.getRenderShape() != RenderShape.MODEL) return;
         pose.pushPose();
         try {
-            var offset = state.getOffset(this, pos);
+            var offset = state.getOffset(renderView, pos);
             pose.translate(offset.x, offset.y, offset.z);
             var model = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
             ModelData data = entities.containsKey(pos) ? entities.get(pos).getModelData() : ModelData.EMPTY;
-            data = model.getModelData(this, pos, state, data);
+            data = model.getModelData(renderView, pos, state, data);
             RandomSource random = RandomSource.create(42);
             for (RenderType layerType : model.getRenderTypes(state, random, data)) {
-                VertexConsumer consumer = buffers.getBuffer(RenderTypeHelper.getEntityRenderType(layerType, false));
+                VertexConsumer consumer = buffers.getBuffer(RenderTypeHelper.getEntityRenderType(layerType, true));
                 for (Direction side : Direction.values()) {
                     BlockPos neighbor = pos.relative(side);
-                    if ((allLayers || neighbor.getY() == layer)
-                            && !Block.shouldRenderFace(state, this, pos, side, neighbor)) continue;
+                    if (!Block.shouldRenderFace(state, renderView, pos, side, neighbor)) continue;
                     random.setSeed(42);
                     renderQuads(pose, consumer, model.getQuads(state, side, random, data, layerType), state, pos);
                 }
@@ -223,7 +219,7 @@ public final class BlueprintPreviewScene implements BlockAndTintGetter, Blueprin
         }
     }
 
-    private static PoseStack copyPose(PoseStack source) {
+    public static PoseStack copyPose(PoseStack source) {
         PoseStack copy = new PoseStack();
         copy.last().pose().set(source.last().pose());
         copy.last().normal().set(source.last().normal());

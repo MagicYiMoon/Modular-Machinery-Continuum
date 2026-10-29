@@ -27,14 +27,8 @@ import java.util.UUID;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import hellfirepvp.modularmachinery.common.modifier.RecipeModifier;
-import hellfirepvp.modularmachinery.common.geo.GeoMachineModelRegistry;
-import hellfirepvp.modularmachinery.common.geo.MachineGeoModel;
-import hellfirepvp.modularmachinery.common.geo.ControllerModelAnimationEvent;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
-import software.bernie.geckolib.core.animation.AnimationController;
-import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
@@ -46,55 +40,71 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * {@code saveAdditional} <b>returns void and mutates the tag it is given</b>, rather than returning a
  * new tag as {@code writeToNBT} did.
  *
- * <p>This class currently stores only the machine's assembly state. Recipe execution, the structure
- * matcher and the async tick model land in later units; the containers and GUI are separate work.
+ * <p>Common controller state, recipe progress, component bindings and GeckoLib animation registration.
+ * Recipe execution and structure matching run through the server tickers on the main thread.
  */
-public class TileController extends TileEntityBase implements GeoBlockEntity {
+public class TileController extends TileEntityBase implements GeoBlockEntity,
+        hellfirepvp.modularmachinery.common.helper.IMachineController {
     private final AnimatableInstanceCache animatableCache = GeckoLibUtil.createInstanceCache(this);
-    /** Last model/resource revision observed by this client-side animation instance. */
-    private long clientAnimationRevision = Long.MIN_VALUE;
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return animatableCache;
     }
 
-    /**
-     * GeckoLib's controller is deliberately data-driven.  A script can declare any animation name
-     * in the model's animation file; the first declared animation is selected while the machine is
-     * formed.  A working machine gets the same animation for now, which keeps old scripts such as
-     * the Dream Energy Core example functional without requiring special resource names.
-     */
+    /** The complete declared sequence is evaluated against the selected model on each predicate. */
     @Override
     public void registerControllers(software.bernie.geckolib.core.animation.AnimatableManager.ControllerRegistrar registrar) {
-        // The source controller is constructed with transitionLengthTicks = 0.  Keeping the
-        // zero-length transition matters for model predicates that deliberately switch to STOP
-        // when a machine unforms: a five-tick blend makes the old animated pose linger after the
-        // structure has already fallen apart.
-        registrar.add(new AnimationController<>(this, "mmce_machine", 0, state -> {
-            // A resource reload replaces GeckoLib's baked maps but does not recreate loaded block
-            // entities.  Reset the controller once when MMCE's revision changes so an old queued
-            // animation cannot retain references to the previous geometry/animation definition.
-            if (getLevel() != null && getLevel().isClientSide) {
-                long currentRevision = GeoMachineModelRegistry.revision();
-                if (clientAnimationRevision != currentRevision) {
-                    clientAnimationRevision = currentRevision;
-                    state.getController().forceAnimationReset();
-                }
-            }
-            MachineGeoModel model = GeoMachineModelRegistry.getForController(this);
-            if (model == null || !isFormed()) return PlayState.STOP;
-            ControllerModelAnimationEvent event = new ControllerModelAnimationEvent(model);
-            GeoMachineModelRegistry.dispatchAnimation(getMachineName(), event);
-            MachineGeoModel.Animation animation = event.getAnimations().isEmpty()
-                    ? model.defaultAnimation() : event.getAnimations().get(0);
-            if (event.getPlayState() != 0) return PlayState.STOP;
-            if (animation == null || animation.name().isBlank()) return PlayState.STOP;
-            RawAnimation raw = animation.loop()
-                    ? RawAnimation.begin().thenLoop(animation.name())
-                    : RawAnimation.begin().thenPlay(animation.name());
-            return state.setAndContinue(raw);
-        }));
+        registrar.add(new hellfirepvp.modularmachinery.common.geo.MachineAnimationController(this));
+    }
+
+    @Override
+    public boolean isWorking() {
+        return isFormed() && !isRedstoneStopped() && isCrafting();
+    }
+
+    @Override
+    public String getFormedMachineName() {
+        return isFormed() ? getMachineName() : null;
+    }
+
+    @Override
+    public hellfirepvp.modularmachinery.common.machine.RecipeThread[] getRecipeThreadList() {
+        return new hellfirepvp.modularmachinery.common.machine.RecipeThread[] {
+                new hellfirepvp.modularmachinery.common.machine.RecipeThread(this, null)};
+    }
+
+    @Override
+    public hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe[] getActiveRecipeList() {
+        return java.util.Arrays.stream(getRecipeThreadList()).map(thread -> thread.getActiveRecipe())
+                .filter(java.util.Objects::nonNull)
+                .toArray(hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe[]::new);
+    }
+
+    @Override
+    public hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe getActiveRecipe() {
+        var recipes = getActiveRecipeList();
+        return recipes.length == 0 ? null : recipes[0];
+    }
+
+    /** Latest actually evaluated run; never serialize capability/context references into a save or packet. */
+    private hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext runtimeRecipeContext;
+    private long runtimeRecipeContextRevision;
+
+    public void observeRuntimeRecipeContext(hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext run) {
+        runtimeRecipeContext = run;
+        if (run != null) {
+            run.bindRuntimeThread(new hellfirepvp.modularmachinery.common.machine.RecipeThread(this, null));
+            if (java.util.Objects.equals(getRecipeName(), run.getRecipeName())) updateRecipeDuration(run.effectiveDuration());
+        }
+        runtimeRecipeContextRevision = hellfirepvp.modularmachinery.common.machine.MachineReloadListener.getServerDefinitionRevision();
+    }
+
+    public hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext getRuntimeRecipeContext() {
+        return hasActiveRecipe() && runtimeRecipeContext != null
+                && java.util.Objects.equals(getRecipeName(), runtimeRecipeContext.getRecipe().registryName())
+                && runtimeRecipeContextRevision == hellfirepvp.modularmachinery.common.machine.MachineReloadListener.getServerDefinitionRevision()
+                ? runtimeRecipeContext : null;
     }
 
     @Override
@@ -114,7 +124,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
                 @Override
                 protected void onContentsChanged(int slot) {
                     setChanged();
-                    // THE BLUEPRINT IN THE SLOT NAMES THE MACHINE (PLAN section 264).
+                     
                     //
                     // `setMachineName` had exactly two callers: the /modularmachinery bind command and the
                     // self-test. The slot accepted blueprints and nothing ever read one, so the ONLY way to
@@ -146,10 +156,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     /**
      * Set when a saved controller comes back FORMED, so the first tick can re-bind its components.
      *
-     * <p>THE FLAG IS PERSISTED AND THE BINDING IS NOT (PLAN 627): load reads "formed" back as true while
-     * boundPositions comes back empty, and only a player action used to fix that. It is a ONE-SHOT request
-     * rather than a condition, so a machine that legitimately binds nothing -- every part a casing -- is not
-     * re-walked every tick.</p>
+     * <p>A saved binding list is only a cleanup record, so loaded formed machines still rebind against
+     * the world once. Unloaded structure chunks postpone consumption of this one-shot request.</p>
      */
     private boolean pendingRebind = false;
     private boolean loadingBlueprint;
@@ -175,14 +183,96 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     private CompoundTag customData = new CompoundTag();
     /** Permanent controller modifiers, keyed like upstream's customModifier map. */
     private final Map<String, RecipeModifier> customModifiers = new LinkedHashMap<>();
+    private final hellfirepvp.modularmachinery.common.modifier.RuntimeModifierState recipeThreadModifiers =
+            new hellfirepvp.modularmachinery.common.modifier.RuntimeModifierState();
+
+    @Override
+    public BlockPos getIPos() { return getBlockPos().immutable(); }
+
+    @Override
+    public net.minecraft.world.level.block.state.BlockState getIBlockState() { return getBlockState(); }
+
+    @Override
+    public net.minecraft.core.Direction getFacing() {
+        var state = getIBlockState();
+        return state.hasProperty(hellfirepvp.modularmachinery.common.block.BlockController.FACING)
+                ? state.getValue(hellfirepvp.modularmachinery.common.block.BlockController.FACING)
+                : net.minecraft.core.Direction.NORTH;
+    }
+
+    @Override
+    public BlockPos rotateWithControllerFacing(BlockPos offset) {
+        java.util.Objects.requireNonNull(offset, "relative position");
+        // Same NORTH -> WEST -> SOUTH -> EAST transform as upstream, formation and projection.
+        return hellfirepvp.modularmachinery.common.machine.StructureMatcher.toWorldOffset(
+                BlockPos.ZERO, getFacing(), offset.getX(), offset.getY(), offset.getZ());
+    }
+
+    @Override
+    public hellfirepvp.modularmachinery.common.util.SmartInterfaceData getSmartInterfaceData(String type) {
+        if (type == null) return null;
+        for (var data : getSmartInterfaceDataList()) if (type.equals(data.getType())) return data;
+        return null;
+    }
+
+    @Override
+    public hellfirepvp.modularmachinery.common.util.SmartInterfaceData[] getSmartInterfaceDataList() {
+        var result = new java.util.ArrayList<hellfirepvp.modularmachinery.common.util.SmartInterfaceData>();
+        // Resolve only recorded, loaded components; async server queries must not traverse world tiles.
+        if (level == null || !formed || isRemoved() || machineName == null
+                || level instanceof net.minecraft.server.level.ServerLevel server && !server.getServer().isSameThread()
+                || !level.hasChunkAt(worldPosition) || level.getBlockEntity(worldPosition) != this)
+            return result.toArray(hellfirepvp.modularmachinery.common.util.SmartInterfaceData[]::new);
+        for (var pos : new java.util.LinkedHashSet<>(boundPositions)) {
+            if (!level.hasChunkAt(pos) || !(level.getBlockEntity(pos) instanceof TileSmartInterface iface)
+                    || iface.isRemoved() || !worldPosition.equals(iface.getControllerPos())) continue;
+            var data = iface.provideComponent().getMachineData(0);
+            if (data != null && (data.getMachineName() == null || machineName.equals(data.getMachineName())))
+                result.add(hellfirepvp.modularmachinery.common.util.SmartInterfaceData.view(this, iface, data));
+        }
+        return result.toArray(hellfirepvp.modularmachinery.common.util.SmartInterfaceData[]::new);
+    }
+
+    @Override public String[] getFoundModifierReplacements() {
+        return hellfirepvp.modularmachinery.common.upgrade.ControllerUpgradeQueries.foundModifiers(this);
+    }
+    @Override public boolean hasModifierReplacement(String modifierName) {
+        if (modifierName == null) return false;
+        for (String name : getFoundModifierReplacements()) if (modifierName.equals(name)) return true;
+        return false;
+    }
+    @Override public boolean hasMachineUpgrade(String upgradeName) { return getMachineUpgrade(upgradeName).length != 0; }
+    @Override public hellfirepvp.modularmachinery.common.upgrade.MachineUpgrade[] getMachineUpgrade(String upgradeName) {
+        if (upgradeName == null) return new hellfirepvp.modularmachinery.common.upgrade.MachineUpgrade[0];
+        return hellfirepvp.modularmachinery.common.upgrade.ControllerUpgradeQueries.installed(this, true).stream()
+                .filter(upgrade -> upgradeName.equals(upgrade.getType().getName()))
+                .toArray(hellfirepvp.modularmachinery.common.upgrade.MachineUpgrade[]::new);
+    }
 
     public CompoundTag getCustomDataTag() {
         return customData;
     }
 
     public void setCustomDataTag(CompoundTag data) {
-        this.customData = data == null ? new CompoundTag() : data.copy();
-        markForUpdate();
+        if (!canChangeRuntimeModifiers()) return;
+        CompoundTag next = data == null ? new CompoundTag() : data.copy();
+        // Replacing even an equal value detaches previously returned mutable script views.
+        boolean changed = !customData.equals(next);
+        this.customData = next;
+        if (changed) markNoUpdateSync();
+    }
+
+    @Override
+    public com.blamejared.crafttweaker.api.data.IData getCustomData() {
+        return hellfirepvp.modularmachinery.integration.crafttweaker.ControllerCustomDataView.create(this);
+    }
+
+    @Override
+    public void setCustomData(com.blamejared.crafttweaker.api.data.IData data) {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel) || !canChangeRuntimeModifiers()) return;
+        if (data == null || !(data.getInternal() instanceof CompoundTag tag))
+            throw new IllegalArgumentException("controller customData must be a compound IData value");
+        setCustomDataTag(tag);
     }
 
     public Map<String, RecipeModifier> getCustomModifiers() {
@@ -194,23 +284,94 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     }
 
     public void addPermanentModifier(String key, RecipeModifier modifier) {
-        if (key == null || key.isEmpty() || modifier == null) return;
+        if (!canChangeRuntimeModifiers() || key == null || key.isBlank() || modifier == null
+                || hellfirepvp.modularmachinery.common.modifier.RuntimeModifierState.same(customModifiers.get(key), modifier)) return;
         customModifiers.put(key, modifier);
+        refreshRuntimeModifierContexts();
         markForUpdate();
     }
 
     public void removePermanentModifier(String key) {
-        if (key != null && customModifiers.remove(key) != null) markForUpdate();
+        if (canChangeRuntimeModifiers() && key != null && customModifiers.remove(key) != null) {
+            refreshRuntimeModifierContexts(); markForUpdate();
+        }
+    }
+
+    /** Detached Java fixtures are supported; attached worlds only permit their owning server thread. */
+    public boolean canChangeRuntimeModifiers() {
+        return !isRemoved() && (level == null || level instanceof net.minecraft.server.level.ServerLevel server
+                && server.getServer().isSameThread() && level.isLoaded(worldPosition)
+                && level.getBlockEntity(worldPosition) == this);
+    }
+    public void addModifier(String key, RecipeModifier modifier) {
+        if (modifier != null) changeRecipeThreadModifier(false, key, modifier);
+    }
+    public void removeModifier(String key) { changeRecipeThreadModifier(false, key, null); }
+    public Map<String, RecipeModifier> getRecipeThreadModifiers(boolean permanent) {
+        return permanent ? recipeThreadModifiers.permanent() : recipeThreadModifiers.semi();
+    }
+    public java.util.List<RecipeModifier> activeRecipeThreadModifiers() { return recipeThreadModifiers.active(); }
+    public void changeRecipeThreadModifier(boolean permanent, String key, RecipeModifier modifier) {
+        if (!canChangeRuntimeModifiers()) return;
+        boolean changed = modifier == null ? recipeThreadModifiers.remove(permanent, key)
+                : recipeThreadModifiers.put(permanent, key, modifier);
+        if (changed) { refreshRuntimeModifierContexts(); resetNormalRecipeSearch(); markForUpdate(); }
+    }
+    protected void refreshRuntimeModifierContexts() {
+        var run = getRuntimeRecipeContext();
+        if (run != null) observeRuntimeRecipeContext(MachineTicker.refreshRuntimeModifiers(this, null, run));
+        resetNormalRecipeSearch();
+    }
+    public void updateRecipeDuration(int value) {
+        if (!hasActiveRecipe()) return;
+        int next = Math.max(1, value);
+        if (recipeDuration != next) { recipeDuration = next; recipeTicks = Math.min(recipeTicks, next); markForUpdate(); }
     }
 
     public void clearCustomRuntimeState() {
         customData = new CompoundTag();
         customModifiers.clear();
+        refreshRuntimeModifierContexts();
         markForUpdate();
     }
 
     public UUID getOwner() {
         return owner;
+    }
+
+    // Source TileEntityRestrictedTick increments after each controller tick, including paused/unformed ticks.
+    // Deliberately neither saved nor synchronized: each newly loaded server/client instance starts at zero.
+    private int controllerTicksExisted;
+
+    @Override public int getTicksExisted() { return controllerTicksExisted; }
+    public void countControllerTick() { controllerTicksExisted++; }
+
+    @Override public int getExtraThreadCount() { return 0; }
+    @Override public void setExtraThreadCount(int extraThreadCount) { } // Ordinary controllers have no dynamic pool.
+
+    @Override
+    public net.minecraft.world.level.Level getIWorld() {
+        if (level == null || isRemoved()) return null;
+        // Do not expose a stale tile's world, load a chunk to validate it, or touch the server off-thread.
+        if (level instanceof net.minecraft.server.level.ServerLevel server && !server.getServer().isSameThread()) return null;
+        return level.hasChunkAt(worldPosition) && level.getBlockEntity(worldPosition) == this ? level : null;
+    }
+
+    @Override
+    public String getOwnerUUIDString() { return owner == null ? null : owner.toString(); }
+
+    @Override
+    public String getOwnerName() {
+        if (owner == null || !(getIWorld() instanceof net.minecraft.server.level.ServerLevel server)) return null;
+        var cache = server.getServer().getProfileCache();
+        // UUID lookup only consults the local cache. A name lookup could trigger remote authentication.
+        return cache == null ? null : cache.get(owner).map(com.mojang.authlib.GameProfile::getName).orElse(null);
+    }
+
+    @Override
+    public net.minecraft.world.entity.player.Player getOwnerIPlayer() {
+        if (owner == null || !(getIWorld() instanceof net.minecraft.server.level.ServerLevel server)) return null;
+        return server.getServer().getPlayerList().getPlayer(owner);
     }
 
     public void setOwner(UUID owner) {
@@ -227,7 +388,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     private final java.util.Set<Integer> activeCatalystRequirements = new java.util.LinkedHashSet<>();
     /** Ticks elapsed on the current recipe. */
     private int recipeTicks;
-    // PARALLELISM OF THE RUNNING CRAFT (PLAN 592-601, upstream ActiveMachineRecipe U43/U58-U69/U156-U157).
+     
     // IT IS PERSISTED BECAUSE IT IS PART OF THE RECIPE STATE, NOT OF THE MACHINE CONFIGURATION: a craft that is
     // half done when the world saves must remember how parallel it was, or it would resume producing a different
     // amount than it started with. UPSTREAM STORES BOTH THE VALUE AND ITS CEILING, and this port does too, because
@@ -241,35 +402,41 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     /** Source-style combination-component group used by the active recipe, or null for normal machines. */
     private String isolationGroupKey;
 
-    // Source TOP exposes rolling CPU/search figures. These counters are server-side diagnostics and are
-    // intentionally transient: a world reload starts a fresh measurement window instead of persisting timings.
-    private long performanceNanos;
-    private long performanceSamples;
-    private long recipeSearchNanos;
-    private long recipeSearchSamples;
+    // Source TimeRecorder keeps the last 100 controller ticks and 20 actual recipe searches.
+    private final hellfirepvp.modularmachinery.common.util.RollingTiming performanceTiming =
+            new hellfirepvp.modularmachinery.common.util.RollingTiming(100);
+    private final hellfirepvp.modularmachinery.common.util.RollingTiming recipeSearchTiming =
+            new hellfirepvp.modularmachinery.common.util.RollingTiming(20);
+    private int normalSearchRetries;
+    private long normalNextSearchTick = Long.MIN_VALUE;
+    private long normalDefinitionRevision = -1;
 
-    public void recordPerformanceNanos(long nanos) {
-        performanceNanos += Math.max(0L, nanos);
-        performanceSamples++;
+    public void recordPerformanceNanos(long nanos) { performanceTiming.add(nanos); }
+    public void recordRecipeSearchNanos(long nanos) { recipeSearchTiming.add(nanos); }
+    public long getAveragePerformanceMicros() { return performanceTiming.averageMicros(); }
+    public long getAverageRecipeSearchMicros() { return recipeSearchTiming.averageMicros(); }
+    public long getPerformanceSamples() { return performanceTiming.size(); }
+    public int getRecipeSearchSamples() { return recipeSearchTiming.size(); }
+
+    public boolean normalRecipeSearchDue(long tick, long definitionRevision) {
+        if (normalDefinitionRevision != definitionRevision) {
+            normalDefinitionRevision = definitionRevision;
+            resetNormalRecipeSearch();
+        }
+        return tick >= normalNextSearchTick;
     }
-
-    public void recordRecipeSearchNanos(long nanos) {
-        recipeSearchNanos += Math.max(0L, nanos);
-        recipeSearchSamples++;
+    public void recordNormalRecipeSearchResult(long tick, boolean started) {
+        if (started) resetNormalRecipeSearch();
+        else {
+            normalSearchRetries = Math.min(16, normalSearchRetries + 1);
+            normalNextSearchTick = tick + Math.min(20 + normalSearchRetries * 5, 100);
+        }
     }
-
-    /** Rolling-window average in microseconds, capped to avoid overflow after a very long server uptime. */
-    public long getAveragePerformanceMicros() {
-        return performanceSamples == 0 ? 0 : Math.min(Long.MAX_VALUE / 1_000L,
-                performanceNanos / performanceSamples / 1_000L);
+    public void requestNormalRecipeSearch() { normalNextSearchTick = Long.MIN_VALUE; }
+    private void resetNormalRecipeSearch() {
+        normalSearchRetries = 0;
+        requestNormalRecipeSearch();
     }
-
-    public long getAverageRecipeSearchMicros() {
-        return recipeSearchSamples == 0 ? 0 : Math.min(Long.MAX_VALUE / 1_000L,
-                recipeSearchNanos / recipeSearchSamples / 1_000L);
-    }
-
-    public long getPerformanceSamples() { return performanceSamples; }
 
     public String getIsolationGroupKey() {
         return isolationGroupKey;
@@ -308,22 +475,75 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     private int boundComponents = 0;
 
     /**
-     * The positions of the components bound at the last formation. Empty when the machine is unformed.
+     * The positions of the components bound at the last successful formation.
      *
      * <p>Retained so the chunk-unloaded state can cover the whole structure rather than only this controller's
      * own chunk, which is what upstream means (§136.3). `MachineFormation.bindComponents` already computed
      * this list for its own unbinding pass, so keeping it costs no extra walking.
      *
-     * <p>Transient, like `boundComponents`: re-derived on every formation, so persisting it would only create
-     * a way for the saved value to disagree with the world.
+     * <p>Persisted as cleanup candidates across reloads. A successful rebind replaces these with the
+     * components actually present; the saved list never substitutes for structure matching.
      */
     private java.util.List<BlockPos> boundPositions = java.util.List.of();
+    private final java.util.Set<BlockPos> pendingUnbindPositions = new java.util.LinkedHashSet<>();
+    private boolean structureCheckRequested;
     /** World positions covered by the formed pattern, synchronized for the client model hider. */
     private java.util.List<BlockPos> hiddenPositions = java.util.List.of();
 
     /** @param positions the components bound at the last formation; see {@link #boundPositions} */
     public void setBoundPositions(java.util.List<BlockPos> positions) {
         this.boundPositions = java.util.List.copyOf(positions);
+    }
+
+    /** Reconcile recorded components in O(old + new), never by searching surrounding world volume. */
+    public void reconcileComponentBindings(java.util.List<BlockPos> positions) {
+        var next = new java.util.LinkedHashSet<>(positions);
+        var stale = new java.util.LinkedHashSet<>(boundPositions);
+        stale.removeAll(next);
+        boolean changed = pendingUnbindPositions.addAll(stale);
+        changed |= pendingUnbindPositions.removeAll(next);
+        boolean bindingsChanged = !boundPositions.equals(positions);
+        setBoundPositions(java.util.List.copyOf(next));
+        if (changed || bindingsChanged) setChanged();
+        flushPendingComponentUnbinds();
+    }
+
+    /** Retain unloaded stale positions for a later tick; never load a chunk merely to clear its binding. */
+    public void flushPendingComponentUnbinds() {
+        if (level == null || level.isClientSide() || pendingUnbindPositions.isEmpty()) return;
+        var iterator = pendingUnbindPositions.iterator();
+        while (iterator.hasNext()) {
+            BlockPos pos = iterator.next();
+            if (!level.hasChunkAt(pos)) continue;
+            if (level.getBlockEntity(pos) instanceof hellfirepvp.modularmachinery.common.tiles.base.MachineComponentTile component
+                    && worldPosition.equals(component.getControllerPos())) component.setControllerPos(null);
+            iterator.remove();
+            setChanged();
+        }
+    }
+
+    public void requestStructureCheck() { structureCheckRequested = true; }
+    public boolean isStructureCheckRequested() { return structureCheckRequested; }
+    public void acknowledgeStructureCheck() { structureCheckRequested = false; }
+
+    @Override public void setRemoved() {
+        hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.unwatch(this);
+        super.setRemoved();
+    }
+
+    @Override public void onChunkUnloaded() {
+        hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.unwatch(this);
+        super.onChunkUnloaded();
+    }
+
+    @Override public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide() && formed) {
+            pendingRebind = true;
+            requestStructureCheck();
+            if (formedPattern != null)
+                hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.watch(this, formedPattern);
+        }
     }
 
     /**
@@ -337,14 +557,14 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
      * <p>Callers should compare this against the count the formation itself reported, which is an
      * independent number.
      */
-    /**
-     * The component positions bound by the last formation, READ-ONLY.
-     *
-     * <p>Added for the machine event dispatch (PLAN sections 491-493, path 1): upstream iterates a map of
-     * live component objects, and this port holds this list instead. THE LIST IS NOT DUPLICATED -- the
-     * dispatch reuses the very list isStructureChunkLoaded walks, which is why the accessor lives here
-     * rather than a second index being built.</p>
-     */
+    
+
+
+
+
+
+
+ 
     public java.util.List<BlockPos> getBoundPositions() {
         return boundPositions;
     }
@@ -355,26 +575,74 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         this.hiddenPositions = positions == null ? java.util.List.of() : java.util.List.copyOf(positions);
     }
 
-    /**
-     * The pattern this machine was FORMED with — the definition's own parts with its dynamic sections merged in
-     * (PLAN §750), or {@code null} while it is unformed.
-     *
-     * <p><b>IT IS UPSTREAM'S {@code foundPattern}, AND THE SAME OBJECT IS THE POINT.</b> Upstream keeps the
-     * matched array on the tile ({@code TileMultiblockMachineController} U140) precisely so that after formation
-     * the structure is <i>the one that actually matched</i> — the wall PLUS the variable-length line — and every
-     * later reader (the re-check at U689, the component binding at U781, the casing walk at U490) asks THAT array
-     * rather than the definition. This port stored the bound <i>positions</i> instead, which is enough for the
-     * chunk-unloaded question but not for "which cells are components", so the engine kept asking the
-     * definition's static half and the shipped {@code assembly_line} had no reachable input or output bus.</p>
-     *
-     * <p>Transient and re-derived on every formation, like {@link #boundPositions}: it is a fact about the world,
-     * not about the machine, and a saved copy could disagree with the blocks after a reload.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private hellfirepvp.modularmachinery.common.machine.MachinePattern formedPattern;
+    private final hellfirepvp.modularmachinery.common.machine.ControllerStructureQueries structureQueries =
+            new hellfirepvp.modularmachinery.common.machine.ControllerStructureQueries(this);
+
+    public void recordFormedStructure(hellfirepvp.modularmachinery.common.machine.DynamicMachine machine,
+            hellfirepvp.modularmachinery.common.machine.MachinePattern pattern,
+            java.util.Map<String, Integer> sizes, net.minecraft.core.Direction facing) {
+        structureQueries.record(machine, pattern, sizes, facing);
+        setFormedPattern(pattern);
+    }
+
+    @Override public hellfirepvp.modularmachinery.common.helper.IDynamicPatternInfo getDynamicPattern(String name) {
+        return structureQueries.dynamic(name);
+    }
+    @Override public BlockPos[] getBlockPosInPattern(String name) { return structureQueries.positions(name); }
+    @Override public BlockPos[] getBlockPosInPattern(BlockState state) { return structureQueries.positions(state); }
+    @Override public BlockPos[] getBlockPosInPattern(com.blamejared.crafttweaker.api.item.IItemStack stack) {
+        return structureQueries.positions(stack == null ? null : stack.getInternal());
+    }
+    @Override public BlockPos[] getBlockPosInPattern(hellfirepvp.modularmachinery.common.helper.IBlockStatePredicate predicate) {
+        return structureQueries.positions(predicate);
+    }
+    @Override public int getBlocksInPattern(String name) { return getBlockPosInPattern(name).length; }
+    @Override public int getBlocksInPattern(BlockState state) { return getBlockPosInPattern(state).length; }
+    @Override public int getBlocksInPattern(com.blamejared.crafttweaker.api.item.IItemStack stack) {
+        return getBlockPosInPattern(stack).length;
+    }
+    @Override public int getBlocksInPattern(hellfirepvp.modularmachinery.common.helper.IBlockStatePredicate predicate) {
+        return getBlockPosInPattern(predicate).length;
+    }
 
     /** @param pattern the pattern the formation walk bound components from; see {@link #formedPattern} */
     public void setFormedPattern(hellfirepvp.modularmachinery.common.machine.MachinePattern pattern) {
         this.formedPattern = pattern;
+        if (pattern != null) {
+            hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.watch(this, pattern);
+            if (formed && refreshFormedPositions()) markForUpdate();
+        }
+    }
+
+    /** Dynamic growth/shrink updates both the chunk guard and the client's hidden structure cells. */
+    private boolean refreshFormedPositions() {
+        if (formedPattern == null) return false;
+        var facing = getBlockState().hasProperty(hellfirepvp.modularmachinery.common.block.BlockController.FACING)
+                ? getBlockState().getValue(hellfirepvp.modularmachinery.common.block.BlockController.FACING)
+                : net.minecraft.core.Direction.NORTH;
+        var positions = new java.util.ArrayList<BlockPos>();
+        for (var part : formedPattern.getParts())
+            positions.add(hellfirepvp.modularmachinery.common.machine.StructureMatcher.toWorldOffset(
+                    worldPosition, facing, part.x(), part.y(), part.z()));
+        if (hiddenPositions.equals(positions)) return false;
+        setHiddenPositions(positions);
+        return true;
     }
 
     /**
@@ -449,58 +717,58 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     // The parallelism READOUT (upstream GuiMachineController U145-U154 / GuiFactoryController U277-U311)
     // ------------------------------------------------------------------
 
-    /**
-     * The two lines upstream's controller GUI prints under the progress line, as <b>finished components</b>.
-     *
-     * <pre>
-     * upstream GuiMachineController U145-U154        this port
-     *   int parallelism    = getParallelism()          getParallelism()
-     *   int maxParallelism = getMaxParallelism()       getMaxParallelism()
-     *   if (parallelism &gt; 1) {                        the SAME guard, so the pair is readout rather
-     *     I18n.format("gui.controller.parallelism", …)   than a constant 1/1 on every idle machine
-     *     I18n.format("gui.controller.max_parallelism",…)
-     *   }
-     * </pre>
-     *
-     * <p><b>RULE A0 -- THE SOURCE OF THE TWO NUMBERS IS NOT UPSTREAM'S.</b></p>
-     * <ol>
-     *   <li><b>upstream file:line.</b> {@code GuiMachineController} U145-U146 reads
-     *       {@code activeRecipe.getParallelism()} / {@code getMaxParallelism()} off the
-     *       {@code ActiveMachineRecipe}, and {@code GuiFactoryController} U277-U311 reads the factory's
-     *       {@code thread.getParallelism()} off the run it is describing. Both are the value of the craft
-     *       the line describes, and both are the ceiling it started under.</li>
-     *   <li><b>evidence of the difference.</b> On 1.12.2 the client's {@code GuiContainer} was CONSTRUCTED
-     *       WITH the tile ({@code GuiMachineController} U42-U44) and could therefore hold the tile's
-     *       {@code ActiveMachineRecipe}; the port's screens are constructed with a MENU, and the menu's six
-     *       int slots are defined by {@code MenuMachineController} (PROGRESS, DURATION, FORMED, COMPONENTS,
-     *       REDSTONE, CHUNK) with no parallelism among them. The port's screens nonetheless have the
-     *       reading -- {@code ScreenFactoryController} reads its machine name and its run list off the
-     *       client-side tile for exactly this reason (PLAN 664), and the sentence is in that class's own
-     *       table: the name "is not an int and the menu's data slots are int-only".</li>
-     *   <li><b>what this does instead.</b> Reads the two values off the tile the screen already resolves --
-     *       on a client that is the copy the update tag produced, which is why {@code saveAdditional} writes
-     *       both keys (see the field javadoc above). {@link TileFactoryController} overrides both getters to
-     *       report its FIRST RUNNING RUN, so the factory screen's numbers are the run's, i.e. upstream's
-     *       source, reached through the tile. NO MENU SLOT WAS ADDED: widening {@code DATA_SIZE} would change
-     *       what every screen that reuses the menu's layout reads, and a check on a dedicated server cannot
-     *       watch a screen draw either slot.</li>
-     * </ol>
-     *
-     * <p><b>WHY THE LINES ARE BUILT HERE RATHER THAN IN THE TWO SCREENS.</b> A screen class cannot be
-     * loaded on a dedicated server at all, so an assertion about what a line SAYS could not be made against
-     * one -- the suite reads client classes as bytes and can only ask which fields a body reads. Building
-     * the components on the TILE puts the key, the argument and the guard in a class the suite can call,
-     * and the screens are left with a loop. The port's own precedent is the factory menu's pinned
-     * arithmetic, stated there for this same reason: a value a check must see has to live where the check
-     * can reach it.</p>
-     *
-     * <p>The keys are the ones the lang files carry ({@code gui.controller.parallelism} /
-     * {@code gui.controller.max_parallelism}); the arguments are the two numbers, NOT literals -- a {@code
-     * Component} argument that happened to equal the value would still be the wrong argument, and the suite
-     * reads the argument back out of the component it gets here.</p>
-     *
-     * @return the two components in upstream's order, or an EMPTY list when this craft is not parallel
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public java.util.List<net.minecraft.network.chat.Component> parallelismReadoutLines() {
         if (getParallelism() <= 1) {
             return java.util.List.of();
@@ -510,9 +778,9 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
                 net.minecraft.network.chat.Component.translatable(MAX_PARALLELISM_KEY, getMaxParallelism()));
     }
 
-    /** Upstream {@code GuiMachineController} U148, verbatim. Public so the screen and the suite share ONE name. */
+     
     public static final String PARALLELISM_KEY = "gui.controller.parallelism";
-    /** Upstream {@code GuiMachineController} U151, verbatim. */
+     
     public static final String MAX_PARALLELISM_KEY = "gui.controller.max_parallelism";
 
     /**
@@ -526,6 +794,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
 
     /** Starts a recipe. Inputs must already have been consumed by the caller. */
     public void beginRecipe(String recipeName, int duration, int parallelism) {
+        runtimeRecipeContext = null;
+        resetNormalRecipeSearch();
         this.recipeName = recipeName;
         this.recipeDuration = Math.max(1, duration);
         this.recipeTicks = 0;
@@ -533,25 +803,25 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         this.maxParallelism = Math.max(1, parallelism);
         this.triggeredRequirements.clear();
         this.isolationGroupKey = null;
-        // A NEW CRAFT HAS NO HOLD REASON (PLAN 683). Without this a machine that was held by a full output and
+         
         // then started a different craft would keep displaying the previous craft's reason.
         setStatusMessage(null);
         markForUpdate();
     }
 
-    /**
-     * Advances the progress counter by one tick, <b>stopping at the duration</b>.
-     *
-     * <p><b>THE CLAMP IS UPSTREAM'S, AND WITHOUT IT THE COUNTER RAN AWAY (PLAN 683, DEFECT B).</b> Upstream
-     * {@code ActiveMachineRecipe.tick} returns <i>before</i> its own {@code this.tick++} once the craft is
-     * complete (U82-U85), where complete means {@code tick >= totalTick} (U117-U118) — so upstream's counter is
-     * clamped at {@code totalTick} by construction and a player can never read a progress above 100%.</p>
-     *
-     * <p>THE PORT INCREMENTED UNCONDITIONALLY, and the "output has no room" hold below leaves the increment in
-     * place while returning early — so a machine whose output bus was full counted up forever while the GUI
-     * read {@code 2478 / 60 t}. That is not cosmetic: progress is the only number a player has for telling
-     * "working" apart from "stuck", and it said "working" for 40 minutes.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+ 
     public void advanceRecipe() {
         if (this.recipeTicks < this.recipeDuration) {
             this.recipeTicks++;
@@ -559,7 +829,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         // Syncing every tick would flood the client with packets for no visual benefit; progress is
         // synced on the transitions and on completion instead.
     }
-        // THE COUNTER, READ AND WRITTEN (PLAN 542, D7b). The READ was here all along; this is the WRITE.
+         
         //
         // Upstream RecipeTickEvent.preventProgressing rewrites the recipe own tick counter: if it is above zero it
         // subtracts one, so the craft does not advance on that tick. THE PORT ADVANCES UNCONDITIONALLY ONE LINE
@@ -578,6 +848,9 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
 
     /** Completes the current recipe and returns to idle. */
     public void finishRecipe() {
+        runtimeRecipeContext = null;
+        recipeThreadModifiers.clearSemi();
+        resetNormalRecipeSearch();
         this.recipeName = null;
         this.recipeTicks = 0;
         this.recipeDuration = 0;
@@ -588,28 +861,28 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         markForUpdate();
     }
 
-    /**
-     * Why the machine is being held, as an <b>unlocalized translation key</b>, or {@code null} when it is not.
-     *
-     * <p><b>ADDED FOR PLAN 683 (DEFECT B): A BLOCKED CRAFT HAD NO REASON ANYWHERE A PLAYER COULD SEE.</b> The
-     * hold itself is correct and upstream — {@code RecipeThread.onFinished} asks {@code canFinishCrafting()}
-     * and, on failure, sets {@code waitForFinish} and stores the failure message as the thread's status
-     * (upstream RecipeThread U73-U78) — but upstream's {@code CraftingStatus} carries that message to the GUI
-     * as an <b>unloc</b> key, and this port has no {@code CraftingStatus}.</p>
-     *
-     * <p><b>WHY A KEY AND NOT A SENTENCE.</b> Upstream's field is literally called {@code unlocMessage} and the
-     * client localizes it, so a Chinese client on an English server still reads Chinese. A server-side
-     * {@code getString()} would fix the text to the server's locale, which is the same defect the port's other
-     * status lines avoid by choosing their key client-side (ScreenMachineController). The port ships both
-     * language files.</p>
-     *
-     * <p><b>IT RIDES THE EXISTING SYNC RATHER THAN A NEW PACKET.</b> {@code saveAdditional} is what
-     * {@code getUpdateTag} returns, so writing it there puts it on the block entity's own update packet, which
-     * is how {@code formed} and the recipe state already reach the client — and
-     * {@code ScreenFactoryController}/{@code ScreenSmartInterface} already read extra state off the
-     * client-side block entity. {@link #markForUpdate()} is called only on a CHANGE, so a machine holding for
-     * a thousand ticks sends one packet, not a thousand.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private String statusMessage = null;
 
     /** @param key the unlocalized reason the machine is holding, or {@code null} to clear it */
@@ -626,29 +899,29 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         return statusMessage;
     }
 
-    /**
-     * Whether the craft this controller carries is <b>advancing</b> rather than held — upstream's
-     * {@code getControllerStatus().isCrafting()}.
-     *
-     * <p><b>WHO ASKS (PLAN 711).</b> Upstream's TheOneProbe provider paints its progress bar from exactly this
-     * question: {@code MMInfoProvider} U246 puts the machine controller's status through {@code isCrafting()}
-     * and takes the three FAILURE colours at U250-U252 when it answers false. The port's own probe
-     * ({@code MachineProbeProvider}) needs the same question answered once, at the tile, rather than rebuilt at
-     * the HUD — so this method is the tile's answer and the probe is its reader.</p>
-     *
-     * <p><b>THE PREDICATE, AND BOTH HOLDS THAT FEED IT.</b> {@code statusMessage} is this port's field for
-     * upstream's {@code CraftingStatus.unlocMessage}, and {@code MachineTicker} writes it at the output-room
-     * refusal (its U677) <b>and at the energy shortfall (PLAN 712, its stall branch)</b>. A machine holding
-     * because its output has no room therefore answers <b>false</b> here and takes upstream's red, and so does
-     * a machine stalled with no power — which is upstream's own behaviour on both paths: the output hold is
-     * {@code RecipeThread.onFinished} U73-U78, and the energy hold is {@code ActiveMachineRecipe.tick}
-     * U88-U98 returning {@code CraftingStatus.failure("craftcheck.failure.energy.input")} without reaching its
-     * own {@code this.tick++} U101, so {@code CraftingStatus.isCrafting()} U53-U55 answers false while the
-     * craft is kept. PLAN 711 recorded the energy half as an open gap; PLAN 712 closed it and this line is
-     * corrected with it, because a method javadoc that still describes its own predicate as wrong is the same
-     * defect as a wrong predicate. An empty {@code statusMessage} now means "this controller is holding nothing
-     * it can name" on every path this engine has.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public boolean isCrafting() {
         return hasActiveRecipe() && statusMessage == null;
     }
@@ -690,6 +963,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
      * MachineTicker, which has the facing the walk needs; TileController does not carry it.</p>
      */
     public boolean consumeRebindRequest() {
+        if (pendingRebind && !isStructureChunkLoaded()) return false;
         boolean requested = this.pendingRebind;
         this.pendingRebind = false;
         return requested;
@@ -720,16 +994,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     }
 
     /**
-     * True when this controller's own chunk is loaded.
-     *
-     * <p><b>Weaker than upstream's state, and deliberately so.</b> Upstream reports `chunk_unloaded` when
-     * <i>a block in the multiblock structure</i> unloads — which needs the structure's component positions, and
-     * the port RETAINS them (corrected per PLAN 501.6 -- see setBoundPositions, added later) ({@code boundComponents} is only a count, §91's note).
-     * This checks the controller's own chunk, which catches the case where the status line is being read about
-     * a block entity whose chunk has just gone away.
-     *
-     * <p>Reported as a weaker check rather than silently presented as the same thing: a status line that names
-     * the wrong reason is worse than one that is coarser (§109).
+     * True when the controller, recorded components and all recorded formed structure cells are loaded.
+     * This guard performs no chunk loads and covers decorative cells in dynamic sections as well as hatches.
      */
     public boolean isStructureChunkLoaded() {
         net.minecraft.world.level.Level level = getLevel();
@@ -744,15 +1010,21 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
                 return false;
             }
         }
+        for (BlockPos structurePos : hiddenPositions) {
+            if (!level.isLoaded(structurePos)) return false;
+        }
         return true;
     }
 
     public void setFormed(boolean formed) {
+        if (!formed) structureQueries.clear();
+        if (!formed) runtimeRecipeContext = null;
         if (this.formed != formed) {
+            resetNormalRecipeSearch();
             nextAutomaticStructureCheck = Long.MIN_VALUE;
             structureSearchRetries = 0;
         }
-        // THE FIRE SITES LIVE HERE RATHER THAN AT THE CALLERS, AND THE REASON IS STRUCTURAL (PLAN 498):
+         
         //
         //   upstream fires MachineStructureFormedEvent at TileMultiblockMachineController U609 and
         //   MachineStructureUpdateEvent at U610, right after it -- both inside the CONTROLLER OWN TICK.
@@ -764,17 +1036,14 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         //   Putting the dispatch inside setFormed keeps upstream ORDER AND SEMANTICS and reaches every caller.
         if (this.formed != formed) {
             this.formed = formed;
-        if (formed && formedPattern != null) {
-            java.util.ArrayList<BlockPos> positions = new java.util.ArrayList<>();
-            net.minecraft.core.Direction facing = getBlockState().hasProperty(
-                    hellfirepvp.modularmachinery.common.block.BlockController.FACING)
-                    ? getBlockState().getValue(hellfirepvp.modularmachinery.common.block.BlockController.FACING)
-                    : net.minecraft.core.Direction.NORTH;
-            for (var part : formedPattern.getParts()) {
-                positions.add(hellfirepvp.modularmachinery.common.machine.StructureMatcher.toWorldOffset(
-                        worldPosition, facing, part.x(), part.y(), part.z()));
+            if (!formed) {
+                acknowledgeStructureCheck();
+                hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.unwatch(this);
+            } else if (formedPattern != null) {
+                hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.watch(this, formedPattern);
             }
-            setHiddenPositions(positions);
+        if (formed && formedPattern != null) {
+            refreshFormedPositions();
         } else if (!formed) {
             setHiddenPositions(java.util.List.of());
         }
@@ -811,29 +1080,12 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
      * Resolves the current upgrade set for upgrade-scoped event callbacks.
      *
      * <p>This intentionally mirrors {@code MachineContext.installedUpgrades()} without constructing a synthetic
-     * server context. Events such as structure formation and machine ticks have a controller but no recipe context;
-     * the controller's bound component positions are the authoritative set of upgrade buses for those events.</p>
+     * server context. Recorded loaded buses provide capped static copies and per-slot dynamic views;
+     * guarded data writes still reach the original bus/item, without merging inventory-owned counts.</p>
      */
     public java.util.List<hellfirepvp.modularmachinery.common.upgrade.MachineUpgrade>
     getInstalledUpgradesForEvents() {
-        java.util.LinkedHashMap<hellfirepvp.modularmachinery.common.upgrade.UpgradeType,
-                hellfirepvp.modularmachinery.common.upgrade.MachineUpgrade> merged = new java.util.LinkedHashMap<>();
-        if (level == null) return java.util.List.of();
-        for (BlockPos pos : boundPositions) {
-            if (level.getBlockEntity(pos) instanceof TileUpgradeBus bus) {
-                for (var upgrade : bus.getUpgradesFor(machineName)) {
-                    // Work on a detached copy: bus-owned upgrade instances are refreshed from inventory and must
-                    // not have their stack count increased every time an event is posted.
-                    var detached = upgrade.copy();
-                    var previous = merged.putIfAbsent(detached.getType(), detached);
-                    if (previous != null) {
-                        int room = previous.getType().getMaxStackSize() - previous.getStackSize();
-                        if (room > 0) previous.incrementStackSize(Math.min(room, detached.getStackSize()));
-                    }
-                }
-            }
-        }
-        return java.util.List.copyOf(merged.values());
+        return hellfirepvp.modularmachinery.common.upgrade.ControllerUpgradeQueries.installed(this, false);
     }
 
     /** Detached blueprint controllers use the client model snapshot without attaching to a real world. */
@@ -843,7 +1095,13 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
 
     public void setMachineName(String machineName) {
         String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
-        this.machineName = fixed == null ? machineName : fixed;
+        String nextMachine = fixed == null ? machineName : fixed;
+        if (!java.util.Objects.equals(this.machineName, nextMachine)) {
+            structureQueries.retainForMachine(nextMachine);
+            resetNormalRecipeSearch();
+            runtimeRecipeContext = null;
+        }
+        this.machineName = nextMachine;
         markForUpdate();
     }
 
@@ -890,16 +1148,28 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
 
     @Override
     public void load(CompoundTag tag) {
+        runtimeRecipeContext = null;
         super.load(tag);
+        formedPattern = null;
+        structureQueries.load(tag);
+        resetNormalRecipeSearch();
+        normalDefinitionRevision = -1;
         if (tag.contains("blueprint")) {
             loadingBlueprint = true;
             try { blueprintInventory.deserializeNBT(tag.getCompound("blueprint")); }
             finally { loadingBlueprint = false; }
         }
         this.formed = tag.getBoolean("formed");
-        // A WORLD RELOAD IS NOT A FORMATION: the flag comes back and the binding does not (PLAN 627).
+         
         this.pendingRebind = this.formed;
         this.hiddenPositions = readHiddenPositions(tag);
+        // Legacy saves already carry the formed cells as hiddenPositions; use them as cleanup candidates
+        // until the first rebind replaces them with the actual component positions.
+        this.boundPositions = tag.contains("boundPositions", net.minecraft.nbt.Tag.TAG_LONG_ARRAY)
+                ? readPositions(tag, "boundPositions") : hiddenPositions;
+        this.pendingUnbindPositions.clear();
+        this.pendingUnbindPositions.addAll(readPositions(tag, "pendingUnbindPositions"));
+        this.structureCheckRequested = this.formed;
         String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
         this.machineName = fixed != null ? fixed : tag.contains("machineName") ? tag.getString("machineName") : null;
         if (tag.hasUUID("owner")) {
@@ -925,7 +1195,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         // method is what onDataPacket runs, so an absent key has to CLEAR the message. Reading it only when
         // present would leave a stale "output full" line on a machine that has since started producing.
         this.statusMessage = tag.contains("statusMessage") ? tag.getString("statusMessage") : null;
-        this.customData = tag.contains("customData") ? tag.getCompound("customData") : new CompoundTag();
+        this.customData = tag.contains("customData") ? tag.getCompound("customData").copy() : new CompoundTag();
+        recipeThreadModifiers.read(tag.getCompound("recipeThreadModifiers"));
         this.customModifiers.clear();
         if (tag.contains("customModifier", net.minecraft.nbt.Tag.TAG_LIST)) {
             ListTag list = tag.getList("customModifier", net.minecraft.nbt.Tag.TAG_COMPOUND);
@@ -944,6 +1215,10 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
+        structureQueries.save(tag);
+        tag.putLongArray("boundPositions", boundPositions.stream().mapToLong(BlockPos::asLong).toArray());
+        if (!pendingUnbindPositions.isEmpty())
+            tag.putLongArray("pendingUnbindPositions", pendingUnbindPositions.stream().mapToLong(BlockPos::asLong).toArray());
         tag.put("blueprint", blueprintInventory.serializeNBT());
         tag.putBoolean("formed", formed);
         if (!hiddenPositions.isEmpty()) {
@@ -982,6 +1257,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
         if (!customData.isEmpty()) {
             tag.put("customData", customData.copy());
         }
+        var threadModifierTag = new CompoundTag(); recipeThreadModifiers.write(threadModifierTag);
+        tag.put("recipeThreadModifiers", threadModifierTag);
         if (!customModifiers.isEmpty()) {
             ListTag list = new ListTag();
             customModifiers.forEach((key, modifier) -> {
@@ -994,6 +1271,11 @@ public class TileController extends TileEntityBase implements GeoBlockEntity {
             });
             tag.put("customModifier", list);
         }
+    }
+
+    private static java.util.List<BlockPos> readPositions(CompoundTag tag, String key) {
+        if (!tag.contains(key, net.minecraft.nbt.Tag.TAG_LONG_ARRAY)) return java.util.List.of();
+        return java.util.Arrays.stream(tag.getLongArray(key)).mapToObj(BlockPos::of).distinct().toList();
     }
 
     private static java.util.List<BlockPos> readHiddenPositions(CompoundTag tag) {

@@ -14,41 +14,56 @@
 package hellfirepvp.modularmachinery.common.event.recipe;
 
 import hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext;
+import hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe;
+import hellfirepvp.modularmachinery.common.machine.RecipeThread;
 import hellfirepvp.modularmachinery.common.event.machine.MachineEvent;
 import hellfirepvp.modularmachinery.common.tiles.TileController;
 
 /**
- * Base of the recipe events (upstream RecipeEvent, 63 lines).
- *
- * RULE A0 -- THE TYPE SET IS REDUCED, AND THE REASON IS STRUCTURAL RATHER THAN CONVENIENT (PLAN 500.3):
- *
- *   upstream   RecipeEvent(TileMultiblockMachineController, RecipeThread, RecipeCraftingContext)     U22
- *              with activeRecipe derived from context.getActiveRecipe()                               U24
- *   this port  NO ActiveMachineRecipe, NO RecipeThread, and RecipeCraftingContext HAS NO getActiveRecipe
- *
- * WHY: UPSTREAM RUNS A RECIPE ON A RecipeThread, WHICH IS WHAT THAT TYPE EXISTS FOR. THIS PORT RUNS RECIPES
- * SYNCHRONOUSLY IN THE TICK -- MachineTicker.advance is called straight from tick with NO THREAD ANYWHERE in the
- * recipe path -- SO A THREAD HANDLE WOULD NAME SOMETHING THAT DOES NOT HAPPEN.
- *
- * AND WHAT IS KEPT IS THE OBSERVABLE CONTRACT: which event fires when, the cancel semantics, and the caller-owned
- * handlers. What handlers LOSE is the ability to inspect a thread, BECAUSE THERE IS NO THREAD TO INSPECT. That is
- * recorded here rather than left for a handler author to discover.
- *
- * <p>getContext().getRecipe() REPLACES upstream getActiveRecipe().getRecipe(): the port context carries the recipe
- * directly (RecipeCraftingContext R111), so the wrapper upstream needs has no purpose here.</p>
+ * Base recipe event: the evaluated context, an immutable progress observation and a live logical-thread query.
+ * Ordinary controllers have one implicit thread; factory events explicitly identify their own run.
+ * A closing END event retains the completed craft's observation even after the ticker returns its thread to idle.
+ * Search/check events can precede assignment of a craft; their zero-progress observation describes the candidate.
+ * The logical thread is independent of Java worker threads; execution remains on the server tick thread.
  */
 @com.blamejared.crafttweaker.api.annotation.ZenRegister
 @org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.RecipeEvent")
 public class RecipeEvent extends MachineEvent {
 
     private final RecipeCraftingContext context;
+    private final hellfirepvp.modularmachinery.common.machine.RecipeThread recipeThread;
+    private final hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe activeRecipe;
 
     public RecipeEvent(TileController controller, RecipeCraftingContext context) {
-        super(controller);
-        this.context = context;
+        this(controller, context, context != null && context.runtimeThread() != null ? context.runtimeThread()
+                : controller == null || controller instanceof hellfirepvp.modularmachinery.common.tiles.TileFactoryController
+                ? null : new hellfirepvp.modularmachinery.common.machine.RecipeThread(controller, null));
     }
 
+    protected RecipeEvent(TileController controller, RecipeCraftingContext context,
+                          hellfirepvp.modularmachinery.common.machine.RecipeThread recipeThread) {
+        super(controller);
+        this.context = context;
+        this.recipeThread = recipeThread;
+        var running = recipeThread == null ? null : recipeThread.getActiveRecipe();
+        if (context == null) activeRecipe = running;
+        else if (running != null && running.getRegistryName().equals(context.getRecipeName())) activeRecipe = running;
+        else if (context.observedRecipe() != null) activeRecipe = context.observedRecipe();
+        else activeRecipe = new hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe(
+                    context.getRecipeName(), 0, context.effectiveDuration(), 1, 1);
+        if (context != null) context.observeRecipe(activeRecipe);
+    }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("activeRecipe")
+    @org.openzen.zencode.java.ZenCodeType.Nullable
+    public ActiveMachineRecipe getActiveRecipe() { return activeRecipe; }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("recipeThread")
+    @org.openzen.zencode.java.ZenCodeType.Nullable
+    public RecipeThread getRecipeThread() { return recipeThread; }
+
     @org.openzen.zencode.java.ZenCodeType.Getter("context")
+    @org.openzen.zencode.java.ZenCodeType.Nullable
     public RecipeCraftingContext getContext() {
         return context;
     }

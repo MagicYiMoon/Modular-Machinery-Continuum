@@ -16,6 +16,8 @@ import java.util.*;
 
 /** A total furnace burn-time budget paid at recipe start; excess time is discarded. */
 public final class RequirementFuel extends hellfirepvp.modularmachinery.common.crafting.SelectorRequirement implements Requirement.Parallelizable {
+    // Source any:fuel is a RequirementItem, even though this port gives it a separate implementation.
+    @Override public int getSortingWeight() { return PRIORITY_WEIGHT_ITEM; }
     private final int time;
     private final float chance;
     private final RecipeNbt nbt;

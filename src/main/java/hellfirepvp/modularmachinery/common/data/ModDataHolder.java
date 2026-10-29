@@ -33,64 +33,64 @@ import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.stream.Stream;
 
-/**
- * Owns {@code config/modularmachinery/} — the directories a pack or a player puts machine and recipe
- * files into — and seeds them from the mod's own jar exactly once.
- *
- * <p><b>Ported from upstream {@code hellfirepvp.modularmachinery.common.data.ModDataHolder} (136 lines),
- * read in full.</b> The structures it reproduces are upstream's:
- * <ul>
- *   <li>{@link #setup} — upstream L37-L55: {@code mainDir}, {@code machineryDir} and {@code recipeDir}
- *       are created with {@code mkdirs()}, and {@code requiresDefaultMachinery} is set <b>only</b> when
- *       {@code mainDir} did not exist. That flag is upstream's actual never-overwrite mechanism.
- *   <li>{@link #copyDefaultMachinery} — upstream L71-L80: three copies into three targets, the third a
- *       {@code variables} subdirectory of the machinery directory.
- *   <li>{@link #copy} — upstream L82-L134: walk the shipped asset directory, take every {@code .json},
- *       and write it into the target <b>flattened</b> ({@code new File(directoryTo,
- *       filePath.getFileName().toString())}, upstream L124). Subdirectories are not recreated, which
- *       is why the port's {@code default_recipes/alloy_smelter/*.json} end up as {@code
- *       recipes/*.json}.
- * </ul>
- *
- * <h2>The two differences from upstream, both stated rather than implied</h2>
- *
- * <p><b>1. Where the mod's own files are read from.</b> Upstream obtained a
- * {@code java.io.File} of the mod's source and, for a jar, opened its own
- * {@code FileSystems.newFileSystem(modSource.toPath(), null)} (upstream L95-L107). 1.20.1 has no such
- * File: the mod file is a Forge {@code SecureJar} whose backing path may be a jar <i>or</i> — in a
- * development workspace — a union of the exploded {@code classes} and {@code resources} directories,
- * and Forge has already mounted it. The supported accessor for "a path inside my own mod file" is
- * {@code IModFile.findResource(String...)}, whose body was read from the 47.3.0 jar:
- * {@code getSecureJar().getPath("/" + String.join("/", path))}. Whether a second
- * {@code FileSystems.newFileSystem} on an already-mounted mod jar throws
- * {@code FileSystemAlreadyExistsException} was <b>not</b> tested, so no claim is made about it;
- * {@code findResource} removes the question instead of gambling on the answer. Everything downstream
- * of the root path — the walk, the {@code .json} filter, the flattening — is upstream's, unchanged.
- *
- * <p><b>2. A per-file existence check inside {@link #copy}.</b> Upstream's copy loop writes every
- * file unconditionally (upstream L124-L126), and is protected only by the one-shot
- * {@code requiresDefaultMachinery} gate. That gate is kept verbatim, and the per-file skip is added
- * on top of it: on a first run it can only change the outcome for two shipped files that share a
- * basename in different source subdirectories, where upstream silently keeps the last and this keeps
- * the first. It never restores a file the player deleted — that is the gate's job, and upstream's
- * answer there is "not restored" as well.
- *
- * <h2>Startup order</h2>
- * <p>MMC 1.1 prepares the directories and first-run templates in DedicatedControllers.register(),
- * before deferred block registration. The common-setup subscriber remains idempotent for callers
- * using the historical initialization path. Runtime loaders still read complete definitions on reload.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 @Mod.EventBusSubscriber(modid = Modularmachinery.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ModDataHolder {
 
-    /**
-     * The one holder.
-     *
-     * <p>Upstream kept its instance in {@code CommonProxy.dataHolder} (a static field). This port has no
-     * CommonProxy to hang it on, and inventing a proxy class to hold one field would be a second
-     * convention for "where shared mod state lives" — so the holder holds itself. The readers are the
-     * two loaders and, from PLAN 641 step 4 onward, the in-game authoring tool.
-     */
+    
+
+
+
+
+
+
+ 
     public static final ModDataHolder INSTANCE = new ModDataHolder();
 
     private File mainDir;
@@ -199,7 +199,7 @@ public final class ModDataHolder {
             Iterator<Path> itr = walk.iterator();
             while (itr.hasNext()) {
                 Path filePath = itr.next();
-                // Upstream's filter, verbatim: only .json, and directories named *.json are treated the
+                 
                 // same way upstream treats them (attempted, and failing loudly).
                 if (!filePath.getFileName().toString().endsWith(".json")) {
                     continue;

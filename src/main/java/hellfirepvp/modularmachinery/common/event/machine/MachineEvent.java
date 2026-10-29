@@ -16,26 +16,23 @@ package hellfirepvp.modularmachinery.common.event.machine;
 import hellfirepvp.modularmachinery.common.tiles.TileController;
 import net.minecraftforge.eventbus.api.Event;
 
-/**
- * The base machine event, and the three-way dispatch (PLAN sections 491-493).
- *
- * RULE A0 -- upstream MachineEvent (94 lines) defines postEvent() as:
- *
- *     // ModularMachinery.EVENT_BUS.post(this);        <-- UPSTREAM COMMENTED THIS OUT
- *     postEventToComponents();                            // path 1
- *     UpgradeMachineEventHandler.onMachineEvent(this);    // path 2
- *     if (!isCanceled()) postCrTEvent();                  // path 3
- *
- * TWO THINGS ARE WORTH STATING BECAUSE READING THE BODY IS WHAT SHOWED THEM, not the signature:
- *
- *   1. THE EVENT DOES NOT GO THROUGH THE FORGE BUS. The post is commented out upstream, so this is a DIRECT
- *      DISPATCH class and needs no Forge event registration at all.
- *   2. PATH 3 IS CRAFTTWEAKER OWN AND IS NOT COPIED (493). Upstream postCrTEvent() reads
- *      DynamicMachine.getMachineEventHandlers(Class) and returns List<crafttweaker.util.IEventHandler<...>> --
- *      A CRAFTTWEAKER TYPE, absent from CraftTweaker 14. It is left as an explicit no-op rather than stubbed
- *      with a placeholder type, because the port soft-dependency discipline (488.4) keeps CraftTweaker types out
- *      of core paths -- and this class IS a core path.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 @com.blamejared.crafttweaker.api.annotation.ZenRegister
 @org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.MachineEvent")
 public class MachineEvent extends Event {
@@ -47,6 +44,11 @@ public class MachineEvent extends Event {
     }
 
     public TileController getController() {
+        return controller;
+    }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("controller")
+    public hellfirepvp.modularmachinery.common.helper.IMachineController getIMachineController() {
         return controller;
     }
 
@@ -100,10 +102,8 @@ public class MachineEvent extends Event {
     }
 
     /**
-     * Path 3, deliberately empty. See the class javadoc and PLAN section 493: upstream own version dispatches
-     * to crafttweaker.util.IEventHandler, which does not exist in CraftTweaker 14. Kept as a named method rather
-     * than deleted, so the dispatch order stays readable against upstream and so the gap is visible in the code
-     * rather than only in this record.
+     * Dispatches registered script callbacks without loading the optional CraftTweaker API.
+     * Specialized client events can override this step while preserving component/upgrade ordering.
      */
     public void postCrTEvent() {
         hellfirepvp.modularmachinery.common.machine.ScriptMachineEventRegistry.dispatch(this);

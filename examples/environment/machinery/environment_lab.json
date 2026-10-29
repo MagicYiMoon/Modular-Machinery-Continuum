@@ -1,0 +1,26 @@
+{
+  "registryname": "environment_lab",
+  "localizedname": "Environment Lab / 环境实验台",
+  "requires-blueprint": false,
+  "parts": [
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:blockinputbus"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:blockoutputbus"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "elements": "modularmachinery:blockenvironmentdetector",
+      "selector-tag": "sensor"
+    }
+  ]
+}

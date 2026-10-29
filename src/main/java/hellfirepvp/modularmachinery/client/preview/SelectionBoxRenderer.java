@@ -40,69 +40,69 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * Draws the authoring selection: <b>the cuboid between the two corners</b>, plus the blocks inside it that
- * the export will actually carry.
- *
- * <p><b>Ported from upstream {@code hellfirepvp.modularmachinery.client.util.SelectionBoxRenderHelper}
- * (86 lines)</b>, which was read in full. Its draw half is upstream L35-L56: on the last render event,
- * return unless a player exists, take the held stack (main hand, else off hand), return unless it is the
- * construct tool, and then draw the selection — filtered to positions within a squared radius of 32
- * blocks, which is upstream's {@code pos.distanceSq(player.getPosition()) <= 1024}.
- *
- * <h2>What changed when the selection became two corners (PLAN 655.1, 655.2)</h2>
- *
- * <p><b>The Refoxed has no renderer at all.</b> Its {@code MultiblockDetectorItem} carries no rendering
- * code; its interface is a three-line tooltip, so "box selection" there means <i>two corners define a
- * cuboid</i>, not <i>a cuboid is drawn</i>. That is the reason this class is kept rather than replaced:
- * there is nothing in the Refoxed for it to conflict with, and showing the volume is strictly more than
- * showing two coordinates. What changed is what it draws: the cuboid first, and the corner block on its
- * own while only one is marked.
- *
- * <p><b>Why the cuboid matters more than the old per-position outlines did.</b> With per-block
- * accumulation the boxes <i>were</i> the selection — one box per clicked block, and the set of them was
- * the whole answer. Now the volume between the corners is the selection and it includes cells nobody
- * clicked, so a player who saw only the two corners would have no way to tell how far the box reaches,
- * or which of the blocks inside it will end up in the file (air is skipped — see
- * {@code PlayerStructureSelectionHelper.selectionAt}). Both of those are drawn below.
- *
- * <h2>Why the interior is drawn at all, and why it is bounded</h2>
- *
- * <p>The interior outlines are the export's contents, not decoration: a block that is there will be a
- * part of the machine, and a cell of air will not. That is the one thing a wireframe cannot say.
- * <b>It is capped at {@link #MAX_OUTLINED_CELLS}</b> because the volume is now unbounded by anything the
- * player's clicks imply — this runs every frame, and walking a million cells per frame to draw blocks
- * nobody can see through each other would be a frame-time bug rather than feedback. Past the cap the
- * cuboid is still drawn, which is the part that says how big the selection is.
- *
- * <h2>What it reuses rather than writing again</h2>
- *
- * <p><b>The render stage, the camera translation and the buffer are {@link StructurePreviewRenderer}'s,
- * deliberately.</b> This port has had exactly one in-world renderer since §181, and the two things it
- * draws — a previewed machine's cells and an author's selection — are the same kind of thing at the same
- * stage. A second implementation of "translate by the camera, get {@code RenderType.lines()}, batch it"
- * would be a second place for the {@code pushPose}/{@code -cam} convention to be got wrong; §296 is the
- * round where getting it wrong drew every ghost at the world origin and a player standing at the machine
- * saw nothing at all. The cuboid itself is {@code LevelRenderer.renderLineBox}, which is vanilla's own
- * box outline and needs no shape building — the corners of a big box would otherwise cost a
- * {@code VoxelShape} allocation per frame for geometry that is twelve lines.
- *
- * <p><b>The two purges are {@link StructurePreviewRenderer}'s as well, and that is the more important
- * reuse.</b> Upstream cleared the client selection from two places — {@code ClientDisconnectionFromServerEvent}
- * (upstream L73-L77) and {@code WorldEvent.Unload} (upstream L79-L84) — and this port already has exactly
- * those two, with the dist check that a dedicated server needs, because {@code StructurePreviewHelper}
- * had the same leak: three statics that survived a world change, so a preview started in one world could
- * render in the next (§350-§361). Adding a third and fourth subscriber for the same two events would
- * leave two places to fix the next time either is wrong. So the clears are in that class's handlers,
- * next to the preview's own, and this class has none.
- *
- * <h2>Unverified, and named rather than implied</h2>
- *
- * <p><b>This port's harness is a dedicated server and cannot render.</b> The class compiles, it is
- * dist-gated, and its geometry comes from the two corners rather than from a guessed cube — but whether
- * the box appears where a player expects is a question only a client can answer, and it is recorded as
- * such rather than asserted. Nothing in the self-test can reach this class.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 @Mod.EventBusSubscriber(modid = Modularmachinery.MODID, value = Dist.CLIENT,
         bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class SelectionBoxRenderer {
@@ -175,7 +175,7 @@ public final class SelectionBoxRenderer {
             // x=4 and a corner at x=6 select the three columns 4,5,6, so the far face is at 7.0.
             AABB box = new AABB(min.getX(), min.getY(), min.getZ(),
                     max.getX() + 1.0, max.getY() + 1.0, max.getZ() + 1.0);
-            // Absolute coordinates, because the pose stack is translated only by the CAMERA (PLAN 296) --
+             
             // the same convention StructurePreviewRenderer's parts use, and the one it once got wrong.
             if (box.distanceToSqr(Vec3.atCenterOf(player.getOnPos())) <= RENDER_RADIUS_SQUARED) {
                 LevelRenderer.renderLineBox(poseStack, lines, box, 1.0F, 1.0F, 1.0F, 1.0F);

@@ -97,7 +97,7 @@ public final class RecipeModifier {
      * @return the parsed modifier, or {@code null} when a field cannot be read
      */
     public static RecipeModifier deserialize(JsonObject entry) {
-        // FOUR RULES ALIGNED WITH UPSTREAM (PLAN section 318), from upstream's own reader at
+         
         // RecipeModifier.java:229-266. Each was OPTIONAL in the port with a default:
         //
         //   String ioTarget = part.getAsJsonPrimitive("io").getAsString();   // read unconditionally
@@ -213,7 +213,7 @@ public final class RecipeModifier {
     }
 
     // ================================================================================================
-    // THE DURATION TARGET (PLAN section 353.3 recorded the gap; this closes it).
+     
     //
     // `"target": "modularmachinery:duration"` NAMES A REQUIREMENT TYPE THAT CANNOT BE INSTANTIATED. Upstream
     // registers it (RegistryRequirementTypes:74 -> `register(new RequirementDuration(), KEY_REQUIREMENT_DURATION)`)
@@ -345,21 +345,21 @@ public final class RecipeModifier {
         return (baseTime + add) * mul;
     }
 
-    /**
-     * The duration a recipe of {@code baseTime} ticks actually runs for, with the machine's ACTIVE modifiers
-     * applied — upstream {@code MachineRecipe.getRecipeTotalTickTime()} after the two sites that scale it.
-     *
-     * <p><b>RULE A0 — ONE SUPERSEDED BRANCH, STATED RATHER THAN OMITTED.</b> Upstream's
-     * {@code ActiveMachineRecipe.calculateExtraParallelism} (U131-U143) answers a scaled total below 1 by
-     * GRANTING EXTRA PARALLELISM ({@code maxParallelism *= (int) (1F / totalTick)}) and setting the duration to 1.
-     * The port has no {@code ActiveMachineRecipe} (PLAN section 353.3), and its granted parallelism is decided in
-     * {@code MachineTicker.effectiveParallelism} from what the requirements can supply — a different question — so
-     * that branch is NOT transcribed: a duration scaled to zero or below is clamped to one tick, which is the part
-     * of upstream's own answer the port can honour. A pack that scales a duration to nothing gets a one-tick
-     * recipe rather than a parallelism bonus, and this is the record of that.</p>
-     *
-     * @param baseTime the recipe's declared duration in ticks
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static int effectiveDuration(Iterable<RecipeModifier> modifiers, int baseTime) {
         return (int) Math.max(1, Math.round(applyDurationModifiers(modifiers, baseTime)));
     }

@@ -39,23 +39,23 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-/**
- * Block registry.
- *
- * <p><b>1.12.2 → 1.20.1.</b> Upstream held bare {@code public static Block} fields populated by
- * {@code RegistryBlocks.initialize()} from the {@code FMLPreInitializationEvent} handler. Both the
- * lifecycle event and static-field registration are gone: blocks are lazily-resolved
- * {@link RegistryObject}s, and the whole {@link DeferredRegister} is attached to the mod event bus in
- * the {@code @Mod} constructor. Forgetting that attachment registers nothing, <b>silently</b>.
- *
- * <p>Upstream's field names are preserved verbatim ({@code blockController}, {@code itemInputBus}, …)
- * so the remaining port work proceeds against familiar names, even though 1.20.1 convention would use
- * SCREAMING_SNAKE constants.
- *
- * <p>Registry ids (<i>not</i> field names) are what matter for compatibility: they are the ids the
- * shipped blockstates, models and lang entries are keyed on, and what addon structure JSONs reference.
- * They are taken from the upstream asset filenames.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class RegistryBlocks {
 
     public static final DeferredRegister<net.minecraft.world.level.block.Block> BLOCKS =
@@ -119,6 +119,9 @@ public final class RegistryBlocks {
     public static final RegistryObject<BlockEnergyOutputHatch> energyOutputHatch =
             BLOCKS.register("blockenergyoutputhatch", () -> new BlockEnergyOutputHatch(componentProperties()));
 
+    public static final RegistryObject<hellfirepvp.modularmachinery.common.block.BlockEnergyOutputPort> energyOutputPort =
+            BLOCKS.register("blockenergyoutputport", () -> new hellfirepvp.modularmachinery.common.block.BlockEnergyOutputPort(componentProperties()));
+
     // ------------------------------------------------------------------
     // Controllers and machine logic
     // ------------------------------------------------------------------
@@ -135,8 +138,24 @@ public final class RegistryBlocks {
     public static final RegistryObject<BlockUpgradeBus> upgradeBus =
             BLOCKS.register("blockupgradebus", () -> new BlockUpgradeBus(componentProperties()));
 
+    public static final RegistryObject<hellfirepvp.modularmachinery.common.block.BlockEnvironmentDetector> environmentDetector =
+            BLOCKS.register("blockenvironmentdetector", () -> new hellfirepvp.modularmachinery.common.block.BlockEnvironmentDetector(componentProperties()));
+
+    public static final RegistryObject<hellfirepvp.modularmachinery.common.block.BlockSparkManaProvider> sparkManaInput =
+            BLOCKS.register("blocksparkmanainput", () -> new hellfirepvp.modularmachinery.common.block.BlockSparkManaProvider(componentProperties(), true));
+    public static final RegistryObject<hellfirepvp.modularmachinery.common.block.BlockSparkManaProvider> sparkManaOutput =
+            BLOCKS.register("blocksparkmanaoutput", () -> new hellfirepvp.modularmachinery.common.block.BlockSparkManaProvider(componentProperties(), false));
+
     private RegistryBlocks() {
     }
+
+    public static final RegistryObject<hellfirepvp.modularmachinery.common.block.BlockEmberHatch> emberInput =
+            BLOCKS.register("blockemberinputhatch", () -> new hellfirepvp.modularmachinery.common.block.BlockEmberHatch(componentProperties()));
+
+    public static final RegistryObject<hellfirepvp.modularmachinery.common.block.BlockPressureHatch> pressureInput =
+            BLOCKS.register("blockpressureinputhatch", () -> new hellfirepvp.modularmachinery.common.block.BlockPressureHatch(componentProperties(), true));
+    public static final RegistryObject<hellfirepvp.modularmachinery.common.block.BlockPressureHatch> pressureOutput =
+            BLOCKS.register("blockpressureoutputhatch", () -> new hellfirepvp.modularmachinery.common.block.BlockPressureHatch(componentProperties(), false));
 
     /**
      * Registers an extra machine component.

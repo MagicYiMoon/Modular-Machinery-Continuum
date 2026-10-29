@@ -31,6 +31,7 @@ public final class ScriptUpgradeEventRegistry {
             return;
         }
         for (MachineUpgrade upgrade : upgrades) {
+            if (upgrade instanceof DynamicMachineUpgrade dynamic && dynamic.isInvalid()) continue;
             for (BiConsumer<MachineEvent, MachineUpgrade> callback : upgrade.eventHandlers(event.getClass())) {
                 try {
                     callback.accept(event, upgrade);

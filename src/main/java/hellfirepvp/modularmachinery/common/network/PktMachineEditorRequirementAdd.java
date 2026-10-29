@@ -8,6 +8,10 @@ import hellfirepvp.modularmachinery.common.editor.BasicRequirementType;
 import hellfirepvp.modularmachinery.common.editor.DurabilityEditor;
 import hellfirepvp.modularmachinery.common.editor.SmartInterfaceEditor;
 import hellfirepvp.modularmachinery.common.editor.FluidTickEditor;
+import hellfirepvp.modularmachinery.common.editor.PneumaticEditor;
+import hellfirepvp.modularmachinery.common.editor.EnvironmentEditor;
+import hellfirepvp.modularmachinery.common.editor.ItemRequirementEditor;
+import hellfirepvp.modularmachinery.common.editor.ResourceAmountEditor;
 import hellfirepvp.modularmachinery.common.editor.MachineNameFormatting;
 import hellfirepvp.modularmachinery.common.machine.MachineReloadListener;
 import hellfirepvp.modularmachinery.common.menu.MenuMachineEditor;
@@ -100,6 +104,8 @@ public record PktMachineEditorRequirementAdd(String recipeId, String type, Strin
                 throw new IllegalArgumentException("催化剂源文件已发生变化，请重新加载并打开编辑器");
             var smartOptions = creating ? SmartInterfaceEditor.options(MachineReloadListener.getLoader().findByName(message.newMachine))
                     : SmartInterfaceEditor.options(message.recipeId, MachineReloadListener.getLoader(), recipes);
+            if ((ItemRequirementEditor.isItem(requirement) || DurabilityEditor.isDurability(requirement) || hellfirepvp.modularmachinery.common.editor.IngredientGroupEditor.isGroup(requirement) || EnvironmentEditor.isEnvironment(requirement) || PneumaticEditor.isPneumatic(requirement) || ResourceAmountEditor.isResource(requirement)) && !creating && !json.equals(recipes.getRecipeSource(message.recipeId)))
+                throw new IllegalArgumentException("源配方文件已发生变化，请重新加载并打开编辑器");
             if ((SmartInterfaceEditor.isSmart(requirement) || FluidTickEditor.isRate(requirement)) && !creating) {
                 var loaded = recipes.getRecipe(message.recipeId);
                 var loadedMachines = new java.util.TreeSet<String>();
@@ -122,7 +128,15 @@ public record PktMachineEditorRequirementAdd(String recipeId, String type, Strin
             if (replacementIndex >= 0) {
                 if (replacementIndex >= requirements.size()) throw new IllegalArgumentException("需求位置已失效，请重新打开编辑器");
                 var original = requirements.get(replacementIndex).getAsJsonObject();
-                requirements.set(replacementIndex, FluidTickEditor.isRate(original) || FluidTickEditor.isRate(requirement)
+                requirements.set(replacementIndex, ItemRequirementEditor.isItem(original) || ItemRequirementEditor.isItem(requirement)
+                        ? ItemRequirementEditor.merge(original, requirement)
+                        : EnvironmentEditor.isEnvironment(original) || EnvironmentEditor.isEnvironment(requirement)
+                        ? EnvironmentEditor.merge(original, requirement)
+                        : ResourceAmountEditor.isResource(original) || ResourceAmountEditor.isResource(requirement)
+                        ? ResourceAmountEditor.merge(original, requirement)
+                        : PneumaticEditor.isPneumatic(original) || PneumaticEditor.isPneumatic(requirement)
+                        ? PneumaticEditor.merge(original, requirement)
+                        : FluidTickEditor.isRate(original) || FluidTickEditor.isRate(requirement)
                         ? FluidTickEditor.merge(original, requirement)
                         : SmartInterfaceEditor.isSmart(original) || SmartInterfaceEditor.isSmart(requirement)
                         ? SmartInterfaceEditor.merge(original, requirement, smartOptions)
@@ -135,7 +149,11 @@ public record PktMachineEditorRequirementAdd(String recipeId, String type, Strin
             } else {
                 if (replacementIndex != -1) throw new IllegalArgumentException("需求位置无效");
                 if (requirements.size() >= 512) throw new IllegalArgumentException("需求数量已达上限");
-                if (FluidTickEditor.isRate(requirement)) requirement = FluidTickEditor.merge(null, requirement);
+                if (ItemRequirementEditor.isItem(requirement)) requirement = ItemRequirementEditor.merge(null,requirement);
+                else if (EnvironmentEditor.isEnvironment(requirement)) requirement = EnvironmentEditor.merge(null, requirement);
+                else if (ResourceAmountEditor.isResource(requirement)) requirement = ResourceAmountEditor.merge(null, requirement);
+                else if (PneumaticEditor.isPneumatic(requirement)) requirement = PneumaticEditor.merge(null, requirement);
+                else if (FluidTickEditor.isRate(requirement)) requirement = FluidTickEditor.merge(null, requirement);
                 else if (SmartInterfaceEditor.isSmart(requirement)) requirement = SmartInterfaceEditor.merge(null, requirement, smartOptions);
                 else if (hellfirepvp.modularmachinery.common.editor.IngredientGroupEditor.isGroup(requirement))
                     requirement = hellfirepvp.modularmachinery.common.editor.IngredientGroupEditor.merge(null, requirement);

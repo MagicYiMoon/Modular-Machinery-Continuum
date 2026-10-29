@@ -38,43 +38,43 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Loads machine definitions and variable lists from {@code config/modularmachinery/machinery/}.
- *
- * <p><b>Architectural decision (carried from the plan).</b> These definitions are <b>not</b> vanilla
- * recipes and are deliberately kept in the mod's own loader rather than moved into a datapack. They
- * describe a multiblock pattern plus per-recipe requirement components — JSON multiblock layouts,
- * energy/fluid/item requirements with counts, and command callbacks — none of which vanilla's
- * {@code RecipeType}/{@code RecipeSerializer} can express. Moving them into {@code data/} would force
- * them through that machinery and lose the loader's own validation, which existing addon packs depend
- * on.
- *
- * <p><b>What changed in this round (PLAN 636, 641 steps 1-3).</b> This loader used to read a fixed
- * list of names out of its own jar, which made a file that was not in the list <b>invisible</b> — no
- * error and no log line. It now reads the config directory that
- * {@link hellfirepvp.modularmachinery.common.data.ModDataHolder} creates and seeds from the jar on the
- * first run, and discovers the files by walking it. That is upstream's own model (upstream
- * MachineLoader:56-79 plus ModDataHolder:71-134), and it is what makes a pack able to add a machine by
- * dropping a JSON in, and the in-game authoring tool (PLAN 641 step 4) able to write one out.
- *
- * <p>The {@code assets/} copies of these files are therefore not dead weight: they are the
- * <b>template</b> the first run extracts. A future round can register this loader as a
- * {@code PreparableReloadListener} through {@code AddReloadListenerEvent} to gain {@code /reload}
- * support without changing the format.
- *
- * <p>Loading is <b>non-fatal by design</b>: a malformed machine file must not stop the server from
- * starting. Every problem is collected and reported, and the affected definition is skipped.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class MachineLoader {
 
     // ------------------------------------------------------------------
-    // Discovery (PLAN 636, 641 step 3)
+     
     // ------------------------------------------------------------------
     //
     // THE HARDCODED NAME LISTS ARE GONE. Until this change the loader held List.of("alloy_furnace", ...)
     // and read each name out of the jar, so a file that was not in the list was skipped with NO ERROR
     // AND NO LOG LINE -- which is how a sixth machine file was added, the suite passed 142/142, and the
-    // machine did not exist (PLAN 636.1). UPSTREAM NEVER HAD THAT LIST: it extracted its shipped files
+     
     // into config/modularmachinery/machinery/ and WALKED THE DIRECTORY, so a pack adds a machine by
     // dropping a file in (upstream MachineLoader:56-79, ModDataHolder:71-80).
     //
@@ -143,7 +143,7 @@ public final class MachineLoader {
         return candidates;
     }
 
-    /** The two kinds of file the machinery directory holds. Upstream MachineLoader:142-154, verbatim. */
+     
     public enum FileType {
 
         VARIABLES,
@@ -250,24 +250,24 @@ public final class MachineLoader {
         return resolver;
     }
 
-    /**
-     * Reads every variable file under the machinery directory first, then every machine file.
-     *
-     * <p>Order matters: a machine's {@code elements} may name a variable, so the variable table must be
-     * populated before definitions are validated against it.
-     *
-     * <p><b>The source is {@code config/modularmachinery/machinery/}, not the jar.</b> That is the change
-     * of PLAN 636/641: the jar is now only what {@code ModDataHolder.copyDefaultMachinery} SEEDS the
-     * directory from, once, on the first run. Everything after that — a pack's edit, a pack's addition,
-     * and later the in-game authoring tool's output — is read from the directory.
-     *
-     * @param resourceManager unused, and this is upstream's shape rather than an oversight: upstream read
-     *                        the same files from a {@code File} (upstream MachineRegistry:65) because
-     *                        they are the mod's own config templates and not part of the server's resource
-     *                        pack stack. The parameter is kept so that the reload-listener contract
-     *                        ({@code ResourceManagerReloadListener}) and {@code MachineReloadListener}'s
-     *                        call site stay unchanged.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public void load(ResourceManager resourceManager) {
         machines.clear();
         problems.clear();
@@ -351,21 +351,21 @@ public final class MachineLoader {
         }
     }
 
-    /**
-     * Parses <b>one</b> machine file without touching the loaded set — the same parse
-     * {@link #loadMachines} runs, and the same name rule, by construction rather than by agreement.
-     *
-     * <p>Extracted for PLAN 641 step 5, whose check has to answer "does the file the authoring tool just
-     * wrote come back as the machine that was authored?". That question needs the parse and the name and
-     * nothing else: calling {@link #load} instead would make a check of the <i>writer</i> into a check of
-     * the <i>directory</i>, and it would swap the loaded definitions out from under every other check in
-     * the suite. Two paths that both go through {@code readMachineFile} can still disagree about a file,
-     * but they cannot disagree about how a file is read, which is the thing a round-trip check is for.
-     *
-     * @param file a machine file, at any path
-     * @return the definition the loader would build from it, or empty when it cannot be read or parsed —
-     *         in which case the reason is in {@link #getProblems()} exactly as it would be after a load
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public Optional<DynamicMachine> parseMachineFile(File file) {
         return readJson(file).map(root -> readMachineFile(nameOf(file), root));
     }
@@ -428,7 +428,7 @@ public final class MachineLoader {
                 machine.setPrefix(root.get("prefix").getAsString());
             }
 
-            // requires-blueprint IS READ (PLAN section 292).
+             
             //
             // The key has been in this port own machine JSON since the asset conversion and nothing ever read
             // it (section 263), while upstream AbstractMachine carried the same flag all along.
@@ -458,12 +458,12 @@ public final class MachineLoader {
             machine.setParallelizable(root.get("parallelizable").getAsBoolean());
         }
 
-            // MODIFIERS ARE READ, NOT IGNORED (PLAN sections 224-225).
+             
             //
             // The shipped machinery JSON declares a `modifiers` array and even describes its effect to the
             // player in a `description` string ("Replace block above controller with machine vent for double
 
-            // failure-action IS READ (PLAN section 310).
+             
             //
             // Upstream reads it in DynamicMachine and applies it in ActiveMachineRecipe.doFailureAction; the
             // port read neither, so its own shipped assembly_line.json asked for decrease and got still.
@@ -483,7 +483,7 @@ public final class MachineLoader {
                 }
             }
 
-            // `color` IS READ (PLAN section 319).
+             
             //
             // Upstream reads it as a HEX STRING and parses with Integer.parseInt(hexStr, 16), rejecting
             // anything that is not a hex number; the machine default is the CONFIG value, not zero
@@ -501,7 +501,7 @@ public final class MachineLoader {
                     problems.add(name + ": color " + colorStr + " is not a hexadecimal number");
                 }
             }
-            // MODIFIERS ARE READ, NOT IGNORED (PLAN sections 224-225).
+             
             //
             // The shipped machinery JSON declares a `modifiers` array and even describes its effect to the player
             // in a `description` string ("Replace block above controller with machine vent for double item
@@ -521,7 +521,7 @@ public final class MachineLoader {
                         throw new com.google.gson.JsonParseException("Too many modifier positions");
                 }
                 machine.setModifierReplacements(parsed);
-                // AND A MODIFIER WHOSE TARGET NOTHING CAN APPLY IS REPORTED HERE (PLAN section 353.3's duration
+                 
                 // gap, the "no longer silent" half). The reader above is total: it accepts any non-null `target`
                 // string, and until now a target the port has no path for loaded, parsed, named a type that
                 // cannot match, and scaled nothing -- with no warning anywhere. `modularmachinery:duration` was
@@ -540,13 +540,13 @@ public final class MachineLoader {
                                             .REQUIREMENT_TARGETS) + ")");
                 }
             }
-            // dynamic-patterns IS READ (PLAN sections 321-325).
+             
             //
             // The shipped assembly_line declares a repeating line of 5 to 15 sections, and upstream refuses to
             // form that machine when the line is wrong. The port read nothing, so it formed from the wall alone.
             readDynamicPatterns(name, root, machine);
 
-            // smart-interface-types IS READ (PLAN 663, B2). UPSTREAM HAS NO JSON KEY FOR THIS AND THE
+             
             // EVIDENCE IS ITS WRITER LIST: DynamicMachine.smartInterfaces is written only by
             // MachineBuilder.addSmartInterfaceType (U337-U342) and MachineModifier.addSmartInterfaceType
             // (U27-U40), and cleared only by ModIntegrationCrafttweaker U84 -- all three CraftTweaker. This
@@ -655,32 +655,32 @@ public final class MachineLoader {
         return null;
     }
 
-    /**
-     * Reads the {@code smart-interface-types} array (PLAN 663, B2).
-     *
-     * <p>An ARRAY of type objects, one per declared type. The keys are the FIELD NAMES of upstream's
-     * {@code common.util.SmartInterfaceType}, in the kebab-case this loader already uses for the other keys
-     * it reads ({@code requires-blueprint}, {@code failure-action}, {@code max-parallelism}):</p>
-     *
-     * <pre>
-     *   type                required, a primitive — the name a recipe's interface requirement names
-     *   default-value       optional, a number — absent means 0, which is upstream's own field initialiser
-     *   priority            optional, an integer — higher wins; see SmartInterfaceType#compareTo
-     *   header-info         optional, a string — GUI line above the value
-     *   value-info          optional, a string — GUI format for the value
-     *   footer-info         optional, a string — GUI line below the value
-     *   not-equal-message   optional, a string — the failure line when a value is out of range
-     *   jei-tooltip         optional, a string — the JEI line's format
-     *   jei-tooltip-args    optional, an integer — how many arguments that format takes (upstream: 2)
-     * </pre>
-     *
-     * <p><b>Upstream rejects nothing here because upstream reads nothing here</b> (this key exists only in this
-     * port — see the call site comment). So every rule above is a choice, and the two that matter are: a
-     * MISSING {@code type} is reported and that entry is skipped, because a nameless type can never be looked
-     * up and would silently never publish; and a duplicate name REPLACES the earlier entry, which is what
-     * {@code addSmartInterfaceType} does on the machine. A malformed entry does NOT reject the machine: this
-     * loader's contract for every other key is to collect a problem and keep loading.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private void readSmartInterfaceTypes(String name, JsonObject root, DynamicMachine machine) {
         if (!root.has("smart-interface-types") || !root.get("smart-interface-types").isJsonArray()) {
             return;     // absent is the normal case, and it means "this machine has no smart interfaces"
@@ -720,32 +720,32 @@ public final class MachineLoader {
         }
     }
 
-    /**
-     * Reads the `dynamic-patterns` array (PLAN sections 321-325).
-     *
-     * <p>An ARRAY of pattern objects, one per repeating structure segment. Every rule here is upstream's, from
-     * DynamicMachine:329-490, and the required/optional split is its own:
-     *
-     * <pre>
-     *   name                          required, a primitive
-     *   faces                         required, an array of direction names
-     *   maxSize                       required, a number
-     *   minSize                       optional, a number if present
-     *   parts                         required, an array of parts
-     *   parts-end                     optional, the same shape as parts
-     *   structure-size-offset-start   optional, an OBJECT
-     *   structure-size-offset         optional, an OBJECT
-     * </pre>
-     *
-     * <p>Upstream THROWS on every one of those failures, rejecting the whole machine. The port collects a problem
-     * and CONTINUES, which is its contract for every other key in this loader -- but the difference is recorded here
-     * rather than glossed, because a rejected machine and a machine with a missing dynamic pattern behave
-     * differently: the first does not exist, the second forms without its line.
-     *
-     * <p>The template is built as a MachinePattern, so its element strings go through the same reader, the same
-     * variable resolution and the same resolver as the machine's own parts. A second representation would be a
-     * second set of rules for what an element string means.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private void readDynamicPatterns(String name, JsonObject root, DynamicMachine machine) {
         if (!root.has("dynamic-patterns") || !root.get("dynamic-patterns").isJsonArray()) {
             return;     // absent is the normal case: one shipped machine of five declares one
@@ -984,7 +984,7 @@ public final class MachineLoader {
                 java.util.Collection<net.minecraft.world.level.block.state.BlockState> accepted =
                         resolver.resolveAccepted(bound);
                 if (!accepted.isEmpty()) {
-                    // THE DEFAULT VARIANT, NOT "THE FIRST ACCEPTED ONE" (PLAN section 269).
+                     
                     //
                     // A bare element name (no @meta) resolves to EVERY state of the block -- that is what
                     // makes one definition accept every tier of a hatch. But getPossibleStates() has no
@@ -1019,17 +1019,17 @@ public final class MachineLoader {
         return placed;
     }
 
-    /**
-     * Looks a definition up by the name stored on a controller -- the JSON's `registryname`, verbatim.
-     *
-     * <p>The comparison is against the BARE name, not a resource id: a machine whose JSON says
-     * {@code "registryname": "transformer"} is found as {@code transformer}, never as
-     * {@code modularmachinery:transformer}. Callers holding a {@code ResourceLocation} must pass its
-     * {@code getPath()} -- which is what {@code ItemBlueprint} does.
-     *
-     * @param name the definition's name, or null
-     * @return the definition, or null when the name is absent or unknown
-     */
+    
+
+
+
+
+
+
+
+
+
+ 
     public DynamicMachine findByName(String name) {
         if (name == null || name.isEmpty()) {
             return null;

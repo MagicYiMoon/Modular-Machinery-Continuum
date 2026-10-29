@@ -81,7 +81,7 @@ public final class ControllerInteraction {
         // `BlockController.use` already documents the split: it returns PASS on a sneaking click "left to the
         // formation handler", and opens the menu otherwise. This is the other half of that contract, which was
         // missing.
-        // MAIN HAND ONLY, or the message appears TWICE (PLAN section 304).
+         
         //
         // Forge fires RightClickBlock once for EACH hand on the server, so a sneak-click produced two
         // identical chat lines. The client reported exactly that, with a screenshot showing the same
@@ -109,7 +109,7 @@ public final class ControllerInteraction {
         // a detected machine and a bound one are indistinguishable afterwards -- which is what makes this
         // a shortcut rather than a second kind of binding.
         if (machine == null) {
-            // FIRST MATCHING MACHINE WINS, which is what upstream does (PLAN section 309).
+             
             //
             // Upstream's TileMultiblockMachineController.checkAllPatterns walks every machine, SKIPS the ones
             // that require a blueprint, and tests each remaining one against the blocks actually built:
@@ -146,7 +146,7 @@ public final class ControllerInteraction {
 
         if (attempt.formed()) {
             controller.setFormed(true);
-            // LOCALISED (PLAN section 305). This was a hard-coded English sentence, and the screenshot that
+             
             // confirmed structure detection showed it directly beneath the CHINESE detection message --
             // one message in each language, about a single click.
             //

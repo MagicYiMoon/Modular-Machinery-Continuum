@@ -62,6 +62,8 @@ import net.minecraft.world.item.ItemStack;
  *       Two speed upgrades are then 4x input cost, not 2x.</li>
  * </ul>
  */
+@com.blamejared.crafttweaker.api.annotation.ZenRegister
+@org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.SimpleMachineUpgrade")
 public class SimpleMachineUpgrade extends MachineUpgrade {
 
     private final List<String> descriptions = new ArrayList<>();
@@ -206,7 +208,7 @@ public class SimpleMachineUpgrade extends MachineUpgrade {
     /** CraftTweaker-facing IData view of the bus-owned custom data. */
     @org.openzen.zencode.java.ZenCodeType.Getter("customData")
     public com.blamejared.crafttweaker.api.data.IData getCustomDataValue() {
-        return com.blamejared.crafttweaker.api.data.converter.tag.TagToDataConverter.convert(customData);
+        return scriptCustomData();
     }
 
     /** CraftTweaker-facing setter for the bus-owned custom data. */

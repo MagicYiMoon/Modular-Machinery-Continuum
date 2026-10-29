@@ -41,40 +41,40 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Loads machine recipes from {@code config/modularmachinery/recipes/}.
- *
- * <p><b>The source is the config directory, not the jar</b> (PLAN 636, 641 steps 1-3), matching
- * {@link MachineLoader}: {@code ModDataHolder} creates the directory and seeds it from the mod's own
- * shipped files once, on the first run, without ever overwriting what is already there. The jar is a
- * template after that, not the source of truth — which is what lets a pack add a recipe by dropping a
- * file in and lets the authoring tool write one out.
- *
- * <h2>Validation is the point</h2>
- *
- * <p>Recipe JSON is user-editable content. A recipe that names an unknown machine, or a requirement
- * type the port does not implement, must be <b>reported at load</b> and skipped — not discovered when a
- * player finishes building a machine and finds it does nothing. Every problem is collected rather than
- * thrown, so one bad file cannot take the rest down.
- *
- * <h2>Requirement types implemented here</h2>
- *
- * <p>Only the two the shipped content uses ({@code modularmachinery:energy} and
- * {@code modularmachinery:item}) plus rejection of the rest. Upstream had 41 requirement classes, many
- * of them for mods that do not exist on 1.20.1; the remaining portable ones (fluid, and the
- * cross-loader generics) are additive work, and unknown types are reported by name so the worklist is
- * explicit.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class RecipeLoader {
 
     // ------------------------------------------------------------------
-    // Discovery (PLAN 636, 641 step 3)
+     
     // ------------------------------------------------------------------
     //
     // THE HARDCODED RECIPE-FILE LIST IS GONE, for the reason MachineLoader records in full: a file that
     // was not in the list was skipped with no error and no log line. Upstream RecipeLoader:54-80 walks
     // config/modularmachinery/recipes/ instead, which is the directory ModDataHolder seeds from the jar
-    // and -- from PLAN 641 step 4 onward -- the directory the in-game authoring tool writes into.
+     
 
     /**
      * Every {@code .json} under {@code directory}, recursively. Upstream RecipeLoader:54-80, read line by line.
@@ -192,6 +192,8 @@ public final class RecipeLoader {
      * generator that could not run -- and because merging them would make "the shipped content has no
      * problems" stop meaning what every existing check reads it as.</p>
      */
+    private final Map<String, java.util.List<String>> templateReports = new LinkedHashMap<>();
+    private final Map<String, Integer> templateImported = new LinkedHashMap<>();
     private final List<String> notExpandedAdapters = new ArrayList<>();
 
     /** @return the templates that named an adapter that produced no recipes, with reasons; empty when none */
@@ -338,18 +340,18 @@ public final class RecipeLoader {
         return true;
     }
 
-    /**
-     * How many recipe files the last {@link #load} READ — i.e. how many files the directory walk handed
-     * to the parser — as opposed to how many produced a usable recipe.
-     *
-     * <p>The two numbers answer different questions and only the first one measures the defect this round
-     * removed: a file on disk that the loader never opened. A file that IS read and rejected is a reported
-     * problem ({@link #getProblems()}), which is a different failure with a different fix, and counting
-     * them together would hide which one happened.
-     *
-     * <p>It replaces {@code listedRecipePaths()}, which exposed the hardcoded list to the self-test check
-     * and became meaningless when the list did (PLAN 641 step 3).
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     public int filesRead() {
         return filesRead;
     }
@@ -376,6 +378,7 @@ public final class RecipeLoader {
         sourceByRecipeName.clear();
         sourceEditableByRecipeName.clear();
         recipeSourceDocuments.clear();
+        templateReports.clear(); templateImported.clear();
         adapterProbes.clear();
         notExpandedAdapters.clear();
         filesRead = 0;
@@ -398,7 +401,7 @@ public final class RecipeLoader {
         // PASS 1 -- READ AND PARSE. Templates are held back rather than registered: an adapter template is a
         // GENERATOR, and the recipes it stands for do not exist until the adapter runs. Registering the
         // template would put a recipe in the machine's list that MachineTicker refuses as
-        // "unexpanded adapter recipe" -- which is exactly the state this round removes.
+         
         List<ParsedFile> parsed = new ArrayList<>();
         for (File file : candidates) {
             filesRead++;
@@ -487,13 +490,17 @@ public final class RecipeLoader {
         return added;
     }
 
-    /** Upstream traverses priority buckets in ascending order, then its TreeSet build weight. */
+    /** Source order: ascending priority, then sortId minus input weights, then registration order. */
     private void sortRecipesByPriority() {
+        // One sequence across ALL machines and priorities, reconstructed from the insertion-ordered registry.
+        // Snapshots preserve that order. Re-sorting after a script merge must not number an already sorted list.
+        Map<String, Integer> sortIds = new LinkedHashMap<>();
+        for (String name : byName.keySet()) sortIds.put(name, sortIds.size());
         byMachine.values().forEach(recipes -> recipes.sort(
                 java.util.Comparator.comparingInt(MachineRecipe::priority)
-                        // MachineRecipe.buildWeight subtracts input sorting weights, so larger input weights
-                        // sort earlier inside one priority bucket.
-                        .thenComparing( java.util.Comparator.comparingInt(MachineRecipe::sortingWeight).reversed())));
+                        .thenComparingInt(recipe -> sortIds.get(recipe.registryName()) - recipe.sortingWeight())
+                        // Source TreeSet treats an equal score as a duplicate. Keep both recipe identities.
+                        .thenComparingInt(recipe -> sortIds.get(recipe.registryName()))));
     }
 
     /** One file read into the pieces the expansion and registration passes need. */
@@ -512,6 +519,7 @@ public final class RecipeLoader {
      */
     private int expandAdapter(String path, RecipeDefinition definition, MachineLoader machineLoader) {
         int registered = 0;
+        var report = templateReports.computeIfAbsent(path, key -> new ArrayList<>());
         for (MachineDefinition machine : definition.machines()) {
             if (machineLoader.findByName(machine.name()) == null) {
                 problems.add(path + ": names machine '" + machine.name() + "' which did not load"
@@ -522,17 +530,21 @@ public final class RecipeLoader {
             int before = notExpandedAdapters.size();
             java.util.Collection<MachineRecipe> generated =
                     hellfirepvp.modularmachinery.common.crafting.adapter.RecipeAdapterRegistry
-                            .createRecipesFor(definition.adapter(), machine.name(),
+                            .createRecipesFor(definition.adapter(), ModDataHolder.INSTANCE.getRecipeDirectory()
+                                            .toPath().toAbsolutePath().normalize().relativize(
+                                                    java.nio.file.Path.of(path).toAbsolutePath().normalize())
+                                            .toString().replace('\\', '/') + "\0" + machine.recipeName(), machine.name(),
                                     definition.modifiers(), definition.requirements());
             // The registry records its own reason; the FILE path is this class's to add, and without it the
             // report names an adapter and not the file an author can open.
             List<String> recorded = hellfirepvp.modularmachinery.common.crafting.adapter.RecipeAdapters
                     .captureNotExpanded();
             for (String entry : recorded) {
-                notExpandedAdapters.add(entry + "  [template: " + path + "]");
+                notExpandedAdapters.add(entry + "  [template: " + path + "]"); report.add(machine.name() + ": " + entry);
             }
-            adapterProbes.putAll(hellfirepvp.modularmachinery.common.crafting.adapter.RecipeAdapters
-                    .captureProbes());
+            var probes = hellfirepvp.modularmachinery.common.crafting.adapter.RecipeAdapters.captureProbes();
+            adapterProbes.putAll(probes);
+            probes.forEach((id, probe) -> report.add(machine.name() + ": " + probe.converted + "/" + probe.candidates + " 已转换；跳过输入不可表示=" + probe.skippedNoSingleInput + "，空输出=" + probe.skippedNoOutput + "，非有限修改值=" + probe.skippedNonFiniteModifier));
             if (generated == null) {
                 continue;
             }
@@ -545,7 +557,24 @@ public final class RecipeLoader {
                 }
             }
         }
+        templateImported.put(path, registered);
         return registered;
+    }
+
+    /** Immutable loaded template documents; editor IDs are relative paths, never personal absolute paths. */
+    public JsonArray editorTemplates() {
+        var array = new JsonArray();var root=ModDataHolder.INSTANCE.getRecipeDirectory().toPath().toAbsolutePath().normalize();
+        recipeSourceDocuments.forEach((path, source) -> {
+            if(!source.has("adapter"))return;var absolute=java.nio.file.Path.of(path).toAbsolutePath().normalize();if(!absolute.startsWith(root))return;
+            var entry=new JsonObject();entry.addProperty("path",root.relativize(absolute).toString().replace('\\','/'));entry.add("source",source.deepCopy());
+            entry.addProperty("digest",hellfirepvp.modularmachinery.common.editor.EditorSaveState.revision(source.toString()));
+            entry.addProperty("expanded",templateImported.containsKey(path));
+            entry.addProperty("imported",templateImported.getOrDefault(path,0));var details=new JsonArray();templateReports.getOrDefault(path,List.of()).forEach(details::add);entry.add("report",details);array.add(entry);
+        });return array;
+    }
+    public static Requirement validateEditorRequirement(JsonObject json) {
+        var loader=new RecipeLoader();var result=loader.parseRequirement("<editor>",json);
+        if(result==null)throw new IllegalArgumentException(String.join("; ",loader.getProblems()));return result;
     }
 
     /** The basename without {@code .json} — the same naming rule MachineLoader.nameOf applies. */
@@ -554,26 +583,26 @@ public final class RecipeLoader {
         return name.endsWith(".json") ? name.substring(0, name.length() - ".json".length()) : name;
     }
 
-    /**
-     * One machine a recipe belongs to, and the name its copy carries there.
-     *
-     * <p><b>Why the name is not the recipe's own.</b> Upstream {@code MachineRecipe.MachineRecipeContainer}
-     * gives every owning machine its own recipe named {@code <registryName>_sub_<index>}
-     * ({@code MachineRecipe} U295-U305), because the registry is keyed on ONE name and an array of machines
-     * would otherwise put the same name in the list of several machines. The PORT already has a global
-     * by-name registry after this round, so the same rule is what keeps it honest: two machines cannot share
-     * one {@code registryName} here either.</p>
-     *
-     * <p><b>Rule A0 for the single-machine case: the name is left alone.</b> Upstream would rename
-     * {@code alloy_furnace_diamond} to {@code alloy_furnace_diamond_sub_0}, because its deserialiser turns
-     * even a single string into a one-element list before the container runs. That rename would reach every
-     * existing recipe file, the JEI page, the factory's selection, and every check in this project's suite --
-     * for a recipe whose name no pack author could then predict from the file. The array case is where the
-     * name must be disambiguated, so the array case is where it is.</p>
-     *
-     * @param name       the owning machine's {@code registryname}
-     * @param recipeName the name this recipe carries for that machine
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private record MachineDefinition(String name, String recipeName) {
     }
 
@@ -651,7 +680,7 @@ public final class RecipeLoader {
         // (the per-machine names are built below, once registryName is known: an array's copies are named
         //  `<registryName>_sub_N`, and registryName is read a few lines further down.)
 
-        // registryName IS REQUIRED, in either spelling (PLAN section 313).
+         
         //
         // Upstream (MachineRecipe:332-334) rejects a recipe with neither key. The port accepted either one OR
         // NEITHER and fell back to the FILE PATH, which produced a recipe whose identity depended on where it
@@ -690,7 +719,7 @@ public final class RecipeLoader {
             }
         }
         // (the block below requires it: see section 313)
-        // recipeTime IS REQUIRED (PLAN section 313).
+         
         //
         // Upstream (MachineRecipe:335-337) throws "No recipeTime-entry specified!". The port defaulted it to 0,
         // and 0 is a duration no recipe can ever reach -- so a recipe that forgot the key loaded without error,
@@ -760,8 +789,8 @@ public final class RecipeLoader {
 
         // The sixth component is false here, and that is upstream own default rather than a placeholder:
         // a recipe does not void its inputs on a per-tick failure unless it says so. THE JSON KEY THAT WOULD
-        // DECLARE IT IS NOT READ YET (PLAN 531) -- additive, and no existing pack changes behaviour meanwhile.
-        // THE FLAG, READ FROM UPSTREAM OWN KEY (PLAN 532). Upstream MachineRecipe U381-U388 parses
+         
+         
         // "cancelIfPerTickFails": default FALSE, must be a boolean primitive, and anything else throws with that
         // exact message. THE DEFAULT LIVES IN THE FIELD NAME THERE (voidPerTickFailure) and it is the same here:
         // a recipe does NOT destroy its inputs on a per-tick failure unless it says so.
@@ -775,9 +804,9 @@ public final class RecipeLoader {
             }
         }
 
-        // THE TWO FACTORY-SEARCH KNOBS, READ FROM UPSTREAM'S OWN NAMES (PLAN 664).
+         
         //
-        // RULE A0, and this is the second instance of the same shape as PLAN 663's smart-interface-types:
+         
         // upstream's ONLY writers for MachineRecipe.threadName and MachineRecipe.maxThreads are CraftTweaker
         // (RecipePrimer.setThreadName L982-L984 / setMaxThreads L966-L968, plus mergeAdapter L139-L143 for the
         // adapter path), so a JSON recipe could only ever hold the defaults "" and -1 -- and this port has no
@@ -960,7 +989,7 @@ public final class RecipeLoader {
             return null;
         }
 
-        // io-type IS REQUIRED (PLAN section 311).
+         
         //
         // Upstream (MachineRecipe:446-449) throws when the key is missing or is not a string, which rejects the
         // WHOLE recipe. The port defaulted it to input, and the consequence was worse than a rejected recipe:
@@ -983,7 +1012,7 @@ public final class RecipeLoader {
         }
 
         try {
-            // THE REGISTRY IS CONSULTED FIRST (PLAN section 381).
+             
             //
             // This is the change section 374 called for: until now no code outside this class could add a requirement
             // type, which is why the five upstream types the port does not implement were collected into
@@ -1017,7 +1046,7 @@ public final class RecipeLoader {
 
             return switch (type) {
             case TYPE_ENERGY -> {
-                // energyPerTick IS REQUIRED (PLAN section 313).
+                 
                 //
                 // Upstream's RequirementEnergy takes it as a mandatory constructor argument (and holds it as a
                 // long). The port read it with a 0 default, and 0 for energy is a requirement that costs

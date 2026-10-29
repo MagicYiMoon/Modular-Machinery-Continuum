@@ -29,6 +29,8 @@ public final class FluxNetworksIntegration {
 
     private static void attach(AttachCapabilitiesEvent<BlockEntity> event) {
         if (event.getObject() instanceof TileEnergyHatch hatch) {
+            // The separate directional port must not gain an all-face long-energy bypass.
+            if (hatch instanceof hellfirepvp.modularmachinery.common.tiles.TileEnergyOutputPort) return;
             Storage provider = new Storage(hatch);
             event.addCapability(new ResourceLocation(Modularmachinery.MODID, "flux_energy"), provider);
             event.addListener(provider::invalidate);

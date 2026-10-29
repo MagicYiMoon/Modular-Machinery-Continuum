@@ -24,43 +24,43 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Base for the Applied Energistics 2 item buses: a buffer the machine reads and writes, wired to the ME network.
- *
- * <h2>The two behaviours taken from upstream, neither of which is implied by "an ME version of a bus"</h2>
- *
- * <h3>1. UNLIMITED stacks per slot</h3>
- *
- * <p>Upstream's line is <code>inventory.setStackLimit(Integer.MAX_VALUE, slotIDs)</code>. **An ME bus holds network QUANTITIES,
- * not 64-capped stacks** -- a single input slot can legitimately hold thousands of an item because the network handed them over at
- * once. The port's inventory overrides {@code getSlotLimit} to match, and the constant looks like a typo without this sentence.
- *
- * <h3>2. The 100-tick full re-check</h3>
- *
- * <pre>
- * changedSlots[]     a slot marked dirty by the inventory's own change callback
- * failureCounter[]   how many ticks remain before a FAILED slot is retried
- * lastFullCheckTick  when every slot was last examined regardless of dirtiness
- * </pre>
- *
- * <p>{@link #getNeedUpdateSlots} returns only dirty slots normally, and EVERY slot once per 100 ticks. **The periodic full pass is
- * the point:** the cheap path notices a slot the bus itself touched, and the full pass catches a slot that changed while the bus was
- * not looking -- a chunk reload, or a neighbour that filled up and then emptied. **Without it a bus can stop pushing forever and
- * nothing would report it.**
- *
- * <p>And {@code failureCounter} exists so a push that FAILED is retried after a delay rather than being marked clean and forgotten.
- * **A bus that cleared the dirty flag on the first failure would silently stop moving that stack.**
- *
- * <h2>Why this does not extend the ordinary {@code TileItemBus}</h2>
- *
- * <p>Upstream's {@code MEItemBus} extends {@code MEMachineComponent}, not {@code TileItemBus}, and the port keeps that. The two
- * hierarchies answer different questions -- one owns a grid node, the other owns a machine-facing buffer -- and Java's single
- * inheritance means a class cannot do both.
- *
- * <p><b>This is why the {@code slotLimit()} hook added to {@code TileItemBus} in PLAN section 396 is NOT on this path</b>, and that
- * is recorded rather than glossed: the ME buses carry their own inventory here, exactly as upstream's do. The hook remains for a
- * future ME bus that wants the ordinary buffer's bookkeeping, and it is harmless where it is.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public abstract class MEItemBus extends MEMachineComponent implements IGridTickable {
 
     /** How often every slot is re-examined regardless of whether it was marked dirty. Upstream's constant. */
@@ -268,52 +268,52 @@ public abstract class MEItemBus extends MEMachineComponent implements IGridTicka
         loadInventoryClamped(inventory, tag, "inventory");
     }
 
-    /**
-     * Restores one of this bus's inventories from NBT, <b>clamped to that handler's own slot count</b>.
-     *
-     * <h2>Why a bare {@code deserializeNBT} is a hazard here, stated as the two failures it produces</h2>
-     *
-     * <pre>
-     *   Forge 47.3.0  ItemStackHandler.deserializeNBT (sources jar, L186-L188):
-     *       setSize(nbt.contains("Size", Tag.TAG_INT) ? nbt.getInt("Size") : stacks.size());
-     *
-     *   this class    load(...)  ->  loadInventoryClamped(inventory, tag, "inventory")
-     * </pre>
-     *
-     * <p><b>The size is taken from the SAVED tag, so a handler read from a tag with a different {@code Size} comes
-     * back with THAT size</b> -- which the project had already measured once, for {@code TileUpgradeBus} (see that
-     * class's javadoc and PLAN 275). On the ME item buses the same line is worse than a wrong grid, because this
-     * class's parallel arrays are sized by the CONSTRUCTOR's count and never by the handler:</p>
-     *
-     * <pre>
-     *   inventory        ItemStackHandler(slots)      <- resized by the tag
-     *   changedSlots     new boolean[slots]           <- NOT resized
-     *   failureCounter   new int[slots]               <- NOT resized
-     * </pre>
-     *
-     * <p>So a 27-slot tag read by a 16-slot bus produced (a) {@code onContentsChanged(26)} writing past
-     * {@code changedSlots} -- an {@link ArrayIndexOutOfBoundsException} the first time the network or the machine
-     * touched one of the extra slots -- and (b) {@code ItemStackHandler.getStackInSlot} THROWING
-     * {@code "Slot 26 not in valid range - [0,16)"} from any reader that iterated the handler it was handed. The
-     * mismatched handler is not a cosmetic problem; it is a crash with two entry points.</p>
-     *
-     * <h2>Why CLAMPING rather than REBUILDING, which is what the other two repairs in this project do</h2>
-     *
-     * <p>{@code TileItemBus.getInventory} and {@code TileUpgradeBus.getUpgradeInventory} both rebuild a handler whose
-     * size disagrees, and both accept losing its contents. That is right where the count comes from a BLOCK STATE: a
-     * rebuild re-derives it from the block and the tile is correct afterwards. <b>Here the count is a constant of the
-     * class</b> -- there is no state to re-derive it from -- so a rebuild would always be needed for an old save and
-     * would always throw away every stack in the bus. What is done instead keeps the items that still have a home and
-     * drops only the ones in slots the bus no longer has ({@code Size} is rewritten, out-of-range {@code Items} are
-     * filtered out), which is exactly the shape a fresh save of the new geometry would have.</p>
-     *
-     * <p><b>The dropped slots are logged rather than silently vanished</b>, because "my bus lost its contents" with
-     * nothing in the log is the report this project has had to answer before.</p>
-     *
-     * @param handler the handler to fill, whose current slot count is the authority
-     * @param parent  the tag that carries {@code key}
-     * @param key     the inventory's own key, e.g. {@code "inventory"}
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     protected void loadInventoryClamped(ItemStackHandler handler, net.minecraft.nbt.CompoundTag parent, String key) {
         if (!parent.contains(key)) {
             return;

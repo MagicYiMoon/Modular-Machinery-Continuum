@@ -15,31 +15,31 @@ package hellfirepvp.modularmachinery.common.util.nbt;
 import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.Tag;
 
-/**
- * A numeric pattern leaf: a comparison against whatever number the stack's tag holds.
- *
- * <h2>One class where upstream has six</h2>
- *
- * <p>Upstream builds six classes -- {@code NBTComparableByte}, {@code Short}, {@code Integer}, {@code Long}, {@code Float},
- * {@code Double} -- each extending a different vanilla numeric tag, each carrying an identical copy of the five-case
- * comparison (PLAN section 384.4 counted them: lines 62-66, 72-76, 82-86, 92-96, 102-...).
- *
- * <p>The port needs one, because the design no longer subclasses the tags (section 385: their constructors are private, so it
- * cannot) and because {@link NbtComparisonMode} already owns the comparison. <b>The six upstream classes existed to satisfy
- * single inheritance, not because the behaviour differs.</b>
- *
- * <h2>Why the comparison widens to {@code double}</h2>
- *
- * <p>{@code NumericTag.getAsDouble()} reads any of the six numeric kinds, so one leaf can be tested against a byte, a short,
- * an int, a long, a float or a double without knowing which it will be. <b>The pattern's own value is also read as a
- * {@code double}</b>, so both sides widen the same way and a comparison between them is exact for every magnitude where a
- * double is exact.</p>
- *
- * <p>The limit that leaves is worth stating rather than hiding: a {@code long} above 2^53 cannot be distinguished by this,
- * and a pattern written as {@code "=9007199254740993"} would compare equal to {@code 9007199254740992}. <b>Upstream has the same
- * limit for the same reason</b> -- its comparison also widens -- so this is inherited behaviour, not a porting regression, but
- * it is recorded because nothing in the code says it.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class NbtNumberPattern implements NbtPattern {
 
     private final NbtComparisonMode mode;

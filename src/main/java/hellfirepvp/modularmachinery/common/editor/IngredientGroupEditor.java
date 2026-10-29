@@ -43,8 +43,8 @@ public final class IngredientGroupEditor {
     public static JsonObject validate(JsonObject json) {
         if (CatalystEditor.isCatalyst(json)) return CatalystEditor.validate(json);
         if (!isGroup(json) || json.has("io-type") && !Set.of("input", "output").contains(json.get("io-type").getAsString())
-                || json.has("nbt") || json.has("nbt-display") || !json.has("items") || !json.get("items").isJsonArray())
-            throw new IllegalArgumentException("仅支持无 NBT 的候选输入组和随机物品输出组");
+                || !json.has("items") || !json.get("items").isJsonArray())
+            throw new IllegalArgumentException("仅支持候选输入组和随机物品输出组");
         boolean output = isOutput(json);
         var items = json.getAsJsonArray("items");
         if (items.isEmpty() || items.size() > MAX_CANDIDATES)
@@ -53,14 +53,15 @@ public final class IngredientGroupEditor {
         if (!Float.isFinite(chance) || chance < 0 || chance > 1) throw new IllegalArgumentException("概率必须为 0～1");
         JsonObject result = empty(output);
         result.addProperty("chance", chance);
+        copyNbt(json, result, output);
         boolean positiveWeight = false;
         for (var element : items) {
             if (!element.isJsonObject()) throw new IllegalArgumentException("候选物品数据无效");
             var candidate = element.getAsJsonObject();
-            if (candidate.has("nbt") || candidate.has("nbt-display") || candidate.has("consumeDurability")
+            if (candidate.has("consumeDurability")
                     || !candidate.has("item") || !candidate.get("item").isJsonPrimitive()
                     || !candidate.getAsJsonPrimitive("item").isString())
-                throw new IllegalArgumentException("候选项仅支持具体物品或物品标签，NBT 和耐久需求请修改源文件");
+                throw new IllegalArgumentException("候选项仅支持具体物品或物品标签，耐久需求请单独添加");
             int amount = integer(candidate, "amount", integer(json, "amount", 1));
             int min = integer(candidate, "minAmount", amount), max = integer(candidate, "maxAmount", amount);
             float weight = candidate.has("chance") ? candidate.get("chance").getAsFloat() : 1F;
@@ -72,6 +73,7 @@ public final class IngredientGroupEditor {
             JsonObject clean = new JsonObject();
             clean.add("item", validated.get("item"));
             clean.addProperty("amount", amount);
+            copyNbt(candidate, clean, output);
             if (output) {
                 clean.addProperty("minAmount", min);
                 clean.addProperty("maxAmount", max);
@@ -136,12 +138,30 @@ public final class IngredientGroupEditor {
                 if (saved.has("minAmount")) saved.add("minAmount", item.get("amount"));
                 if (saved.has("maxAmount")) saved.add("maxAmount", item.get("amount"));
             }
+            copyNbt(item, saved, isOutput(clean));
             saved.remove(ORIGIN);
             items.add(saved);
         }
+        copyNbt(clean, result, isOutput(clean));
         result.add("items", items);
         result.add("chance", clean.get("chance"));
         return result;
+    }
+
+    /** Explicit absence removes this level only; the runtime still inherits group defaults. */
+    public static void copyNbt(JsonObject from, JsonObject to, boolean output) {
+        var context = from.deepCopy(); context.addProperty("io-type", output ? "output" : "input");
+        for (String key : java.util.List.of("nbt", "nbt-display")) {
+            if (from.has(key)) {
+                String text = RequirementNbtEditor.text(from, key);
+                // Validate the bounded parser and preserve the author's original representation.
+                RequirementNbtEditor.parse(RequirementNbtEditor.mode(from, key), text);
+            }
+        }
+        RequirementNbtEditor.merge(context, -1, "", -1, "");
+        for (String key : java.util.List.of("nbt", "nbt-display")) {
+            if (from.has(key)) to.add(key, from.get(key).deepCopy()); else to.remove(key);
+        }
     }
 
     /** Conditional selection share; group chance is a separate gate. Double avoids overflowing float sums. */

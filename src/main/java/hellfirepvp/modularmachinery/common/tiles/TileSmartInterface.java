@@ -32,90 +32,90 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Smart interface — lets a machine's logic read a value that a pack author can drive externally.
- *
- * <p>Upstream: {@code TileSmartInterface.java}, 179 lines, read in full. This is the port of the CHANNEL
- * half (PLAN 5xx/B2): the data model, the provider a requirement reads through, the publish path that
- * fires {@link SmartInterfaceUpdateEvent}, and the prune tick. The consumer is
- * {@link hellfirepvp.modularmachinery.common.crafting.requirement.RequirementInterfaceNumInput}.</p>
- *
- * <h2>RULE A0 — ONE SHAPE, AND IT IS THIS ONE. The port's {@code Data} wins, upstream's
- * {@code SmartInterfaceData} is deleted rather than kept beside it.</h2>
- *
- * <p>The two models were compared line by line at PLAN 551.4 and the choice between them was recorded as
- * a three-branch fork; branch (a) — "adapt the event to the port model" — is the one the user chose. What
- * the comparison actually says, field by field (<b>PLAN 674 CHANGED ONE ROW BACK: the machine's name is
- * carried again, see the paragraph below</b>):</p>
- *
- * <pre>
- * upstream SmartInterfaceData (99 lines)      this port's Data (T49-T83)
- *   BlockPos pos   -- the CONTROLLER the datum belongs to   (absent)
- *   ResourceLocation parent = the machine's name            String machineName  (PLAN 674; was absent)
- *   String type    -- the declared TYPE's name              String key        (same role)
- *   float value                                             double numberValue and String stringValue
- * </pre>
- *
- * <p><b>THE MISSING POSITION IS NOT MISSING INFORMATION, AND THAT IS THE EVIDENCE FOR BRANCH (a):</b>
- * the machine link is carried by the component mechanism instead — this tile IS a
- * {@link hellfirepvp.modularmachinery.common.tiles.base.MachineComponentTile}, and
- * {@code MachineFormation.bindComponents} (the port's walk over the pattern) calls
- * {@code setControllerPos} on it at every formation, which is the same fact {@code SmartInterfaceData.pos}
- * stored per datum. Upstream needed it per datum because its bound-data list lived on the interface and
- * was looked up BY CONTROLLER POSITION ({@code getMachineData(BlockPos)}, U123-U130, called with the
- * controller's own position at U906/U1115/U1125); with one controller per tile here, the tile's own
- * binding answers that question once instead of once per datum.</p>
- *
- * <p><b>AND THE MACHINE'S NAME CAME BACK, BECAUSE THE ROW ABOVE WAS ONLY HALF TRUE (PLAN 674).</b> "The
- * component mechanism carries the machine link" holds ON THE SERVER, where the tile can ask its controller.
- * It does NOT hold on a CLIENT: the screen that draws this datum's value also drew the machine's name and the
- * declared type's header/value/footer, and it obtained them by looking the definition up in
- * {@code MachineReloadListener}'s loader — a loader whose only producer is a SERVER-side event
- * ({@code AddReloadListenerEvent}, posted from {@code ForgeEventFactory.onResourceReload(
- * ReloadableServerResources, ...)}). On a client that lookup returned null and the screen returned BEFORE
- * DRAWING THE VALUE, which is the client-reported defect this round fixes. So the datum carries the machine's
- * registry name and display name again — upstream's own {@code parent}, for upstream's own reason
- * ({@code GuiContainerSmartInterface} U65 resolves the definition FROM THE DATUM}) — plus the declared type's
- * three display strings, and the screen reads all of them from the same tag the value travels in. See
- * {@link Data#setDisplay} for the producer and {@link Data} for every reader.</p>
- *
- * <p><b>AND THE VALUE SPLIT IS A SUPERSET RATHER THAN A DIVERGENCE.</b> Upstream's datum holds a single
- * {@code float}; its block enum ({@code SmartInterfaceTypeEnum}, one constant, NUMBER) had no string
- * storage at all, so the {@code type=string} block variant upstream shipped a model for could never hold
- * anything. This tile stores both and the variant decides which one is meaningful — see
- * {@link hellfirepvp.modularmachinery.common.block.prop.SmartInterfaceType}'s own javadoc for why the
- * enum has two constants on 1.20.1.</p>
- *
- * <h2>THE PROVIDER IS THE MECHANISM, AND IT IS WHY A REQUIREMENT CAN READ ANYTHING AT ALL</h2>
- *
- * <p>Upstream's {@code SmartInterfaceProvider} is a {@code MachineComponent} — a first-class object the
- * recipe machinery hands to a requirement — and its bound-data list is <b>the interface's own list, not a
- * copy</b> (upstream U109, {@code this.boundData = parent.boundData}). That is the whole channel: the
- * controller writes a datum into the provider during structure formation, and a requirement later asks
- * the same provider for it by type name and compares the value.</p>
- *
- * <p><b>RULE A0 — THE PROVIDER IS KEPT, ITS BASE CLASS IS NOT, AND THE REASON IS A TYPE THAT DOES NOT
- * EXIST HERE.</b> {@code MachineComponent} is absent from this port (PLAN 353.3 measured its absence
- * alongside {@code ActiveMachineRecipe}/{@code RecipeRegistry}/{@code MachineComponent}, and
- * {@code RequirementType}'s own javadoc records the same for {@code ComponentRequirement}), so
- * {@code extends MachineComponent<SmartInterfaceProvider>}, {@code getComponentType()} (upstream
- * U169-U172) and {@code getContainerProvider()} (upstream U175-U177) have nothing to bind to and are not
- * reproduced. What makes the provider REACHABLE here is the other half of upstream's shape: this tile
- * implements {@code MachineComponentTile}, so {@code MachineContext} resolves it during the machine's
- * component walk and a requirement receives the tile — and asks it for the provider
- * ({@code iface.provideComponent()}), which is upstream's own call site at {@code PktSmartInterfaceUpdate}
- * U50 and {@code GuiContainerSmartInterface} U49.</p>
- *
- * <p><b>{@code getMachineData(BlockPos)} IS DROPPED WITH ITS FACTS STATED:</b> its three upstream callers
- * looked up "the datum belonging to THIS controller" (U906 in the binding walk, U1115 and U1125 in two
- * CraftTweaker-facade getters). One controller per tile makes that "the datum this interface publishes",
- * so the port uses the by-index accessor upstream already provides ({@code getMachineData(int)}, U132-U135)
- * and no position-keyed overload exists to be called with the wrong argument. <b>Dropping it also drops
- * an upstream no-op</b>: U915 calls {@code removeMachineData(realPos)} with the COMPONENT's position while
- * every entry was added under the CONTROLLER's position (U922/U927), so the by-position removal can never
- * match and the stale datum upstream meant to drop stays put. The port's removal is keyed by the type
- * name, which is the same key the lookup uses, so the two cannot disagree.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class TileSmartInterface extends TileMachineComponent {
 
     /**
@@ -132,28 +132,28 @@ public class TileSmartInterface extends TileMachineComponent {
         private double numberValue;
 
         // ------------------------------------------------------------------
-        // WHAT THE SCREEN DRAWS, CARRIED BY THE VALUE ITSELF (PLAN 674)
+         
         // ------------------------------------------------------------------
 
-        /**
-         * The machine definition that DECLARED this datum's type — upstream's {@code SmartInterfaceData.parent}
-         * (U21), which upstream's screen resolved the definition through ({@code GuiContainerSmartInterface}
-         * U65: {@code MachineRegistry.getRegistry().getMachine(data.getParent())}).
-         *
-         * <p><b>WHY IT IS BACK AFTER §663.1(1) DROPPED IT, AND WHY THAT ARGUMENT WAS ONLY HALF RIGHT.</b>
-         * Dropping it was justified by "the machine link is carried by the component mechanism instead" —
-         * this tile knows its controller — and that is true ON THE SERVER. It is not true on a CLIENT: the
-         * SCREEN needs the DECLARING MACHINE (for its name line) and the TYPE'S DISPLAY STRINGS, and the
-         * port answered that with a CLIENT-SIDE definition lookup through the controller's machine name
-         * ({@code ScreenSmartInterface.owningMachine}). <b>THAT LOOKUP HAS NO PRODUCER ON A CLIENT:</b> the
-         * port's definitions are loaded ONLY by {@code MachineReloadListener.onAddReloadListeners}, and
-         * Forge posts {@code AddReloadListenerEvent} from
-         * {@code ForgeEventFactory.onResourceReload(ReloadableServerResources, RegistryAccess)} — a
-         * SERVER-side path (verified against the mapped jar, PLAN 674). So a client connected to a server
-         * has an EMPTY loader, {@code owningMachine} returned null, and {@code renderLabels} RETURNED BEFORE
-         * DRAWING THE VALUE LINE — the number the player typed was stored, synced and correct, and never
-         * drawn. See the class javadoc's "what the screen draws" paragraph for the reader list.</p>
-         */
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
         private String machineName;
 
         /** The declaring machine's display name ({@code DynamicMachine.getLocalizedName()}), or null. */
@@ -173,11 +173,11 @@ public class TileSmartInterface extends TileMachineComponent {
             this.type = type;
         }
 
-        /**
-         * @return the registry name of the machine that declared this datum's type, or {@code null} when this
-         *         datum came from a save written before PLAN 674 — the screen falls back to
-         *         {@link #getMachineDisplayName()} and then draws no machine line at all.
-         */
+        
+
+
+
+ 
         public String getMachineName() {
             return machineName;
         }
@@ -356,27 +356,27 @@ public class TileSmartInterface extends TileMachineComponent {
         return created;
     }
 
-    /**
-     * Fires when an interface publishes a value to a machine. Upstream U29-U35, read in full:
-     *
-     * <pre>
-     * TileEntity te = owner.getWorld().getTileEntity(newData.getPos());
-     * if (!(te instanceof final TileMultiblockMachineController ctrl)) return;
-     * new SmartInterfaceUpdateEvent(ctrl, owner.getPos(), newData).postEvent();
-     * </pre>
-     *
-     * <p><b>RULE A0 — ONE ARGUMENT'S SOURCE MOVED, AND THE MOVE IS FORCED BY THE DATA MODEL.</b> Upstream
-     * finds the machine through {@code newData.getPos()}, because its datum carried the controller's
-     * position. This port's datum does not (see the class javadoc), so the same question is answered from
-     * the tile's own component binding: {@code owner.getControllerPos()}, which
-     * {@code MachineFormation.bindComponents} sets at every formation. The {@code instanceof TileController}
-     * test is upstream's guard verbatim — an interface whose controller was replaced by a casing publishes
-     * to nobody rather than throwing — and {@code TileController} is the port's base for both controller
-     * kinds, so a factory controller is accepted here exactly as upstream's base class accepted both.</p>
-     *
-     * @param owner    the interface that changed
-     * @param newData  the datum that changed
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static void onDataUpdate(TileSmartInterface owner, Data newData) {
         net.minecraft.world.level.Level level = owner.getLevel();
         BlockPos controllerPos = owner.getControllerPos();
@@ -441,7 +441,7 @@ public class TileSmartInterface extends TileMachineComponent {
             if (entry.contains("string")) {
                 data.setString(entry.getString("string"));
             }
-            // THE DISPLAY HALF TRAVELS WITH THE VALUE (PLAN 674). Absent in a save written before this
+             
             // round, which is why every field is read defensively rather than assumed.
             data.setDisplay(
                     entry.contains("machine") ? entry.getString("machine") : null,
@@ -517,32 +517,32 @@ public class TileSmartInterface extends TileMachineComponent {
             return index >= 0 && boundData.size() > index ? boundData.get(index) : null;
         }
 
-        /**
-         * Publishes a value under {@code declared}'s type. Upstream U137-U152.
-         *
-         * <p>The override flag is upstream's own: with it, an existing datum for this type is replaced (and
-         * therefore RESET to {@code defaultValue} — the removal and re-creation is what resets it); without
-         * it, the existing datum is left exactly as the player set it. The binding walk passes true, which
-         * is why re-forming a machine restores the declared default rather than keeping a stale value that
-         * belonged to a structure that no longer exists.</p>
-         *
-         * <p><b>RULE A0 — THE PARAMETERS ARE UPSTREAM'S OWN FACTS, PASSED AS ONE OBJECT INSTEAD OF FOUR.</b>
-         * Upstream's signature is
-         * {@code addMachineData(BlockPos pos, ResourceLocation parent, String type, float defaultValue, boolean override)}
-         * (U137), called from the binding walk as
-         * {@code addMachineData(getPos(), foundMachine.getRegistryName(), type.getType(), type.getDefaultValue(), true)}
-         * (U922/U927). The port's datum carries no position (see the class javadoc), and this port calls the
-         * walk with the parsed descriptor in hand — so the declaring machine and the descriptor ARE the
-         * remaining arguments, and {@code declared} carries the type name, the default value AND the three
-         * display strings the screen draws. <b>The display strings are copied onto the datum HERE and nowhere
-         * else</b>, which is what makes the client's screen self-contained: it reads the same tag the value
-         * travels in, instead of looking a definition up in a loader a client never fills (PLAN 674).</p>
-         *
-         * @param machineName the registry name of the machine declaring this type — upstream's {@code parent}
-         * @param displayName the declaring machine's display name, as the screen draws it
-         * @param declared  the declared type: its name, its default value and its display strings
-         * @param override  whether an existing datum for this type may be replaced
-         */
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
         public void addMachineData(String machineName, String displayName,
                                    hellfirepvp.modularmachinery.common.util.SmartInterfaceType declared,
                                    boolean override) {

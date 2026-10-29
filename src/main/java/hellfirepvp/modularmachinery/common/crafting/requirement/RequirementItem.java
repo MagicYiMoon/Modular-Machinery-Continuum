@@ -61,6 +61,8 @@ import java.util.List;
  */
 public final class RequirementItem extends hellfirepvp.modularmachinery.common.crafting.SelectorRequirement implements Requirement.Parallelizable {
 
+    @Override public int getSortingWeight() { return PRIORITY_WEIGHT_ITEM; }
+
     /** 1.12.2 item ids that were split or renamed by the flattening (metadata-free renames). */
     private static final Map<String, String> ITEM_ALIASES = Map.ofEntries(
             Map.entry("minecraft:wool", "minecraft:white_wool"),
@@ -113,7 +115,7 @@ public final class RequirementItem extends hellfirepvp.modularmachinery.common.c
     private final IOType ioType;
     private final String rawId;
     private final int amount;
-    // PARALLELISM (PLAN 591-609), the same pair the other two requirements carry.
+     
     private int parallelism = 1;
     private boolean parallelizeUnaffected = false;
     private final float chance;
@@ -122,18 +124,18 @@ public final class RequirementItem extends hellfirepvp.modularmachinery.common.c
     private final TagKey<Item> resolvedTag;
     private final String resolutionNote;
 
-    /**
-     * The NBT pattern this requirement imposes, or {@code null} when it imposes none (PLAN section 390).
-     *
-     * <p>Upstream's {@code RequirementItem} carries the equivalent as {@code public NBTTagCompound tag}. The port holds a
-     * parsed {@link NbtPattern} rather than a tag because 1.20.1's tag classes cannot be subclassed to carry a pattern
-     * (section 385.1), and parsing once at load time is the point of that departure: matching runs per stack, per tick, on
-     * every machine.
-     *
-     * <p><b>Not final, and set through {@link #withNbtPattern}</b>, because the loader builds the requirement from the item
-     * id and only then parses the {@code nbt} key -- and a malformed pattern must be reportable against the file rather than
-     * failing construction.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     private hellfirepvp.modularmachinery.common.util.nbt.RecipeNbt nbt =
             hellfirepvp.modularmachinery.common.util.nbt.RecipeNbt.EMPTY;
 
@@ -537,27 +539,27 @@ public final class RequirementItem extends hellfirepvp.modularmachinery.common.c
         return canStart(context);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p><b>THE MULTIPLIER, WHICH IS THE ONE THING {@link #canFinish} CANNOT SEE (PLAN 683.2 fact 8, closed
-     * here).</b> At completion the craft is about to place {@code amount * parallelism} items -- that is
-     * exactly what {@code MachineTicker.emitOutputs} does (K1228: {@code stack.getCount() *
-     * Math.max(1, parallelism)}) and exactly what the craft paid for on the input side ({@code
-     * MachineTicker.extract}, K965). The question asked here is upstream's own:
-     * {@code RequirementItem.doItemIO} (upstream U286-U287) simulates {@code parallelism} copies through
-     * {@code insertAllItems} and fails with {@code craftcheck.failure.item.output.space} when fewer than
-     * {@code parallelism} fit (U288-U292).</p>
-     *
-     * <p><b>AND IT IS GATED BY PARALLELISM RATHER THAN BY "IS THIS AN OUTPUT".</b> At parallelism one the
-     * expression below is {@code canFinish}'s own {@code countSpareRoom >= amount}, so the single-copy path
-     * this port has always had is unchanged -- byte for byte the same question.</p>
-     *
-     * <p><b>WHAT A FALSE MEANS AND WHY IT IS NOT A DEAD END.</b> The caller holds the craft at its duration
-     * and re-asks next tick (K640-K658), which is what the port already does for a full output; freeing one
-     * slot lets it through. Holding is not free -- it delays the craft -- but the alternative is what this
-     * method exists to stop: the surplus was dropped and the log called it "lost".</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public boolean canEmit(MachineContext context, int parallelism) {
         if (ioType == IOType.OUTPUT && isIgnoreOutputCheck()) return true;

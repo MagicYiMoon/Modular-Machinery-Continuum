@@ -36,10 +36,20 @@ public final class MachineEditorSnapshot {
     public static String create(MachineLoader machines, RecipeLoader recipes) {
         JsonObject root = new JsonObject();
         root.addProperty("defaultRecipeParallelized", hellfirepvp.modularmachinery.common.data.Config.recipeParallelizeEnabledByDefault());
+        root.addProperty("pneumaticEditorAvailable", net.minecraftforge.fml.ModList.get().isLoaded("pneumaticcraft"));
+        root.addProperty("manaEditorAvailable", net.minecraftforge.fml.ModList.get().isLoaded("botania"));
+        root.addProperty("emberEditorAvailable", net.minecraftforge.fml.ModList.get().isLoaded("embers"));
+        root.addProperty("bloodMagicEditorAvailable", net.minecraftforge.fml.ModList.get().isLoaded("bloodmagic"));
+        root.addProperty("auraEditorAvailable", net.minecraftforge.fml.ModList.get().isLoaded("naturesaura"));
+        var auraTypes = new JsonArray();
+        if (net.minecraftforge.fml.ModList.get().isLoaded("naturesaura"))
+            hellfirepvp.modularmachinery.integration.naturesaura.AuraRegistration.editorTypes().forEach(auraTypes::add);
+        root.add("editorAuraTypes", auraTypes);
         JsonArray machineArray = new JsonArray();
         JsonArray recipeArray = recipes.snapshot();
         for (DynamicMachine machine : machines.all()) {
             JsonObject entry = new JsonObject();
+            RecipeCopyEditor.profile(machine).entrySet().forEach(e -> entry.add(e.getKey(), e.getValue()));
             entry.addProperty("name", machine.getRegistryName());
             entry.addProperty("localizedName", machine.getLocalizedName());
             entry.addProperty("editableName", true);
@@ -71,10 +81,21 @@ public final class MachineEditorSnapshot {
                                     editable && loaded.requirements().get(index) instanceof hellfirepvp.modularmachinery.common.crafting.SelectorRequirement);
                             var requirement = loaded.requirements().get(index);
                             var entryJson = copy.getAsJsonArray("requirements").get(index).getAsJsonObject();
+                            entryJson.addProperty("editableNbt", editable && RequirementNbtEditor.supports(requirement));
                             entryJson.addProperty("editableBatch", editable && RequirementBatchEditor.supports(requirement));
                             entryJson.addProperty("editableTrigger", editable && RequirementTriggerEditor.supports(requirement));
                             var original = recipes.getRequirementSource(requirement);
                             if (original != null) {
+                                if (IngredientGroupEditor.isGroup(original)) {
+                                    for (String key : java.util.List.of("nbt", "nbt-display")) {
+                                        if (original.has(key)) entryJson.add(key, original.get(key).deepCopy()); else entryJson.remove(key);
+                                        for (int n=0; n<original.getAsJsonArray("items").size(); n++) {
+                                            var raw=original.getAsJsonArray("items").get(n).getAsJsonObject();
+                                            var candidate=entryJson.getAsJsonArray("items").get(n).getAsJsonObject();
+                                            if (raw.has(key)) candidate.add(key,raw.get(key).deepCopy()); else candidate.remove(key);
+                                        }
+                                    }
+                                }
                                 if (original.has("triggerTime")) entryJson.addProperty("triggerTime", requirement.getTriggerTime());
                                 else entryJson.remove("triggerTime");
                                 if (original.has("triggerRepeatable")) entryJson.addProperty("triggerRepeatable", requirement.isTriggerRepeatable());
@@ -96,6 +117,8 @@ public final class MachineEditorSnapshot {
             machineArray.add(entry);
         }
         root.add("machines", machineArray);
+        root.add("adapterTemplates", recipes.editorTemplates());
+        var adapters=new JsonArray();hellfirepvp.modularmachinery.common.crafting.adapter.RecipeAdapterRegistry.names().stream().sorted().forEach(id->adapters.add(id.toString()));root.add("registeredAdapters",adapters);
         return root.toString();
     }
 }

@@ -68,7 +68,7 @@ public class TileParallelController extends TileMachineComponent {
     }
 
     public void setParallelism(int parallelism) {
-        // Floor 1, not 0 (PLAN section 250) -- see PktSetParallelism.clampParallelism for why. Both places
+         
         // carry the rule because the packet is the authority for a client request and this is the
         // authority for everything else.
         int clamped = Math.min(Math.max(parallelism, 1), Math.max(1, getMaxParallelism()));

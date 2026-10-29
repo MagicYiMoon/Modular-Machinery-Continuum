@@ -25,40 +25,40 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * One kind of machine upgrade: its identity, its display name, its level and how far it stacks.
- *
- * <h2>Rule A0 — upstream shape, and the one field that could not be copied</h2>
- *
- * <p>Upstream: {@code github.kasuminova.mmce.common.upgrade.UpgradeType}, fields
- * {@code compatibleMachines}/{@code incompatibleMachines}/{@code name}/{@code localizedName}/{@code level}/
- * {@code maxStackSize}, and its own {@code isCompatible(DynamicMachine)} at U49-U57. This class keeps every one of
- * those and the compatibility RULE verbatim:
- *
- * <pre>
- *   if (!compatibleMachines.isEmpty())   return compatibleMachines.contains(machine);      // allow-list WINS
- *   if (!incompatibleMachines.isEmpty()) return !incompatibleMachines.contains(machine);
- *   return true;                                                                            // neither list: all
- * </pre>
- *
- * <p><b>The one thing that changed is WHAT the machine sets contain, and it is a real difference rather than a
- * tidy-up.</b> Upstream holds {@code Set<DynamicMachine>} and fills it from CraftTweaker's
- * {@code MachineUpgradeBuilder.addCompatibleMachines}, which runs its lookups at script-execution time — after
- * machine JSON is loaded — and queues them through {@code MachineModifier.WAIT_FOR_MODIFY} when it is not. This
- * port has no script API ({@code CraftTweakerIntegration} is a stub), so the registrations happen at <b>mod
- * construction</b>, which is BEFORE {@code MachineReloadListener} has read a single machine file. Holding
- * {@code DynamicMachine} references there would mean holding objects that do not exist yet, and the loader
- * REPLACES its machine objects on every reload — so a reference captured at construction would go stale and
- * silently stop matching.
- *
- * <p>So this class holds the machines' <b>registry names</b> ({@code DynamicMachine#getRegistryName()}, upstream
- * U223 uses the same string for the same purpose) and takes a name in {@code isCompatible}. The rule, the
- * precedence and the outcome are upstream's; only the handle is a string, for the reason above.
- *
- * <p>Sets are {@link LinkedHashSet} rather than {@link java.util.HashSet}: the order is {@code DynamicMachine}'s
- * {@code equals}/{@code hashCode} upstream, and this port has no such identity to rely on, so preserving insertion
- * order at least makes a report readable and deterministic instead of depending on hash order.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class UpgradeType {
 
     private final Set<String> compatibleMachines = new LinkedHashSet<>();

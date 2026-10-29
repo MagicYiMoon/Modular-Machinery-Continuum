@@ -60,7 +60,7 @@ public final class RegistrySelfCheck {
         // while the mod's classes are still loading and BEFORE `RegisterEvent`. A `RegistryObject` exists from the
         // moment it is created but is not BOUND until that event runs, and Forge's `RegistryObject#get` throws
         // `NullPointerException: Registry Object not present: …` in that window rather than returning null. Doing
-        // the pairing there crashed mod construction; see `UpgradeItems#register` for the verbatim stack.
+         
         //
         // Why here and not in `RegisterEvent`: `RegistryItems.ITEMS` is attached to the bus from the mod
         // constructor and this class is a `@Mod.EventBusSubscriber` for the MOD bus, so FMLCommonSetupEvent is

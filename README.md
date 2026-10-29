@@ -1,86 +1,53 @@
-# Modular Machinery: Continuum（MMC，模块化机械：延续）
+# Modular Machinery: Continuum
 
-将 Modular Machinery Community Edition 2.3.2 从 Forge 1.12.2 移植到 **Minecraft 1.20.1 / Forge 47.x**，供整合包作者定义多方块机器与配方。本文核对日期：**2026-10-24**。
+**MMC · 模块化机械：延续 · Forge 1.20.1 · 1.4.0**
 
-发布文件：`build/libs/modularmachinerycontinuum-1.2.0-1.20.1-all.jar`。内部模组 ID 继续使用 `modularmachinery`，魔法接口继续使用 `modularmagic`，配置目录和物品 ID 不随显示名称改变。客户端和服务器应安装同一版 JAR；当前网络协议为 **32**。
+A GPL-3.0 derivative port of Modular Machinery Community Edition for Forge 1.20.1, providing modpack authors with configurable multiblock machines and recipes.
 
-## 1.2.0 通量网络联动
+基于 Modular Machinery Community Edition 的 Forge 1.20.1 衍生移植，为整合包作者提供自定义多方块机器与配方的工具。
 
-新增 Flux Networks 7.2.1.15 可选联动：通量节点向能源输入仓供能，能源输出仓向通量插头送电。原生通量接口与 FE 共用库存，保留容量、方向和传输限制。安装和配置见[通量网络教程](docs/FLUX_NETWORKS_ZH.md)。
+## 安装
 
-## 1.1.0 独立控制器
+使用 **Java 17**，推荐 **Forge 47.4.23**。将 `modularmachinerycontinuum-1.4.0-1.20.1-all.jar` 放入两端的 `mods` 目录，替换旧版 MMC。GeckoLib Forge 4.8.4 已内嵌；可选联动与它们的前置需要另装。
 
-每种机器现在独立注册普通控制器，按 `has-factory` 或全局默认配置注册工厂控制器。控制器固定绑定机器，名称和外壳颜色来自机器定义；可在 `/modularmachinery gui` 的“控制器外观”中输入 RGB、使用调色板并预览。
+升级前备份存档与配置，保留 `config/modularmachinery/controller-registry.json`。新控制器身份需要重启两端，名称／配方可重载。客户端和服务器使用相同模组版本、机器定义和依赖组合。
 
-旧通用控制器、旧方块实体 ID、蓝图和配置路径保留。颜色和配方可重载；新增机器身份、新增工厂控制器需客户端与服务端一起重启。分发配置时同时保留 `controller-registry.json`，详细迁移和资源包用法见[独立控制器教程](docs/DEDICATED_CONTROLLERS_ZH.md)。
+## 功能
 
-## 教程入口
+- JSON 多方块定义，独立普通／工厂控制器、染色、结构校验及升级。
+- 物品、流体、FE、催化剂、耐久、候选输入与随机输出、批量、触发及智能接口。
+- 工厂核心线程与脚本接口；同一配方 ID 最多占一个线程，线程内允许批量加工。
+- 管理员可视化编辑器：名称与格式预览、需求搜索、配方复制、联动资源、物品／流体 NBT 数据。
+- JEI 三维预览、分层和投影，木棍生存自动搭建，工具选区导出机器。
+- GeckoLib 模型／动画绑定；模型和动画由整合包作者提供。
+- 环境检测器、定向 FE 输出端口，以及可选的魔力／空气／余烬等资源部件。
 
-- [文档目录与阅读顺序](docs/README.md)
-- [玩家使用教程](docs/USER_GUIDE_ZH.md)：安装、控制器、木棍自动装配、蓝图、投影与常用命令。
-- [整合包作者教程](docs/PACK_AUTHOR_GUIDE_ZH.md)：机器制作、配方、可视化编辑、线程、智能接口、GeckoLib 动态模型和可选资源联动。
-- [JSON 补充参考](docs/ADDING_MACHINES.md)：结构、NBT、修饰符、动态结构和智能接口示例。
-- [可选社区依赖的来源与版本](libs/optional/README.md)
-
-使用教程以这些入口为准。本公开包不含内部开发日记、审计文件、测试世界和本机日志。
-
-## 安装与当前功能
-
-基础模组可单独运行，**已内嵌 GeckoLib Forge 4.8.4**。普通机器、工厂线程、批量倍率、物品／流体／FE、智能接口、升级与修饰符、蓝图 3D 预览、世界投影和生存自动装配均已实现。
-
-机器和配方分别放在 `config/modularmachinery/machinery/`、`config/modularmachinery/recipes/`，支持递归扫描子目录；修改后执行 `/reload`。JAR 的 `default_*` 仅在配置主目录首次创建时提供模板，不覆盖已有配置，也不会自动补回删除的文件。
-
-管理员可用 `/modularmachinery gui` 编辑已有机器名称和配方；机器结构通过建造工具、`/modularmachinery register <机器名>` 或 JSON 创建。编辑器的具体支持范围见作者教程。
-
-工厂的线程数量和配方批量倍率相互独立。同一工厂内同种配方最多占一个线程，线程内仍可批量加工，其他线程可执行不同配方。
-
-普通 FE 仓默认容量现从 tiny 的 1000 FE 递增到 ultimate 的 2147483647 FE，输入／输出仓共用容量配置。已有配置需要自行合并新值，见[容量配置教程](docs/PACK_AUTHOR_GUIDE_ZH.md)。
+机器定义放入 `config/modularmachinery/machinery/`，配方放入 `config/modularmachinery/recipes/`。首次配置会生成模板，已有文件不被覆盖。执行 `/modularmachinery gui` 打开管理员编辑器；机器结构通过工具、命令或 JSON 创建。
 
 ## 可选联动
 
-下列模组均需另装，发布包只内嵌 GeckoLib。可选模组自身的必需前置也需要安装；客户端与服务器使用相同依赖组合。
+JEI、The One Probe、CraftTweaker 14、AE2／GuideME、Mekanism／Applied Mekanistics、Flux Networks、Botania、Blood Magic、Nature’s Aura、PneumaticCraft、Embers，以及部分 GTCEu 普通仓室和外部配方导入。社区 Astral Sorcery 和 Extra Utilities Rebirth 使用固定的实验版本；准确版本与来源见[依赖说明](libs/optional/README.md)。
 
-| 联动 | 当前用途／验证目标 |
-| --- | --- |
-| JEI 15.62.0.216 | 配方、结构预览、分层与投影入口 |
-| CraftTweaker 14.0.60 | 脚本配方、机器修改、核心线程与 GeckoLib 绑定 |
-| AE2 15.4.11 + GuideME 20.1.7 | ME 物品／流体总线、样板供应等 |
-| Mekanism 10.4.16.80 | 气体仓与气体配方 |
-| Flux Networks 7.2.1.15 | 普通 FE 能源仓原生通量接口、插头／节点连接 |
-| Applied Mekanistics 1.4.3 + AE2 + Mekanism | ME 气体输入／输出总线 |
-| The One Probe 10.0.4 | 控制器、配方进度与阻塞原因提示 |
-| Botania（Forge 1.20.1）+ Patchouli + Curios | 魔力输入／输出 |
-| Blood Magic 3.3.8-50 + Patchouli | 生命源质 LP 与区块恶魔意志 |
-| Nature’s Aura 39.4 + Patchouli | 世界灵气输入／输出 |
-| 社区 Astral Sorcery 1.20.1 固定源码构建 | 真实星能网络输入／输出、星座检测 |
-| Extra Utilities Rebirth 内部版本 1.7.3 | 相邻虹彩发电机运行检测 |
+外部模组不随 MMC 分发，只有 GeckoLib 被内嵌。源质、GP、Impetus 仍为占位；GTCEu 激光／特殊 ME／摆放代理尚未提供。详细支持范围见对应教程。
 
-基础版本已在 Forge **47.3.0** 验证；包含上述新联动的组合在 **47.4.23** 验证。安装 Rebirth 1.7.3 请使用已验证的 **47.4.23**，它不能在 47.3.0 正常加载。社区 Astral 的固定提交和下载／构建说明见[依赖说明](libs/optional/README.md)。
+1.4.0 新增环境条件 GUI、导入模板 GUI、跨机器复制、候选组／催化剂内部 NBT 和背包物品选择；操作见[模板编辑](docs/ADAPTER_TEMPLATE_EDITOR_ZH.md)、[背包选择](docs/INVENTORY_PICKER_ZH.md)和[作者教程](docs/PACK_AUTHOR_GUIDE_ZH.md)。
 
-虹彩使用相邻检测，与源版 Extra Utilities 2 的玩家频率网络不同；不提供 GP。Rebirth 1.7.3 自身存在两组无效物品标签，另附[可选数据包修复说明](examples/datapacks/mmr-extrautilitiesrebirth-1.7.3-tags/README.md)。
+1.4.0 的网络协议为 33，旧 1.3.0 使用协议 32。升级须同时替换客户端和服务器。
 
-**源质、GP、Impetus 的六个接口仍保留占位**，暂不执行对应资源需求。其他第三方配方／能源适配、配方复制和可视化编辑器进一步扩展暂缓。注册方块不代表已实现源版所有行为。
+## 文档
 
-## 构建与验证
-
-开发环境为 **Java 17、Gradle 8.8、ForgeGradle 6.0.54、MixinGradle 0.7.38**，映射使用 Mojang official 1.20.1。默认 Forge 版本仍为 `gradle.properties` 中的 47.3.0。
-
-编译需要可选 API，即使运行时不安装这些模组。先按[依赖说明](libs/optional/README.md)将固定社区 JAR 放入 `libs/optional/`；其他 Maven 依赖首次构建时下载：
-
-```powershell
-.\gradlew.bat build jarJar reobfJarJar
-```
-
-缓存完整后可用 `--offline`。指定新版 Forge 的 PowerShell 写法：
-
-```powershell
-.\gradlew.bat build jarJar reobfJarJar '-Pforge_version=47.4.23'
-```
-
-服务端回归方法与实际通过记录见 [VERIFY.md](VERIFY.md)。1.1.0 的独立、全联动和全新配置环境覆盖固定控制器身份、实际加工与生存挖掘、颜色编辑保护、投影和资源包。客户端新界面与染色画面仍需实际验证；本模组不保证兼容所有 1.12.2 整合包。版本变化见[发布说明](RELEASE_NOTES.md)。
+- [教程目录](docs/README.md)
+- [玩家教程](docs/USER_GUIDE_ZH.md)
+- [整合包作者与 GeckoLib 教程](docs/PACK_AUTHOR_GUIDE_ZH.md)
+- [NBT 编辑教程](docs/NBT_EDITOR_ZH.md)
+- [从源码构建](BUILDING.md)
+- [功能与测试范围](TESTING.md)
+- [中英文更新说明](RELEASE_NOTES.md)
 
 ## 许可与来源
 
-本项目为 GPL-3.0-only 衍生作品，保留原作者署名，见 [LICENSE](LICENSE) 与[第三方声明](src/main/resources/META-INF/THIRD-PARTY-NOTICES.md)。分发时应按 GPL 提供对应源码。原作者包括 HellFirePvP、wiiv、KasumiNova、youyihj、ikexing 及其他社区贡献者；社区依赖的许可由各自项目声明。
+本项目遵循 [GPL-3.0-only](LICENSE)，保留 HellFirePvP、wiiv、KasumiNova、youyihj、ikexing 及其他社区贡献者署名。分发 JAR 时请同时提供对应源码。GeckoLib 适用 MIT，见[第三方声明](THIRD-PARTY-NOTICES.md)。
 
-完整发行包构建方法见 [BUILDING.md](BUILDING.md)。
+- [Modular Machinery 原项目](https://github.com/HellFirePvP/ModularMachinery)
+- [Modular Machinery Community Edition](https://github.com/KasumiNova/ModularMachinery-Community-Edition)
+- [MMC 仓库与问题反馈](https://github.com/MagicYiMoon/Modular-Machinery-Continuum)

@@ -67,12 +67,12 @@ import java.util.List;
  */
 public class ItemBlueprint extends Item {
 
-    /**
-     * The NBT key, taken verbatim from the jar rather than chosen.
-     *
-     * <p>It must match upstream because blueprints are exchanged between worlds and pack versions; a
-     * different key would silently orphan every blueprint written by the original mod.
-     */
+    
+
+
+
+
+ 
     public static final String DYNAMIC_MACHINE_NBT_KEY = "dynamicmachine";
 
     public ItemBlueprint() {
@@ -115,7 +115,7 @@ public class ItemBlueprint extends Item {
         if (byKey != null) {
             return byKey;
         }
-        // TOLERANT FALLBACK (PLAN section 265): blueprints written BEFORE the namespace fix carry
+         
         // "minecraft:<name>", and a pack's own blueprint could carry any namespace. findByName compares the
         // bare registry name, so the path alone is enough to resolve one. Without this, every blueprint
         // already sitting in a player's inventory would stay unknown forever.
@@ -123,7 +123,7 @@ public class ItemBlueprint extends Item {
     }
 
     public static void setAssociatedMachine(ItemStack stack, DynamicMachine machine) {
-        // WITH THE MOD'S NAMESPACE, NOT THE IMPLICIT "minecraft" ONE (PLAN section 265).
+         
         //
         // This read `new ResourceLocation(machine.getRegistryName())`, and getRegistryName() holds the
         // JSON's bare "registryname" -- "test_multiblock". The one-argument ResourceLocation constructor

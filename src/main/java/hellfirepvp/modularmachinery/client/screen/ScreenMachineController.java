@@ -18,6 +18,10 @@
 package hellfirepvp.modularmachinery.client.screen;
 
 import hellfirepvp.modularmachinery.common.menu.MenuMachineController;
+import hellfirepvp.modularmachinery.common.menu.MachineStatusViewport;
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import hellfirepvp.modularmachinery.Modularmachinery;
@@ -52,46 +56,20 @@ import net.minecraft.world.entity.player.Inventory;
  */
 public class ScreenMachineController extends AbstractContainerScreen<MenuMachineController> {
 
-    /**
-     * Panel size. Standard 176x166, which is what upstream's {@code GuiMachineController} effectively uses:
-     * its {@code setWidthHeight()} override is empty, so {@code GuiContainerBase} keeps the vanilla default.
-     */
-    // Sourced from the menu: one declaration, assertable server-side (see MenuMachineController).
     private static final int PANEL_WIDTH = MenuMachineController.PANEL_WIDTH;
     private static final int PANEL_HEIGHT = MenuMachineController.PANEL_HEIGHT;
-    /**
-     * The texture the jar's own {@code GuiMachineController} names -- read out of its class file, not
-     * guessed: {@code textures/gui/guicontroller_large.png}. Note the 1.16 branch calls this
-     * {@code guicontroller.png}, a file this mod does not ship, which is why the jar is the authority.
-     */
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(Modularmachinery.MODID, "textures/gui/guicontroller_large.png");
-
-    private static final int COLOR_PANEL = 0xFFC6C6C6;
-    private static final int COLOR_PANEL_EDGE = 0xFF555555;
-    private static final int COLOR_SLOT = 0xFF8B8B8B;
-    private static final int COLOR_BAR_TRACK = 0xFF3A3A3A;
-    private static final int COLOR_BAR_FILL = 0xFF3CB43C;
-    private static final int COLOR_TEXT = 0xFF404040;
-    private static final int COLOR_OK = 0xFF1E7A1E;
-    private static final int COLOR_BAD = 0xFF9A2020;
+    private static final int COLOR_WHITE = 0xFFFFFFFF;
+    private final MachineStatusViewport statusViewport = new MachineStatusViewport();
 
     public ScreenMachineController(MenuMachineController menu, Inventory playerInventory,
                                    Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = PANEL_WIDTH;
         this.imageHeight = PANEL_HEIGHT;
-        // The player inventory is not shown, so its label would float under the panel pointing at
-        // nothing.
-        // The label is restored: with a 213-tall panel there is room for it, and the player inventory now
-        // sits where the art expects rather than being suppressed to hide the mismatch.
-        // §218: derived from the slot row rather than from vanilla's imageHeight - 94. Both give 119 here,
-        // but the derivation is what keeps them from disagreeing -- and on the factory controller the same
-        // arithmetic put the label 58 pixels above its own grid.
-        // §219: the label sits over the grid it names, on both axes.
         this.inventoryLabelX = MenuMachineController.PLAYER_INV_X;
         this.inventoryLabelY = MenuMachineController.PLAYER_INV_Y - 12;
-        // NOTE: nothing may be assigned to titleLabelX/Y here -- AbstractContainerScreen.init() sets them
     }
 
     @Override
@@ -101,86 +79,155 @@ public class ScreenMachineController extends AbstractContainerScreen<MenuMachine
     }
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        drawControllerStatus(graphics);
+        drawPerformanceFooter(graphics);
+    }
+
+    private record StatusRow(FormattedCharSequence text, int y) { }
+
+    private void drawControllerStatus(GuiGraphics graphics) {
         var tile = minecraft != null && minecraft.level != null
                 && minecraft.level.getBlockEntity(menu.getControllerPos())
                 instanceof hellfirepvp.modularmachinery.common.tiles.TileController controller ? controller : null;
-        graphics.pose().pushPose();
-        graphics.pose().scale(0.72F, 0.72F, 1F);
-        try {
-            int y = 12;
-            if (menu.getRedstoneStopped()) {
-                drawWrapped(graphics, Component.translatable("gui.controller.status.redstone_stopped"), y + 10);
-                return;
-            }
+        var rows = new ArrayList<StatusRow>();
+        int y = 0;
+        if (menu.getRedstoneStopped()) {
+            // Preserve the source's redstone-only status branch, while keeping diagnostics accessible below.
+            y = addWrapped(rows, Component.translatable("gui.controller.status.redstone_stopped"), y + 10);
+        } else {
             var blueprint = hellfirepvp.modularmachinery.common.item.ItemBlueprint
                     .getAssociatedMachine(menu.getSlot(0).getItem());
             if (blueprint != null) {
-                y = drawWrapped(graphics, Component.translatable("gui.controller.blueprint", ""), y);
-                y = drawWrapped(graphics, machineName(blueprint), y) + 5;
+                y = addWrapped(rows, Component.translatable("gui.controller.blueprint", ""), y);
+                y = addWrapped(rows, machineName(blueprint), y) + 5;
             } else if (!menu.isFormed()) {
-                y = drawWrapped(graphics, Component.translatable("gui.controller.blueprint",
+                y = addWrapped(rows, Component.translatable("gui.controller.blueprint",
                         Component.translatable("gui.controller.blueprint.none")), y) + 5;
             }
             var found = tile == null || !menu.isFormed() ? null :
                     hellfirepvp.modularmachinery.common.machine.MachineReloadListener.getLoader()
                             .findByName(tile.getMachineName());
             if (found != null) {
-                y = drawWrapped(graphics, Component.translatable("gui.controller.structure", ""), y);
-                y = drawWrapped(graphics, machineName(found), y);
+                y = addWrapped(rows, Component.translatable("gui.controller.structure", ""), y);
+                y = addWrapped(rows, machineName(found), y);
                 var event = new hellfirepvp.modularmachinery.common.event.machine.ControllerGUIRenderEvent(tile);
                 event.postEvent();
-                for (String line : event.getExtraInfo()) y = drawWrapped(graphics, Component.literal(line), y);
+                for (String line : event.getExtraInfo())
+                    if (line != null) y = addWrapped(rows, Component.literal(line), y);
             } else {
-                y = drawWrapped(graphics, Component.translatable("gui.controller.structure",
+                y = addWrapped(rows, Component.translatable("gui.controller.structure",
                         Component.translatable("gui.controller.structure.none")), y);
             }
             y += 5;
-            y = drawWrapped(graphics, Component.translatable("gui.controller.status"), y);
+            y = addWrapped(rows, Component.translatable("gui.controller.status"), y);
             String holding = tile == null ? null : tile.getStatusMessage();
             String status = !menu.getChunkLoaded() ? "gui.controller.status.chunk_unloaded"
                     : !menu.isFormed() ? "gui.controller.status.missing_structure"
                     : holding != null ? holding
                     : menu.getDuration() <= 0 ? "gui.controller.status.no_recipe"
                     : "gui.controller.status.crafting";
-            y = drawWrapped(graphics, Component.translatable(status), y) + 5;
+            y = addWrapped(rows, Component.translatable(status), y) + 5;
             if (menu.getDuration() > 0) {
                 long percent = Math.min(100L, Math.max(0L, (long) menu.getProgress() * 100 / menu.getDuration()));
-                y = drawWrapped(graphics, Component.translatable("gui.controller.status.crafting.progress",
+                y = addWrapped(rows, Component.translatable("gui.controller.status.crafting.progress",
                         percent + "%"), y) + 5;
                 if (tile != null) {
-                    for (Component line : tile.parallelismReadoutLines()) y = drawWrapped(graphics, line, y);
+                    for (Component line : tile.parallelismReadoutLines()) y = addWrapped(rows, line, y);
                 }
+            }
+        }
+        statusViewport.updateHeight(y);
+        graphics.enableScissor(leftPos + MachineStatusViewport.X, topPos + MachineStatusViewport.Y,
+                leftPos + MachineStatusViewport.X + MachineStatusViewport.WIDTH,
+                topPos + MachineStatusViewport.Y + MachineStatusViewport.HEIGHT);
+        graphics.pose().pushPose();
+        try {
+            graphics.pose().translate(MachineStatusViewport.X + 1, MachineStatusViewport.Y, 0);
+            graphics.pose().scale((float) MachineStatusViewport.SCALE, (float) MachineStatusViewport.SCALE, 1F);
+            for (StatusRow row : rows) {
+                int lineY = row.y() - statusViewport.offset();
+                if (lineY + font.lineHeight > 0 && lineY < MachineStatusViewport.LOGICAL_HEIGHT)
+                    graphics.drawString(font, row.text(), 0, lineY, COLOR_WHITE, true);
             }
         } finally {
             graphics.pose().popPose();
+            graphics.disableScissor();
         }
+        if (statusViewport.maxOffset() > 0) {
+            graphics.fill(MachineStatusViewport.SCROLL_X, MachineStatusViewport.Y,
+                    MachineStatusViewport.SCROLL_X + MachineStatusViewport.SCROLL_WIDTH,
+                    MachineStatusViewport.Y + MachineStatusViewport.HEIGHT, 0xFF303030);
+            graphics.fill(MachineStatusViewport.SCROLL_X, statusViewport.thumbY(),
+                    MachineStatusViewport.SCROLL_X + MachineStatusViewport.SCROLL_WIDTH,
+                    statusViewport.thumbY() + statusViewport.thumbHeight(), 0xFFAAAAAA);
+        }
+    }
+
+    private int addWrapped(List<StatusRow> rows, Component text, int y) {
+        for (var line : font.split(text, MachineStatusViewport.TEXT_WIDTH)) {
+            rows.add(new StatusRow(line, y));
+            y += 10;
+        }
+        return y;
     }
 
     private Component machineName(hellfirepvp.modularmachinery.common.machine.DynamicMachine machine) {
         return Component.translatableWithFallback(machine.getTranslationKey(), machine.getLocalizedName());
     }
 
+    private List<Component> performanceLines() {
+        return List.of(Component.translatable("gui.factory.performance.tick", menu.performanceTickText()),
+                Component.translatable("gui.factory.performance.search", menu.performanceSearchText()),
+                Component.translatable("gui.factory.performance.mode", Component.translatable(menu.workModeTranslationKey())));
+    }
+
+    private void drawPerformanceFooter(GuiGraphics graphics) {
+        graphics.pose().pushPose();
+        try {
+            graphics.pose().translate(MachineStatusViewport.X + 1, MachineStatusViewport.FOOTER_Y, 0);
+            graphics.pose().scale((float) MachineStatusViewport.SCALE, (float) MachineStatusViewport.SCALE, 1F);
+            int row = 0;
+            for (Component line : performanceLines()) {
+                String text = line.getString();
+                if (font.width(text) > MachineStatusViewport.TEXT_WIDTH)
+                    text = font.plainSubstrByWidth(text, MachineStatusViewport.TEXT_WIDTH - font.width("…")) + "…";
+                graphics.drawString(font, text, 0, (int) (row++ * MachineStatusViewport.FOOTER_STRIDE / MachineStatusViewport.SCALE),
+                        COLOR_WHITE, true);
+            }
+        } finally { graphics.pose().popPose(); }
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
-        if (mouseX >= leftPos + 6 && mouseX < leftPos + 142 && mouseY >= topPos + 6
-                && mouseY < topPos + 110 && minecraft != null && minecraft.level != null
+        if (mouseX >= leftPos + MachineStatusViewport.X && mouseX < leftPos + MachineStatusViewport.X + MachineStatusViewport.WIDTH
+                && mouseY >= topPos + MachineStatusViewport.FOOTER_Y
+                && mouseY < topPos + MachineStatusViewport.FOOTER_Y + MachineStatusViewport.FOOTER_ROWS * MachineStatusViewport.FOOTER_STRIDE) {
+            graphics.renderComponentTooltip(font, performanceLines(), mouseX, mouseY);
+        } else if (mouseX >= leftPos + MachineStatusViewport.X && mouseX < leftPos + MachineStatusViewport.X + MachineStatusViewport.WIDTH
+                && mouseY >= topPos + MachineStatusViewport.Y && mouseY < topPos + MachineStatusViewport.Y + MachineStatusViewport.HEIGHT
+                && minecraft != null && minecraft.level != null
                 && minecraft.level.getBlockEntity(menu.getControllerPos())
                 instanceof hellfirepvp.modularmachinery.common.tiles.TileController tile) {
             var recipe = hellfirepvp.modularmachinery.common.machine.MachineReloadListener.getRecipeLoader()
                     .getRecipe(tile.getRecipeName());
             if (recipe != null && !recipe.displayName().isBlank())
-                graphics.renderComponentTooltip(font, java.util.List.of(Component.literal(recipe.displayName()),
+                graphics.renderComponentTooltip(font, List.of(Component.literal(recipe.displayName()),
                         Component.literal("ID: " + recipe.registryName())), mouseX, mouseY);
         }
     }
 
-    private int drawWrapped(GuiGraphics graphics, Component text, int y) {
-        for (var line : font.split(text, (int) (135 / 0.72F))) {
-            graphics.drawString(font, line, 12, y, 0xFFFFFF, true);
-            y += 10;
-        }
-        return y;
+    @Override public boolean mouseScrolled(double x, double y, double delta) {
+        return statusViewport.scroll(x - leftPos, y - topPos, delta) || super.mouseScrolled(x, y, delta);
+    }
+    @Override public boolean mouseClicked(double x, double y, int button) {
+        return statusViewport.click(x - leftPos, y - topPos, button) || super.mouseClicked(x, y, button);
+    }
+    @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        return statusViewport.drag(y - topPos, button) || super.mouseDragged(x, y, button, dx, dy);
+    }
+    @Override public boolean mouseReleased(double x, double y, int button) {
+        return statusViewport.release(button) || super.mouseReleased(x, y, button);
     }
 }

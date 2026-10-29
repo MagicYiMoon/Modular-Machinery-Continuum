@@ -17,38 +17,38 @@ import hellfirepvp.modularmachinery.common.crafting.Requirement;
 import hellfirepvp.modularmachinery.common.crafting.requirement.RequirementFluid;
 import hellfirepvp.modularmachinery.common.machine.IOType;
 
-/**
- * {@code modularmachinery:fluid} -- fluid held in a hatch's tank.
- *
- * <p>This is the body of one branch of {@code RecipeLoader}'s former {@code switch}, moved here by PLAN section 379 with
- * its reasoning intact. The branch was:
- *
- * <pre>
- * case TYPE_FLUID -&gt; {
- *     String raw = string(requirement, "fluid", null);
- *     if (raw == null || raw.isEmpty()) {
- *         problems.add(path + ": fluid requirement has no 'fluid' key");
- *         yield null;
- *     }
- *     yield new RequirementFluid(ioType, raw, requiredFluidAmount(path, requirement), chanceOf(requirement));
- * }
- * </pre>
- *
- * <p>Three things about it are decisions rather than transcription:
- *
- * <ul>
- *   <li><b>The {@code fluid} key is required.</b> A fluid requirement naming no fluid is a rejected file, not a
- *       requirement that matches anything.</li>
- *   <li><b>The amount is REQUIRED too</b> -- see {@link RequirementKeys#requiredFluidAmount}, whose own comment records
- *       that the port once defaulted it to a plausible-looking 1000 mB that no author wrote.</li>
- *   <li><b>An empty string counts as missing</b>, not as a fluid named {@code ""}. That is why the guard tests
- *       {@code raw.isEmpty()} and not only {@code raw == null}.</li>
- * </ul>
- *
- * <p>The two failures differ in what they say and that is deliberate: the missing key is reported here with the recipe's
- * path, while the amount's absence throws {@link RequirementParseException} out of the shared helper so that the loader --
- * which knows the path -- can name the file in its problem line.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class FluidRequirementType implements RequirementType {
 
     public static final String NAME = "fluid";

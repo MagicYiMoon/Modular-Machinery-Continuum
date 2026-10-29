@@ -43,29 +43,29 @@ public final class DynamicMachine {
     /** Source AbstractMachine prefix used by structure preview titles. */
     private String prefix = "";
 
-    /**
-     * This machine's modifiers, parsed from its JSON.
-     *
-     * <p><b>Section 224 found this as an untyped {@code Map<String, Object>} that nothing ever wrote to, and a
-     * {@code getModifiers()} that nothing ever called</b> -- while the shipped machinery JSON declared modifiers
-     * and even described their effect to the player ("Replace block above controller with machine vent for
-     * double item output!"). The comment said "Populated later." and later never came.
-     *
-     * <p>It is now TYPED and POPULATED by {@code MachineLoader}. What is still missing is the second half of the
-     * modifier feature: the structure-time test deciding whether a modifier is active, and the point in the
-     * crafting path where it is applied. Both are recorded in PLAN sections 225 and 233 rather than implied.
-     */
-    /**
-     * Whether forming this machine REQUIRES a blueprint to be bound first (PLAN section 292).
-     *
-     * <p>Upstream carries this as AbstractMachine.requiresBlueprint, and its JSON key
-     * requires-blueprint shipped in the port own data from the start -- only nothing read it (section 263).
-     *
-     * <p>True by default, and that is the deliberate direction. A machine that must be bound explicitly can
-     * never be formed by accident; a machine that may be detected by its structure can. So the permissive
-     * behaviour is OPT-IN in the data, which is also what the shipped definitions do: of the four, only
-     * assembly_line declares requires-blueprint false, and the other three omit the key.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
+    
+
+
+
+
+
+
+
+
+
+ 
     private boolean requiresBlueprint = false;
 
     /**
@@ -75,28 +75,28 @@ public final class DynamicMachine {
      */
     private boolean hideComponentsWhenFormed = false;
 
-    /**
-     * What happens to recipe progress when a tick fails (PLAN section 310).
-     *
-     * <p>Upstream reads this from the machine JSON failure-action key and applies it in
-     * ActiveMachineRecipe.doFailureAction. The port had neither, and its own shipped assembly_line.json
-     * declares "decrease" -- so that machine progress decayed in the mod and did not in the port.
-     *
-     * <p>Defaults to the global {@code general/default-failure-actions} configuration, whose upstream default is STILL.
-     */
+    
+
+
+
+
+
+
+
+ 
     private RecipeFailureActions failureAction = RecipeFailureActions.getDefaultAction();
 
-    /**
-     * This machine's colour, per upstream AbstractMachine:19 (PLAN section 319).
-     *
-     * <p><b>The default is the CONFIG value, not zero</b> — upstream writes
-     * {@code protected int definedColor = Config.machineColor;}, so a machine that declares no colour uses
-     * the global one. That is also why the shipped {@code assembly_line.json} declaring {@code "FFFFFF"}
-     * changes nothing by default: white is what the config already is.
-     *
-     * <p>Read from the JSON's {@code color} as a HEX STRING (upstream parses it with
-     * {@code Integer.parseInt(hexStr, 16)} and rejects anything else).
-     */
+    
+
+
+
+
+
+
+
+
+
+ 
     private boolean hasFactory;
     public boolean isHasFactory() { return hasFactory; }
     public void setHasFactory(boolean value) { hasFactory = value; }
@@ -109,15 +109,15 @@ public final class DynamicMachine {
     private int internalParallelism = 0;
     private boolean parallelizable = hellfirepvp.modularmachinery.common.data.Config.machineParallelizeEnabledByDefault();
 
-    /**
-     * The machine's repeating structure segments, keyed by their JSON name (PLAN section 322).
-     *
-     * <p>Upstream holds the same map and reads it in the matcher, the preview and the auto-assembly handler.
-     * The port read none of it, which is why the shipped assembly_line formed from its wall alone while the mod
-     * refuses to form it without the line.
-     *
-     * <p>Empty is the normal state: one shipped machine of five declares a dynamic pattern.
-     */
+    
+
+
+
+
+
+
+
+ 
     private final java.util.Map<String, DynamicPattern> dynamicPatterns = new java.util.HashMap<>();
     private final List<RecipeModifier> modifiers = new ArrayList<>();
     /** Optional structure conditions supplied by the scripting API.  These are not formation parts. */
@@ -346,7 +346,7 @@ public final class DynamicMachine {
     }
 
     // ------------------------------------------------------------------
-    // Smart interface types (PLAN 663, B2)
+     
     // ------------------------------------------------------------------
 
     /**
@@ -429,7 +429,7 @@ public final class DynamicMachine {
     }
 
     // ------------------------------------------------------------------
-    // Factory capacity (PLAN 662)
+     
     // ------------------------------------------------------------------
 
     /** Factory runs per machine, independent of each run's batch multiplier. */

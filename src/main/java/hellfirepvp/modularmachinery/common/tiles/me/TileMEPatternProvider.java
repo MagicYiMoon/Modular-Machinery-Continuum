@@ -105,15 +105,15 @@ public class TileMEPatternProvider extends MEMachineComponent implements Pattern
         MachineComponentTile, MachineComponentTileNotifiable,
         hellfirepvp.modularmachinery.common.tiles.MachineInputHandlerProvider {
 
-    /**
-     * Upstream's constant: 36 pattern slots (upstream U90, {@code MEPatternProvider.PATTERNS}), laid out 9 x 4 by
-     * upstream's container C47-C48 and drawn as 36 wells by {@code mepatternprovider.png}.
-     *
-     * <p><b>This value had NO PRODUCER until PLAN 712.</b> AE2 15.4.11's {@code PatternProviderLogic(node, host)}
-     * delegates to its three-argument form with <b>9</b>, and that argument is passed straight to
-     * {@code new AppEngInternalInventory(host, size)} -- so the logic this tile built held nine patterns, the menu
-     * showed nine slots, and this constant was a number nothing read. It is now the size the logic is built with.</p>
-     */
+    
+
+
+
+
+
+
+
+ 
     public static final int PATTERNS = 36;
 
     /** Upstream's constant (U91). */
@@ -665,39 +665,39 @@ public class TileMEPatternProvider extends MEMachineComponent implements Pattern
 
     // ------------------------------------------------------- returning items to the grid
 
-    /**
-     * <b>The top-left button's whole behaviour</b>: push the independent storage back into the ME network, leaving
-     * behind only what the network refused.
-     *
-     * <p>Upstream's chain is {@code returnItemsScheduled} (U348-U353) -&gt; {@code returnItems} (U355-U374) -&gt;
-     * {@code returnItem} (U376-U417), and it walks the shared handler <b>plus all 36 combination components</b>
-     * (U366-U370). The port walks the same shared and per-pattern handlers, preserving buffered inputs when the mode
-     * changes or the player presses the return button.</p>
-     *
-     * <h2>The three AE2 calls, and the evidence each exists on 15.4.11</h2>
-     *
-     * <pre>
-     *   new:  getMainNode().isActive()                     -- IManagedGridNode (javap: present)
-     *         grid.getStorageService().getInventory()      -- IGrid.getStorageService() is a DEFAULT (javap),
-     *                                                         IStorageService.getInventory() returns MEStorage
-     *         storage.insert(AEKey, long, Actionable, IActionSource)  -- MEStorage (javap: present, returns the
-     *                                                         amount ACCEPTED; the default body is `lconst_0; lreturn`)
-     *   gone: appeng.api.storage.IMEMonitor / IAEItemStack / IFluidStorageChannel / AEApi.instance()
-     *                                                       -- `appeng/api/storage/data/` has ZERO entries in the jar
-     *                                                          (measured this round: 5156 entries total)
-     *         Platform.poweredInsert(energy, inv, stack, source)  -- gone with the same package
-     * </pre>
-     *
-     * <p><b>AND THE PORT'S OWN CALLS ARE REUSED RATHER THAN RE-DERIVED</b> (rule B): {@code MEItemOutputBus}
-     * L128-L140 resolves the grid exactly this way, and its {@code insert}'s return value is read the same way --
-     * as the ACCEPTED amount, with the remainder kept. The one thing NOT copied from it is the energy service:
-     * 15.x's {@code MEStorage.insert} is the storage service's own contract and consumes no power
-     * ({@code PatternProviderLogic.pushPattern} itself calls {@code target.pushPattern} ->
-     * {@code MEStorage.insert} with no energy step), so subtracting a power check would have been an invention.</p>
-     *
-     * @return the number of stacks that could not be returned, so a caller can tell "nothing to do" from "the grid was
-     *         full"; 0 when everything left
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public int returnToNetwork() {
         if (level == null || level.isClientSide()) {
             return 0;

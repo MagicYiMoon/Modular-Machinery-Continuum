@@ -59,25 +59,27 @@ public class BlockFactoryController extends BlockController {
         return new TileFactoryController(pos, state);
     }
 
-    /**
-     * Hands the server the FACTORY ticker, not the controller's.
-     *
-     * <p><b>This override is the wiring, and without it factory mode does nothing.</b> {@link BlockController}
-     * answers this with {@code MachineTicker.tick}, which drives a single-craft controller; a factory controller
-     * handed to that engine reports "no active recipe" for ever, because its state lives in its runs rather than
-     * in the inherited single-craft fields -- so the engine would start a craft and consume its inputs on every
-     * tick while the factory itself stayed empty. {@code MachineTicker} also refuses a
-     * {@code TileFactoryController} outright as a second line of defence, and the self-test asserts BOTH halves
-     * (PLAN 662): the block supplies a ticker that drives a run, and the single-craft engine started by hand on
-     * this tile starts nothing.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     @Nullable
     @Override
     @SuppressWarnings("unchecked")
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(
             Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
         if (level.isClientSide()) {
-            return null;
+            return (lvl, pos, st, be) -> {
+                if (be instanceof TileFactoryController factory) factory.countControllerTick();
+            };
         }
         return (lvl, pos, st, be) -> {
             if (be instanceof TileFactoryController factory) {
@@ -96,6 +98,7 @@ public class BlockFactoryController extends BlockController {
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
                                  InteractionHand hand, BlockHitResult hit) {
+        if (passesControllerInteraction(player, hand)) return InteractionResult.PASS;
         if (!level.isClientSide
                 && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos)

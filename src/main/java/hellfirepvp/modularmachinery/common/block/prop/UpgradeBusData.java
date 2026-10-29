@@ -100,24 +100,24 @@ public enum UpgradeBusData implements StringRepresentable, TierTipValue {
         return getUpgradeSlots();
     }
 
-    /**
-     * The tier whose grid holds exactly {@code slotCount} slots.
-     *
-     * <p><b>IT HAS NO CALLER ANY MORE, AND THAT IS THE FIX RATHER THAN AN OVERSIGHT (defect B).</b> Its one
-     * caller was {@code MenuUpgradeBus.forBus}, which used it to recover the tier from the HANDLER's slot count
-     * (PLAN 275's shape, and the right one for {@code ItemBusSize} — see {@link #getUpgradeSlots()}). On this
-     * family that direction is wrong: Forge's {@code ItemStackHandler.deserializeNBT} resizes a handler from
-     * the SAVED {@code Size} (L188), so the handler's size is not a function of the tier, and a bus restored
-     * from such a world exposed a grid the tier never declared — "升级总线默认全栏位可用，没有按说明给栏位". The
-     * menu now takes the tier from the BLOCK ({@code TileUpgradeBus.getTier()}) and the tile reconciles its
-     * inventory to it, so {@code handler -> tier} is no longer asked of anything. Kept, and kept public,
-     * because the resolution itself is correct and a future caller whose only input really is a slot count
-     * (another mod's handler, a saved inventory) still needs it; it must NOT be used to size this family's
-     * menu again.</p>
-     *
-     * @param slotCount the slot count of a handler
-     * @return the matching tier, or {@link #NORMAL} when no tier has that count
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static UpgradeBusData forSlotCount(int slotCount) {
         for (UpgradeBusData tier : values()) {
             if (tier.getUpgradeSlots() == slotCount) {

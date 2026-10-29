@@ -6,9 +6,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 
 /** Runtime state shared by source-compatible dynamic upgrades. */
+@com.blamejared.crafttweaker.api.annotation.ZenRegister
+@org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.DynamicMachineUpgrade")
 public abstract class DynamicMachineUpgrade extends MachineUpgrade {
     /** Reserved stack tag for data owned by a dynamic upgrade. */
     public static final String ITEM_DATA_TAG = "modularmachinery_upgrade_item_data";
+    /** Source capability data is keyed by upgrade type; the old flat tag remains readable. */
+    public static final String ITEM_DATA_BY_TYPE_TAG = "modularmachinery_upgrade_item_data_by_type";
 
     protected int busInventoryIndex = -1;
     protected boolean valid = true;
@@ -29,6 +33,11 @@ public abstract class DynamicMachineUpgrade extends MachineUpgrade {
     }
 
     public ItemStack getParentStack() {
+        if (runtimeAccess != null) return ((DynamicMachineUpgrade) runtimeAccess.source).getParentStack();
+        if (parentBus != null) {
+            ItemStack current = parentBus.getDynamicUpgradeStack(this);
+            if (current != null) return current;
+        }
         return parentStack.copy();
     }
 
@@ -47,11 +56,12 @@ public abstract class DynamicMachineUpgrade extends MachineUpgrade {
     }
 
     public boolean isValid() {
+        if (runtimeAccess != null) return runtimeAccess.canWrite();
         return valid;
     }
 
     public boolean isInvalid() {
-        return !valid;
+        return !isValid();
     }
 
     public void validate() {
@@ -63,12 +73,30 @@ public abstract class DynamicMachineUpgrade extends MachineUpgrade {
     }
 
     public CompoundTag getItemDataTag() {
+        if (runtimeAccess != null) return ((DynamicMachineUpgrade) runtimeAccess.source).getItemDataTag();
         return itemData.copy();
     }
 
     public void setItemDataTag(CompoundTag data) {
+        if (runtimeAccess != null) {
+            if (runtimeAccess.canWrite()) {
+                var source = (DynamicMachineUpgrade) runtimeAccess.source;
+                if (!source.itemData.equals(data == null ? new CompoundTag() : data)) {
+                    source.setItemDataTag(data);
+                    runtimeAccess.bus.markNoUpdateSync();
+                }
+            }
+            return;
+        }
         itemData = data == null ? new CompoundTag() : data.copy();
         syncItemDataToBus();
+    }
+
+    protected com.blamejared.crafttweaker.api.data.IData runtimeItemData() {
+        var access = runtimeAccess; var source = (DynamicMachineUpgrade) access.source; var root = source.itemData;
+        return hellfirepvp.modularmachinery.integration.crafttweaker.ControllerCustomDataView.guarded(root,
+                () -> access.canWrite() && source.itemData == root,
+                () -> { source.syncItemDataToBus(); access.bus.markNoUpdateSync(); });
     }
 
     public void readItemNBT(CompoundTag tag) {
@@ -88,30 +116,20 @@ public abstract class DynamicMachineUpgrade extends MachineUpgrade {
     }
 
     protected void syncItemDataToBus() {
-        if (parentBus == null || busInventoryIndex < 0 || busInventoryIndex >= parentBus.getUpgradeInventory().getSlots()) {
-            return;
-        }
-        ItemStack updated = parentStack.copy();
-        updated.getOrCreateTag().put(ITEM_DATA_TAG, writeItemNBT());
-        parentStack = updated.copy();
-        parentBus.setUpgradeStack(busInventoryIndex, updated);
+        if (parentBus != null) parentBus.updateDynamicUpgrade(this, 0);
     }
 
     /** Source-compatible durability consumption for a dynamic upgrade item. */
     public void decrementItemDurability(int durability) {
-        if (!valid || parentBus == null || busInventoryIndex < 0 || parentStack.isEmpty()
-                || !parentStack.isDamageableItem() || durability <= 0) {
+        if (runtimeAccess != null) {
+            if (runtimeAccess.canWrite()) {
+                var source = (DynamicMachineUpgrade) runtimeAccess.source;
+                ItemStack before = source.getParentStack();
+                source.decrementItemDurability(durability);
+                if (!ItemStack.matches(before, source.getParentStack()) || !source.valid) runtimeAccess.bus.markNoUpdateSync();
+            }
             return;
         }
-        int next = parentStack.getDamageValue() + durability;
-        if (next >= parentStack.getMaxDamage()) {
-            parentBus.setUpgradeStack(busInventoryIndex, ItemStack.EMPTY);
-            invalidate();
-            return;
-        }
-        ItemStack updated = parentStack.copy();
-        updated.setDamageValue(next);
-        parentStack = updated.copy();
-        parentBus.setUpgradeStack(busInventoryIndex, updated);
+        if (valid && parentBus != null && durability > 0) parentBus.updateDynamicUpgrade(this, durability);
     }
 }

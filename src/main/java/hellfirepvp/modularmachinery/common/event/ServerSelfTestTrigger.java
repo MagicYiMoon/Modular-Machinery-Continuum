@@ -38,24 +38,24 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = Modularmachinery.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ServerSelfTestTrigger {
 
-    /**
-     * Stops the server once the suite has finished (PLAN 695).
-     *
-     * <p><b>NOTHING STOPPED IT BEFORE, SO {@code runServer -PselfTest} ALWAYS RAN TO ITS TIMEOUT</b> -- a measured
-     * 270 seconds of waiting, every run, for a suite that finishes in about thirty. THE COST IS PAID SEVERAL TIMES
-     * PER FEATURE, WHICH MAKES IT THE LARGEST SINGLE WASTE IN THIS PROJECT BUILD LOOP, and it is pure waiting for
-     * something that will never happen.</p>
-     *
-     * <p><b>IN A {@code finally} SO IT ALSO HAPPENS WHEN THE SUITE THROWS.</b> A thrown run is exactly when the log
-     * should be flushed and the process gone -- not when we want five more minutes of nothing.</p>
-     *
-     * <p><b>{@code halt(false)} RATHER THAN {@code stopServer()} OR {@code System.exit}:</b> halt IS the server own
-     * shutdown entry point (it is what a fatal tick error calls), so it drains the world and closes the log properly,
-     * while {@code System.exit} would skip the save and truncate the very log this suite exists to produce.</p>
-     *
-     * <p><b>AND IF IT EVER FAILS TO STOP, NOTHING REGRESSES:</b> the gradle timeout still ends the run exactly as it
-     * did before. THIS CAN ONLY HELP, WHICH IS WHY IT IS WORTH DOING BEFORE ANYTHING ELSE.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static void stopAfterSuite(ServerStartedEvent event) {
         try {
             event.getServer().halt(false);

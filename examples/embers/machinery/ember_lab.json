@@ -1,0 +1,10 @@
+{
+  "registryname": "ember_lab",
+  "localizedname": "Ember Lab / 余烬实验台",
+  "requires-blueprint": false,
+  "parts": [
+    { "x": 1, "y": 0, "z": 0, "elements": "modularmachinery:blockinputbus" },
+    { "x": -1, "y": 0, "z": 0, "elements": "modularmachinery:blockoutputbus" },
+    { "x": 0, "y": 1, "z": 0, "elements": "modularmachinery:blockemberinputhatch@0", "selector-tag": "ember_in" }
+  ]
+}

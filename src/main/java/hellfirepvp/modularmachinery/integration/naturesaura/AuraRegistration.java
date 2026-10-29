@@ -15,6 +15,9 @@ public final class AuraRegistration {
             (pos, state) -> new TileAuraProvider(AuraRegistration.INPUT.get(), pos, state, true), RegistryModularMagicBlocks.blockAuraProviderInput.get()).build(null));
     public static final RegistryObject<BlockEntityType<TileAuraProvider>> OUTPUT = TYPES.register("blockauraprovideroutput", () -> BlockEntityType.Builder.of(
             (pos, state) -> new TileAuraProvider(AuraRegistration.OUTPUT.get(), pos, state, false), RegistryModularMagicBlocks.blockAuraProviderOutput.get()).build(null));
+    public static java.util.List<String> editorTypes() {
+        return de.ellpeck.naturesaura.api.NaturesAuraAPI.AURA_TYPES.keySet().stream().map(Object::toString).sorted().toList();
+    }
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) { TYPES.register(bus); }
     public static BlockEntity create(BlockPos pos, BlockState state, boolean input) { return (input ? INPUT.get() : OUTPUT.get()).create(pos, state); }
     public static void inspect(net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.world.entity.player.Player player) {

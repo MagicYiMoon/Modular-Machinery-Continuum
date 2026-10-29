@@ -140,26 +140,43 @@ public final class RegistryItems {
             ITEMS.register("blockfactorycontroller", () -> new BlockItem(
                     RegistryBlocks.blockFactoryController.get(), new Item.Properties()));
 
+    public static final RegistryObject<BlockItem> sparkManaInput = ITEMS.register("blocksparkmanainput",
+            () -> new BlockItem(RegistryBlocks.sparkManaInput.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> pressureInput = ITEMS.register("blockpressureinputhatch",
+            () -> new BlockItem(RegistryBlocks.pressureInput.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> emberInput = ITEMS.register("blockemberinputhatch",
+            () -> new hellfirepvp.modularmachinery.common.item.ItemBlockMachineComponent(RegistryBlocks.emberInput.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> pressureOutput = ITEMS.register("blockpressureoutputhatch",
+            () -> new BlockItem(RegistryBlocks.pressureOutput.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> sparkManaOutput = ITEMS.register("blocksparkmanaoutput",
+            () -> new BlockItem(RegistryBlocks.sparkManaOutput.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockItem> energyOutputPort =
+            ITEMS.register("blockenergyoutputport", () -> new BlockItem(RegistryBlocks.energyOutputPort.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockItem> environmentDetector =
+            ITEMS.register("blockenvironmentdetector", () -> new BlockItem(RegistryBlocks.environmentDetector.get(), new Item.Properties()));
+
     public static final RegistryObject<BlockItem> smartInterface =
             ITEMS.register("blocksmartinterface", () -> new BlockItem(
                     RegistryBlocks.smartInterface.get(), new Item.Properties()));
 
-    /**
-     * The parallel controller and the upgrade bus: the last two TIERED block items, and they were bare
-     * {@link BlockItem}s (PLAN 731).
-     *
-     * <p>Both blocks carry a five-constant {@code type=} variant ({@code ParallelControllerData} and
-     * {@code UpgradeBusData}), both have five language keys each, five blockstates, five block models and five
-     * item models -- and neither item could NAME its tier, because the naming reads a stack's
-     * {@code BlockStateTag} and only {@link hellfirepvp.modularmachinery.common.item.ItemBlockMachineComponent}
-     * does that. Every sibling family ({@link #blockCasing}, the four hatches, the two buses) already used it;
-     * these two did not, and a bare {@code BlockItem} cannot be a tier at all -- which is why the creative tab
-     * could only ever offer the default one and the user reported the tiers as missing.
-     *
-     * <p>Registered through the same {@code () -> new …} supplier as the rest of this class: the Item constructor
-     * touches {@code BuiltInRegistries.ITEM}, so constructing one after the registry is frozen throws, and the
-     * deferred supplier is what keeps construction at the registry event rather than at class initialisation.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static final RegistryObject<BlockItem> parallelController =
             ITEMS.register("blockparallelcontroller", () -> new hellfirepvp.modularmachinery.common.item.ItemBlockMachineComponent(
                     RegistryBlocks.parallelController.get(), new Item.Properties()));

@@ -17,7 +17,9 @@ import java.util.List;
 final class StructureUpgradeInputHandler implements IJeiInputHandler {
     private final StructurePreviewEntry entry;
     StructureUpgradeInputHandler(StructurePreviewEntry entry) { this.entry = entry; }
-    @Override public ScreenRectangle getArea() { return new ScreenRectangle(0, 0, 180, 220); }
+    @Override public ScreenRectangle getArea() {
+        return new ScreenRectangle(0, 0, StructurePreviewLayout.WIDTH, StructurePreviewLayout.HEIGHT);
+    }
     @Override public boolean handleInput(double x, double y, IJeiUserInput input) {
         if (input.getKey().getType() == InputConstants.Type.MOUSE) return false;
         int index = StructurePreviewCategory.upgradeAt(entry, x, y);

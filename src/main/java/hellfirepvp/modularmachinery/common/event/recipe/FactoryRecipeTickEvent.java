@@ -17,39 +17,39 @@ import hellfirepvp.modularmachinery.common.event.machine.Phase;
 import hellfirepvp.modularmachinery.common.machine.factory.FactoryRecipeThread;
 import hellfirepvp.modularmachinery.common.tiles.TileController;
 
-/**
- * Fired around each tick of ONE factory run (upstream FactoryRecipeTickEvent, 81 lines).
- *
- * <p>FIRE SITES, and there are two per tick per running run: {@code FactoryTicker.tickThread} fires
- * {@code Phase.START} before the run's work and {@code Phase.END} after it. Upstream's are the same two
- * (TileFactoryController U227 and U252), with one difference this port states: upstream returns BEFORE the end
- * event on its not-working paths (U242-U249), while this port always closes the bracket, because the port's
- * established rule for a bracketed tick is that a handler which prepared at START gets its END (PLAN 561/565,
- * and MachineTicker's {@code finally}).</p>
- *
- * <h2>THE OVERRIDE IS THE BEHAVIOUR, which is why the flags are not merely stored</h2>
- *
- * <p>Upstream's {@code postEvent} (U26-U49) reads its own flags after the dispatch and ACTS:
- * {@code preventProgressing} rewinds the run's tick counter so the craft does not advance, and a failure with
- * {@code destructRecipe} tears the run down. A port that kept the flags and dropped the override would produce
- * an event whose handlers set a flag and nothing happens -- the section 420 pattern. Both effects are here:</p>
- *
- * <pre>
- * upstream                                            this port
- * activeRecipe.getTick()/setTick(getTick() - 1)         FactoryRecipeThread.rewindRecipeTick()
- *   guarded by "if getTick() > 0"                        the same floor, in the same method
- * recipeThread.setActiveRecipe(null).setContext(null)
- *   .setStatus(failure(reason))
- *   .getSemiPermanentModifiers().clear()                FactoryRecipeThread.abandonRecipe()
- * </pre>
- *
- * <p>The last line is the port's own teardown operation, used by every other failure path in this port; the
- * three things upstream clears beyond the active recipe do not exist here (see FactoryRecipeThread).</p>
- *
- * <p>The rewind is a ONE-STEP REWIND rather than a setter, and its net effect is one tick of no progress
- * because the ticker advances unconditionally one line later -- the argument PLAN 542 recorded for the
- * single-craft event, applied unchanged to a run.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 @com.blamejared.crafttweaker.api.annotation.ZenRegister
 @org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.FactoryRecipeTickEvent")
 public class FactoryRecipeTickEvent extends FactoryRecipeEvent {
@@ -62,6 +62,12 @@ public class FactoryRecipeTickEvent extends FactoryRecipeEvent {
 
     public FactoryRecipeTickEvent(FactoryRecipeThread recipeThread, TileController controller, Phase phase) {
         super(recipeThread, controller);
+        this.phase = phase;
+    }
+
+    public FactoryRecipeTickEvent(FactoryRecipeThread recipeThread, TileController controller, Phase phase,
+                                 hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext context) {
+        super(recipeThread, controller, context);
         this.phase = phase;
     }
 

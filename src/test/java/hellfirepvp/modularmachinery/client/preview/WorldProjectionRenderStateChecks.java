@@ -25,6 +25,7 @@ public final class WorldProjectionRenderStateChecks {
     private static int assertions;
 
     public static void main(String[] args) {
+        checkWorldView();
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
         RenderSystem.initRenderThread();
@@ -42,6 +43,7 @@ public final class WorldProjectionRenderStateChecks {
             GLFW.glfwMakeContextCurrent(window);
             GL.createCapabilities();
             System.out.println("GL renderer: " + glGetString(GL_RENDERER) + "; version: " + glGetString(GL_VERSION));
+            BlueprintFluidRenderChecks.run();
             run();
             System.out.println("[MMCE][projection-gl] PASS: " + assertions + " assertions; blend pixels, occlusion/depth, "
                     + "target/texture/format preservation, batch routing/cache, setup/draw/cleanup failures and state restoration");
@@ -50,6 +52,34 @@ public final class WorldProjectionRenderStateChecks {
             GLFW.glfwTerminate();
             error.free();
         }
+    }
+
+    /** Catch the AFTER_LEVEL regression independently of GL blend/texture assertions. */
+    private static void checkWorldView() {
+        var frame = new ProjectionViewFrame();
+        require(frame.take() == null, "frame must not invent a world view");
+        for (float yaw : new float[]{0, 90, 180, 270}) {
+            for (float pitch : new float[]{-55, 0, 70}) {
+                PoseStack world = new PoseStack();
+                world.mulPose(com.mojang.math.Axis.XP.rotationDegrees(pitch));
+                world.mulPose(com.mojang.math.Axis.YP.rotationDegrees(yaw + 180));
+                org.joml.Matrix4f expected = new org.joml.Matrix4f(world.last().pose());
+                org.joml.Matrix3f normals = new org.joml.Matrix3f(world.last().normal());
+                frame.capture(world);
+                world.setIdentity(); // LevelRenderer and later callbacks may mutate the original stack.
+                PoseStack captured = frame.take();
+                require(captured.last().pose().equals(expected, 0.00001F)
+                                && captured.last().normal().equals(normals, 0.00001F), "world camera rotation was lost");
+                captured.translate(-2055, -66.62, -2029);
+                var block = new org.joml.Vector3f(2057, 65, 2033);
+                var actual = captured.last().pose().transformPosition(new org.joml.Vector3f(block));
+                var oracle = expected.transformPosition(block.sub(2055, 66.62F, 2029));
+                require(actual.distance(oracle) < .001F, "camera position applied twice or world anchor drifted");
+                require(frame.take() == null, "stale view leaked into another frame");
+            }
+        }
+        frame.capture(new PoseStack()); frame.clear();
+        require(frame.take() == null, "resource/world reload retained stale view");
     }
 
     private static void run() {

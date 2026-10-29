@@ -24,25 +24,23 @@ import java.util.Locale;
 
 /**
  * Ordinary FE hatch tiers; names preserve the source blockstate variants.
- * Capacity defaults follow the user's 2026-10-20 balance settings, while transfer
- * defaults retain the source values. Both remain configurable per tier.
+ * Capacity defaults follow the user's 2026-10-20 balance settings. As of 2026-10-28,
+ * automatic transfer is 10% of configured capacity, with optional explicit per-tier overrides.
  */
 public enum EnergyHatchData implements StringRepresentable {
-    TINY(1_000, 128),
-    SMALL(10_000, 512),
-    NORMAL(100_000, 512),
-    REINFORCED(1_000_000, 2_048),
-    BIG(10_000_000, 8_192),
-    HUGE(100_000_000, 32_768),
-    LUDICROUS(1_000_000_000, 131_072),
-    ULTIMATE(Integer.MAX_VALUE, 131_072);
+    TINY(1_000),
+    SMALL(10_000),
+    NORMAL(100_000),
+    REINFORCED(1_000_000),
+    BIG(10_000_000),
+    HUGE(100_000_000),
+    LUDICROUS(1_000_000_000),
+    ULTIMATE(Integer.MAX_VALUE);
 
     private final int defaultMaxEnergy;
-    private final int defaultMaxTransfer;
 
-    EnergyHatchData(int maxEnergy, int maxTransfer) {
+    EnergyHatchData(int maxEnergy) {
         this.defaultMaxEnergy = maxEnergy;
-        this.defaultMaxTransfer = maxTransfer;
     }
 
     /** @return the Continuum default buffer for this tier, before configuration overrides */
@@ -50,9 +48,9 @@ public enum EnergyHatchData implements StringRepresentable {
         return defaultMaxEnergy;
     }
 
-    /** @return the source default transfer limit for this tier */
+    /** @return the default transfer limit at this tier's default capacity */
     public int getDefaultMaxTransfer() {
-        return defaultMaxTransfer;
+        return Math.max(1, defaultMaxEnergy / 10);
     }
 
     /** Configured FE capacity, bounded by Forge Energy's signed 32-bit interface. */
@@ -60,7 +58,7 @@ public enum EnergyHatchData implements StringRepresentable {
         return hellfirepvp.modularmachinery.common.data.Config.energyHatchCapacity(this);
     }
 
-    /** Configured transfer limit, independent of buffer capacity. */
+    /** Configured transfer limit, or 10% of configured capacity when the setting is zero. */
     public int getMaxTransfer() {
         return hellfirepvp.modularmachinery.common.data.Config.energyHatchTransfer(this);
     }

@@ -1,36 +1,34 @@
 # 从源码构建
 
-使用 JDK 17。仓库自带 Gradle 8.8 Wrapper，无需单独安装 Gradle。首次构建需要联网下载 Gradle、Forge、映射及 Maven 依赖。
+使用 JDK 17、Python 3 和自带 Gradle 8.8 Wrapper。首次构建需要网络下载 Forge、映射和 Maven 依赖。源码包不携带第三方模组二进制或个人缓存。
 
-## 准备编译依赖
+## 编译依赖
 
-运行时的可选联动在编译时仍需要 API。大部分依赖由 Gradle 下载；Astral Sorcery 社区版需要先从固定提交构建，把 `astralsorcery-1.20.1-1.0.0.0.jar` 放入 `libs/optional/`。固定提交、源码链接和构建方法见 [依赖说明](libs/optional/README.md)。本源码包不附带外部模组二进制。
+即使不在游戏中安装可选联动，编译仍需这些 API：
 
-Extra Utilities Rebirth 仅在启用 `-PwithRainbowIntegration` 运行开发游戏时需要，不是普通编译的必要依赖。不要用 1.12.2 或 NeoForge 版本替代这些依赖。
-
-## 构建发行包
-
-PowerShell：
+1. 按[固定依赖说明](libs/optional/README.md)从社区 Astral Sorcery 固定提交构建 `astralsorcery-1.20.1-1.0.0.0.jar`，放入 `libs/optional/`。在上游目录执行 `gradlew.bat jar reobfJar`，使用 Java 17；不要使用 1.12.2 JAR。
+2. 在 MMC 项目目录运行：
 
 ```powershell
-.\gradlew.bat build jarJar reobfJarJar
+python tools/prepare_gtceu.py
+python tools/prepare_recipe_integrations.py
 ```
 
-Linux / macOS：
+脚本从官方源下载固定版本并校验哈希，外部模组不嵌入 MMC。其他 Maven API 由 Gradle 解析。Extra Utilities Rebirth 仅在开启其开发运行开关时需要，不是普通编译依赖。
 
-```bash
-chmod +x gradlew
-./gradlew build jarJar reobfJarJar
-```
-
-默认 Forge 47.3.0。要使用已验证的全联动环境 Forge 47.4.23：
+## 发布 JAR
 
 ```powershell
 .\gradlew.bat build jarJar reobfJarJar '-Pforge_version=47.4.23'
 ```
 
-发行文件为 `build/libs/modularmachinerycontinuum-1.2.0-1.20.1-all.jar`，通过 Forge Jar-in-Jar 内嵌 GeckoLib 4.8.4。分发时选用此文件；普通无 `-all` 的 JAR 不含完整内嵌依赖。外部联动不会被一起打包。
+Linux／macOS：
 
-依赖下载并缓存完整后可追加 `--offline`。本地依赖来源固定，但上游构建时间、ZIP 元数据等可能令重建文件哈希不同，不要求逐字节一致。
+```bash
+chmod +x gradlew
+./gradlew build jarJar reobfJarJar -Pforge_version=47.4.23
+```
 
-开发回归及可选运行开关见 [VERIFY.md](VERIFY.md)。公开源码包含模组全部 Java 源码、资源、构建脚本和回归源码；内部开发过程记录不影响构建。
+使用 `build/libs/modularmachinerycontinuum-1.4.0-1.20.1-all.jar`，该文件经过 Forge 重映射并内嵌 GeckoLib 4.8.4。不要将开发类文件或无 `-all` JAR 当作完整发布文件。依赖缓存完整后可以追加 `--offline`。ZIP 时间戳与上游元数据可能导致重建哈希不同。
+
+默认 Forge 版本由 `gradle.properties` 指定，上述命令显式使用 47.4.23。日常开发可以运行 `runClient`／`runServer`，可选联动开关及测试边界见 [TESTING](TESTING.md)。

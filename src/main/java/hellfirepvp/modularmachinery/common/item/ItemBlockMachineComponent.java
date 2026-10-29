@@ -60,24 +60,24 @@ public class ItemBlockMachineComponent extends BlockItem {
         super(block, properties);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Reads the tier off the stack and returns {@code <base key>.<tier>}. Falls back to the base name whenever
-     * the stack carries no tier — an untagged stack from {@code /give}, a stack from a world saved before the
-     * tag existed, or a block that has no variants at all.
-     *
-     * <p><b>Three property names, because the blocks do not agree.</b> The buses and hatches write {@code size};
-     * the casing writes {@code casing}; the parallel controller, the upgrade bus and the smart interface write
-     * {@code type}. Reading only one would leave the other families showing their base name and look exactly like
-     * the feature not working, rather than like part of it working — which is precisely what PLAN 629 was (the
-     * list held two of the three names) and what PLAN 731 was for the third: the parallel controller and the
-     * upgrade bus had five language keys each and no way to reach any of them.
-     *
-     * <p><b>The list is {@link BlockMachineComponent#VARIANT_PROPERTY_NAMES}, read and not copied.</b> This class
-     * used to spell the names out itself, and a second copy of a name list next to the first is the same defect
-     * waiting to happen a third time.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public @NotNull Component getName(@NotNull ItemStack stack) {
         CompoundTag tag = stack.getTagElement("BlockStateTag");
@@ -134,7 +134,7 @@ public class ItemBlockMachineComponent extends BlockItem {
             if (withTier == null) {
                 continue;
             }
-            // tipLines, NOT tipLine: the general form whose default is the single line (PLAN/audit row 41). The
+             
             // energy hatch emits upstream's TWO lines here; every other family's list holds the one line it always
             // did, so this loop is the same behaviour for four families and the whole tip for the fifth.
             java.util.List<Component> lines = component.tipLines(withTier, value.getAsString());

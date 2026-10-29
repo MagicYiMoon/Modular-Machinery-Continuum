@@ -13,66 +13,66 @@
  ******************************************************************************/
 package hellfirepvp.modularmachinery.common.util;
 
-/**
- * One smart interface TYPE a machine DECLARES — its name, its default value, and the texts the GUI,
- * the failure line and JEI show for it.
- *
- * <p><b>Not to be confused with {@link hellfirepvp.modularmachinery.common.block.prop.SmartInterfaceType},
- * which is a different class with the same simple name in a different package.</b> That one is the
- * BLOCK's variant property (upstream's {@code SmartInterfaceTypeEnum}: number/string); this one is
- * upstream's {@code common.util.SmartInterfaceType}, a per-machine data descriptor. Upstream has both
- * under the same simple name too, and the two are unrelated in both codebases.</p>
- *
- * <h2>Why this class is the missing half of the smart interface</h2>
- *
- * <p>Upstream's {@code TileSmartInterface} stores {@code SmartInterfaceData} entries whose TYPE is a
- * plain {@code String}, and whose VALUE is a float. Nothing in that tile knows what the type MEANS —
- * the meaning lives here, in the machine definition, and the machine is what hands the interface its
- * type and its initial value at formation time:
- *
- * <pre>
- * TileMultiblockMachineController U922 / U927
- *     smartInterface.addMachineData(getPos(), foundMachine.getRegistryName(),
- *                                  type.getType(), type.getDefaultValue(), true);
- * </pre>
- *
- * <p>So a port that skipped this class could not publish a single value: there would be no declared
- * types to publish, no default to publish, and {@code RequirementInterfaceNumInput}'s constructor
- * (upstream U28-U33 and U35-U40) would have nothing to take. It is listed here as a prerequisite of the
- * requirement, not as a display helper.</p>
- *
- * <h2>RULE A0 — what is kept and what is dropped</h2>
- *
- * <p><b>KEPT VERBATIM IN SHAPE AND NAME:</b> every field and every getter of upstream's
- * {@code common/util/SmartInterfaceType.java} (134 lines), including {@link #compareTo}, which is a
- * DESCENDING priority comparison ({@code another.priority - priority}, upstream U131-U133) and is what
- * decides which type a new interface receives when a machine declares more types than the structure has
- * interfaces.</p>
- *
- * <p><b>DROPPED, WITH THE REASON:</b> the CraftTweaker surface only — {@code @ZenRegister},
- * {@code @ZenClass("mods.modularmachinery.SmartInterfaceType")}, the {@code @ZenGetter}/{@code @ZenMethod}
- * annotations, and the static {@code create(String, float)} factory that exists solely to be called from
- * ZenScript. Upstream's constructors are public, so dropping the script factory costs the class nothing:
- * the one caller that made it exist does not exist in this port (PLAN 488.4 keeps a soft dependency out
- * of a core class, and PLAN 659.2(a) records that machine definitions reach this port through JSON, not
- * through a script API).</p>
- *
- * <p><b>AND THE FIELDS ARE NOT DEAD WEIGHT — each has a reader in this port:</b></p>
- *
- * <pre>
- * type              the key a bound datum is published and looked up under, and what a recipe's
- *                   interface requirement names                        (TileSmartInterface, requirement)
- * defaultValue      the value an interface is bound with at formation  (MachineFormation)
- * priority          an interface's type when types outnumber interfaces (MachineFormation)
- * notEqualMessage   the failure line when a value is out of range      (RequirementInterfaceNumInput)
- * jeiTooltip/args   the JEI page's value line                          (TooltipInterfaceNumberInput)
- * header/value/footer info  the smart interface screen's four lines     (ScreenSmartInterface)
- * </pre>
- *
- * <p>The three GUI texts are routed through {@code Component.translatable} exactly as upstream routes
- * them through {@code I18n.format} (upstream U83 / U88-U90 / U98), so an empty string still means
- * "use the default text" and a pack override still works.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class SmartInterfaceType implements Comparable<SmartInterfaceType> {
 
     /** The type's name, unique within one machine. Upstream U12. */

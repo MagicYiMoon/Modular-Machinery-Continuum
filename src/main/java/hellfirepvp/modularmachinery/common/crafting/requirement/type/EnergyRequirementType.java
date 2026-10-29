@@ -17,29 +17,29 @@ import hellfirepvp.modularmachinery.common.crafting.Requirement;
 import hellfirepvp.modularmachinery.common.crafting.requirement.RequirementEnergy;
 import hellfirepvp.modularmachinery.common.machine.IOType;
 
-/**
- * {@code modularmachinery:energy} -- a per-tick power cost or gain.
- *
- * <p>This is the body of one branch of {@code RecipeLoader}'s former {@code switch}, moved here by PLAN section 380 with
- * its reasoning intact:
- *
- * <pre>
- * case TYPE_ENERGY -&gt; {
- *     if (!requirement.has("energyPerTick") || !requirement.get("energyPerTick").isJsonPrimitive()) {
- *         problems.add(path + ": energy requirement has no energyPerTick");
- *         yield null;
- *     }
- *     yield new RequirementEnergy(ioType, requirement.get("energyPerTick").getAsInt());
- * }
- * </pre>
- *
- * <h2>Why {@code energyPerTick} is REQUIRED, and it is not about strictness</h2>
- *
- * <p>Upstream's {@code RequirementEnergy} takes the value as a MANDATORY constructor argument. The port read it with a 0
- * default -- and 0 for energy is not "unset", it is a requirement that costs nothing: <b>a machine that runs on free power,
- * with nothing in the log to say so.</b> That is why the branch refuses rather than defaults, and it is the same class of
- * mistake §311 found in {@code io-type} and §313 recorded here.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class EnergyRequirementType implements RequirementType {
 
     public static final String NAME = "energy";

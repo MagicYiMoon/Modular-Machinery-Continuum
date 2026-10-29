@@ -24,64 +24,64 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntConsumer;
 
-/**
- * The unbounded item-and-fluid container that the pattern provider offers to the machine (PLAN section 441).
- *
- * <h2>What upstream's class is, read from `fill`'s body (U78-120)</h2>
- *
- * <p><b>It never refuses.</b> The two lists grow on demand, and `fill` returns {@code resource.amount} UNCONDITIONALLY -- the simulate path does
- * not even inspect capacity, it just reports that everything fits. **That is the {@code Inf} in the name: an APPENDING, unbounded container,
- * not a bounded one that reports partial acceptance.**</p>
- *
- * <p>Upstream's `fill` has three branches, and the other methods follow the same skeleton:</p>
- *
- * <ol>
- *   <li><b>an empty slot</b> -- the incoming stack takes that slot wholesale</li>
- *   <li><b>a same-fluid slot</b> -- it absorbs as much as fits, bounded by {@code Integer.MAX_VALUE - amount} against overflow</li>
- *   <li><b>whatever remains</b> -- APPENDED as a new list entry</li>
- * </ol>
- *
- * <p>and <b>every branch fires the change callback with the index that CHANGED.</b></p>
- *
- * <h2>Rule A0: what could NOT be followed, and the evidence</h2>
- *
- * <p><b>1. {@code getTankProperties()} does not exist on 1.20.1's {@code IFluidHandler}.</b></p>
- *
- * <p>Upstream implements a four-method interface ({@code getTankProperties}, {@code fill}, {@code drain(FluidStack, boolean)},
- * {@code drain(int, boolean)}) and 46 lines of its own are built on that shape. **On 1.20.1 the interface was REDESIGNED: the lifetime
- * information moved out into {@code getTanks()} / {@code getFluidInTank(int)} / {@code getTankCapacity(int)} /
- * {@code isFluidValid(int, FluidStack)}, and the {@code boolean doFill}/{@code doDrain} flags became
- * {@code IFluidHandler.FluidAction}.** **That is a compile-time fact, not a judgement: the old signatures are not present, so the port has to
- * implement the new ones. Upstream's BEHAVIOUR is reproduced branch for branch; only the entry points differ.**</p>
- *
- * <p><b>2. The gas half is NOT ported, and that is a scope decision rather than an impossibility.</b></p>
- *
- * <p>Upstream also implements {@code IExtendedGasHandler} with four methods built on {@code mekanism.api.gas.*}. **The only consumer of the gas
- * half is the gas bus family, which §432 established is blocked on MekEng -- a mod the objective does not include.** **Writing gas methods here
- * would add a Mekanism dependency to a class that otherwise needs NOTHING but Forge's item and fluid interfaces.** **§441 confirmed that
- * independence is this class's useful property: it can be written and verified with nothing else in place.**</p>
- *
- * <p><b>3. And {@code synchronized} is kept.</b> Upstream marks the mutating methods synchronized because the machine engine and the AE2 grid
- * can both touch this container, on different threads. Removing it for style would be a behaviour change with no evidence behind it.</p>
- *
- * <h2>Fixed GUI storage and the machine-visible view</h2>
- *
- * <p>The unbounded lists are the source-compatible machine cache.  The optional sub-handlers are the fixed GUI-facing
- * slots; {@code machineVisibleItems()} and {@code machineVisibleFluids()} join both halves into the capability the
- * machine consumes.  This keeps the visible wells live while preserving the source handler's append semantics.</p>
- *
- * <p>Two halves were missing, and only one of them is this file's:</p>
- *
- * <ol>
- *   <li>The provider exposes a capability backed by this container, so normal-mode recipes reach the same storage.</li>
- *   <li>This container presents the fixed, GUI-facing half and the cache as ONE handler. That is
- *       {@link #machineVisibleItems()} / {@link #machineVisibleFluids()}, and it is the reason the two wells are now
- *       live instead of dead: a slot over the fixed half writes to the same object the view reads.</li>
- * </ol>
- *
- * <p>{@code TileMEPatternProvider} owns 36 additional instances of this class while
- * {@code WorkModeSetting.ISOLATION_INPUT} is active, one for each source pattern slot.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class InfItemFluidHandler implements IItemHandlerModifiable, IFluidHandler {
 
     /** The items this container holds. Grows on demand; never bounded. */

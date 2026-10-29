@@ -1,19 +1,25 @@
-# Modular Machinery: Continuum 文档目录
+# MMC 1.4.0 教程目录
 
-适用 Minecraft 1.20.1 / Forge，版本 1.2.0-1.20.1，网络协议 32。
+Minecraft Forge 1.20.1，Java 17。玩家先读玩家教程，整合包作者先读基础与 GeckoLib 教程，再按需要查阅联动。
 
-- [1.1.0 独立控制器与颜色编辑](DEDICATED_CONTROLLERS_ZH.md)
-- [玩家使用教程](USER_GUIDE_ZH.md)：安装、控制器、自动装配、蓝图、投影与命令。
-- [整合包作者教程](PACK_AUTHOR_GUIDE_ZH.md)：机器、配方、线程、智能接口、可视化编辑、GeckoLib 和可选联动。
-- [JSON 补充参考](ADDING_MACHINES.md)：结构、NBT、修饰符与高级需求。
-- [CraftTweaker 配方示例](examples/recipe_builder.zs)
-- [工厂核心线程示例](examples/factory_core_threads.zs)
-- [容量配置片段](../examples/config/energy-capacities.toml)
-- [可选数据包修复](../examples/datapacks/mmr-extrautilitiesrebirth-1.7.3-tags/README.md)
-- [源码构建](../BUILDING.md)、[开发回归运行方法](../VERIFY.md)
-- [外部依赖来源](../libs/optional/README.md)、[发布说明](../RELEASE_NOTES.md)
+| 内容 | 文档 |
+| --- | --- |
+| Modular Machinery: Continuum：JSON 补充参考 | [ADDING_MACHINES.md](ADDING_MACHINES.md) |
+| LP、恶魔意志与自然灵气可视化编辑 | [BLOOD_AURA_EDITOR_ZH.md](BLOOD_AURA_EDITOR_ZH.md) |
+| Botania 火花魔力仓 | [BOTANIA_SPARK_ZH.md](BOTANIA_SPARK_ZH.md) |
+| 第三方部件代理扩展（Forge 1.20.1） | [COMPONENT_PROXIES_ZH.md](COMPONENT_PROXIES_ZH.md) |
+| MMC 1.1.0：独立控制器与颜色编辑 | [DEDICATED_CONTROLLERS_ZH.md](DEDICATED_CONTROLLERS_ZH.md) |
+| Embers Rekindled 余烬联动 | [EMBERS_ZH.md](EMBERS_ZH.md) |
+| 定向能源输出端口 | [ENERGY_OUTPUT_PORT_ZH.md](ENERGY_OUTPUT_PORT_ZH.md) |
+| 环境检测器与配方条件 | [ENVIRONMENT_ZH.md](ENVIRONMENT_ZH.md) |
+| 外部配方导入（Forge 1.20.1） | [EXTERNAL_RECIPE_ADAPTERS_ZH.md](EXTERNAL_RECIPE_ADAPTERS_ZH.md) |
+| 可视化编辑导入模板（1.4.0） | [ADAPTER_TEMPLATE_EDITOR_ZH.md](ADAPTER_TEMPLATE_EDITOR_ZH.md) |
+| 通量网络联动（MMC 1.2.0） | [FLUX_NETWORKS_ZH.md](FLUX_NETWORKS_ZH.md) |
+| GTCEu Modern 普通总线、流体仓与 EU 能量仓联动 | [GTCEU_ZH.md](GTCEU_ZH.md) |
+| 物品／流体 NBT 编辑与预览 | [NBT_EDITOR_ZH.md](NBT_EDITOR_ZH.md) |
+| 从玩家背包选择配方物品 | [INVENTORY_PICKER_ZH.md](INVENTORY_PICKER_ZH.md) |
+| Modular Machinery: Continuum：整合包作者基础与 GeckoLib 进阶教程 | [PACK_AUTHOR_GUIDE_ZH.md](PACK_AUTHOR_GUIDE_ZH.md) |
+| PneumaticCraft 压缩空气联动 | [PNEUMATICCRAFT_ZH.md](PNEUMATICCRAFT_ZH.md) |
+| Modular Machinery: Continuum 使用教程（Forge 1.20.1） | [USER_GUIDE_ZH.md](USER_GUIDE_ZH.md) |
 
-梦之能量核心仅用于教程资源命名示范，不随本模组附送。源质、GP、Impetus 六个接口仍为占位。
-内部开发日记、审计文件、聊天记录、测试世界和本机日志不属于使用教程，未放入公开上传包。
-
-- [1.2.0 通量网络联动](FLUX_NETWORKS_ZH.md)：安装、连接、容量和开关。
+[构建说明](../BUILDING.md) · [功能与测试范围](../TESTING.md) · [更新说明](../RELEASE_NOTES.md)

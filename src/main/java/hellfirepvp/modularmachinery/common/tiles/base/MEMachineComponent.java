@@ -27,37 +27,37 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Base for every Applied Energistics 2 block entity in this mod: it owns a grid node the ME network can see.
- *
- * <h2>What replaces upstream's 1.12.2 shape</h2>
- *
- * <p>Upstream extends {@code TileColorableMachineComponent} and holds an {@code AENetworkProxy} built with
- * {@code new AENetworkProxy(this, "aeProxy", getVisualItemStack(), true)}, then sets {@code setIdlePowerUsage(1.0D)} and
- * {@code setFlags(GridFlags.REQUIRE_CHANNEL)}. <b>Both of those two settings survive verbatim</b> -- they describe what the
- * block IS on a network, and nothing about the version changes that.
- *
- * <p><b>What changed is how the node is created and found.</b> On 1.20.1 an in-world node is created through
- * {@link GridHelper#createManagedNode} and is discovered by AE2 through this block entity implementing
- * {@link IInWorldGridNodeHost} -- <b>the interface IS the discovery mechanism</b>, so there is no capability to register.
- * Every signature below was read out of the cached AE2 15.4.11 jar with {@code javap} rather than recalled (PLAN section
- * 393.5), and the reader is owed the note that two of the names I first guessed were at different packages.
- *
- * <h2>The four lifecycle rules, and the one that is easy to get wrong</h2>
- *
- * <ol>
- *   <li><b>Create the node when the level arrives, not in the constructor.</b> A block entity is constructed before it knows
- *       where it is; {@code create(level, pos)} needs both.</li>
- *   <li><b>Destroy it on removal.</b> A node that outlives its block stays on the grid and keeps drawing idle power from a
- *       block that no longer exists -- and on a network with several such ghosts, that is a real drain with no visible
- *       cause.</li>
- *   <li><b>Save the node's own NBT.</b> A node's identity is persisted by AE2, and skipping this makes a bus reconnect as a
- *       new node on every world load, which churns the network.</li>
- *   <li><b>{@code onSaveChanges} is the only listener method without a default</b> -- so the listener here implements exactly
- *       that one and leaves the four optional callbacks alone. Implementing all five would be noise; implementing none would
- *       not compile.</li>
- * </ol>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public abstract class MEMachineComponent extends BlockEntity implements IInWorldGridNodeHost,
         appeng.api.networking.security.IActionHost, MachineComponentTile {
 
@@ -78,12 +78,12 @@ public abstract class MEMachineComponent extends BlockEntity implements IInWorld
         }
     });
 
-    /**
-     * @param type a SUPPLIER rather than the type itself, matching {@code TileItemBus} and for the same reason: a
-     *             {@code BlockEntityType} is built from a factory that CONSTRUCTS the tile, so the tile cannot hold its own
-     *             type at construction time. Resolving it now would produce "the type is not available yet" on the first world
-     *             load -- see PLAN section 402.2.
-     */
+    
+
+
+
+
+ 
     protected MEMachineComponent(java.util.function.Supplier<? extends BlockEntityType<?>> type, BlockPos pos,
                                  BlockState state) {
         super(type.get(), pos, state);
@@ -172,7 +172,7 @@ public abstract class MEMachineComponent extends BlockEntity implements IInWorld
 
     @Override
     public void clearRemoved() {
-        // THE NODE IS NOT CREATED HERE, AND THAT IS A FIX (PLAN section 485).
+         
         //
         // It was, and a user-reported crash found it:
         //

@@ -141,7 +141,7 @@ public final class CatalystEditorRegressionChecks {
             save(player, new PktMachineEditorIngredientGroup(id + "_invalid", -1, "{}", machine, 20, ""), false);
             require(!Files.exists(invalidFile), "invalid first save cannot create source");
 
-            for (String field : List.of("nbt", "target", "operation", "affectChance")) {
+            for (String field : List.of("target", "operation", "affectChance")) {
                 var advanced = JsonParser.parseString(before).getAsJsonObject();
                 var advancedGroup = advanced.getAsJsonArray("requirements").get(0).getAsJsonObject();
                 if (field.equals("nbt")) advancedGroup.add("nbt", JsonParser.parseString("{\"quality\":\"3\"}"));

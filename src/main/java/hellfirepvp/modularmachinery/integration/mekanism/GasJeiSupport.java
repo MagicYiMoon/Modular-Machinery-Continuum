@@ -22,8 +22,9 @@ public final class GasJeiSupport {
     }
 
     public static void addSlots(IRecipeLayoutBuilder builder, MachineRecipe recipe,
-                                int inputStart, int outputStart, int inputX, int outputX,
-                                int firstRow, int slot, int maxRows) {
+                                int inputStart, int outputStart,
+                                java.util.function.IntFunction<mezz.jei.api.gui.builder.IRecipeSlotBuilder> inputSlot,
+                                java.util.function.IntFunction<mezz.jei.api.gui.builder.IRecipeSlotBuilder> outputSlot) {
         int input = inputStart;
         int output = outputStart;
         for (var requirement : recipe.requirements()) {
@@ -43,9 +44,7 @@ public final class GasJeiSupport {
                 stack = gas.asStack(); amount = gas.getAmount(); guaranteed = true; chance = 1F;
             }
             int index = isInput ? input++ : output++;
-            int x = isInput ? inputX + (index / maxRows) * slot : outputX - (index / maxRows) * slot;
-            int y = firstRow + (index % maxRows) * slot;
-            builder.addSlot(isInput ? RecipeIngredientRole.INPUT : RecipeIngredientRole.OUTPUT, x, y)
+            (isInput ? inputSlot : outputSlot).apply(index)
                     .addIngredient(MekanismJEI.TYPE_GAS, stack)
                     .addRichTooltipCallback((view, tooltip) -> {
                         tooltip.add(Component.literal(amount + " mB" +

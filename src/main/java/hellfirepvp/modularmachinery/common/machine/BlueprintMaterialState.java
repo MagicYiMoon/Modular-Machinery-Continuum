@@ -20,12 +20,21 @@ public final class BlueprintMaterialState {
         List<ItemStack> materialStacks(BlockPos pos);
     }
     public static final int COLUMNS = 9, ROWS = 2, ALTERNATIVE_ROWS = 3;
+    private final int visibleRows, alternativeRows;
     private List<ItemStack> summary = List.of(), alternatives = List.of();
     private ItemStack primary = ItemStack.EMPTY;
     private BlockPos selected;
     private int materialScroll, alternativeScroll;
     private Source lastSource;
     private long lastRevision;
+
+    public BlueprintMaterialState() { this(ROWS, ALTERNATIVE_ROWS); }
+
+    public BlueprintMaterialState(int visibleRows, int alternativeRows) {
+        if (visibleRows < 1 || alternativeRows < 1) throw new IllegalArgumentException("Empty material viewport");
+        this.visibleRows = visibleRows;
+        this.alternativeRows = alternativeRows;
+    }
 
     /** Refresh totals on actual scene changes; refresh the clicked snapshot only when replacing its scene. */
     public boolean update(Source source) {
@@ -92,8 +101,8 @@ public final class BlueprintMaterialState {
     public BlockPos selected() { return selected; }
     public int materialScroll() { return materialScroll; }
     public int alternativeScroll() { return alternativeScroll; }
-    public int maxMaterialScroll() { return Math.max(0, (summary.size() + COLUMNS - 1) / COLUMNS - ROWS); }
-    public int maxAlternativeScroll() { return Math.max(0, alternatives.size() - ALTERNATIVE_ROWS); }
+    public int maxMaterialScroll() { return Math.max(0, (summary.size() + COLUMNS - 1) / COLUMNS - visibleRows); }
+    public int maxAlternativeScroll() { return Math.max(0, alternatives.size() - alternativeRows); }
 
     public void scrollMaterials(int delta) { materialScroll = clamp((long) materialScroll + delta, maxMaterialScroll()); }
     public void scrollAlternatives(int delta) { alternativeScroll = clamp((long) alternativeScroll + delta, maxAlternativeScroll()); }
@@ -103,12 +112,12 @@ public final class BlueprintMaterialState {
     private static int clamp(long value, int max) { return (int) Math.max(0, Math.min(value, max)); }
 
     public ItemStack material(int visibleIndex) {
-        return visibleIndex < 0 || visibleIndex >= COLUMNS * ROWS ? ItemStack.EMPTY
+        return visibleIndex < 0 || visibleIndex >= COLUMNS * visibleRows ? ItemStack.EMPTY
                 : at(summary, materialScroll * COLUMNS + visibleIndex);
     }
     public ItemStack primary() { return primary.copy(); }
     public ItemStack alternative(int visibleRow) {
-        return visibleRow < 0 || visibleRow >= ALTERNATIVE_ROWS ? ItemStack.EMPTY : at(alternatives, alternativeScroll + visibleRow);
+        return visibleRow < 0 || visibleRow >= alternativeRows ? ItemStack.EMPTY : at(alternatives, alternativeScroll + visibleRow);
     }
     private static ItemStack at(List<ItemStack> list, int index) { return index < list.size() ? list.get(index).copy() : ItemStack.EMPTY; }
 }

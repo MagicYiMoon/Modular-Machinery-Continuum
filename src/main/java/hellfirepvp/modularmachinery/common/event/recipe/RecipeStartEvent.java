@@ -16,18 +16,18 @@ package hellfirepvp.modularmachinery.common.event.recipe;
 import hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext;
 import hellfirepvp.modularmachinery.common.tiles.TileController;
 
-/**
- * Fired when a recipe starts (upstream RecipeStartEvent, 15 lines).
- *
- * <p>UPSTREAM TAKES A RecipeThread AND PASSES ONLY ITS CONTEXT ON: <code>super(controller, thread,
- * thread.getContext())</code> at U12. THE THREAD IS A CONVEYOR, NOT A PAYLOAD. So the port signature takes the
- * context directly, which is a mechanical substitution rather than a design choice -- and the proof is upstream own
- * ResultChanceCreateEvent, which takes a RecipeCraftingContext outright because no thread is involved there
- * (PLAN 500.3).</p>
- *
- * <p>The class adds nothing beyond the constructor, and that is the correct port of a class that adds nothing beyond
- * the constructor.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+ 
 @com.blamejared.crafttweaker.api.annotation.ZenRegister
 @org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.RecipeStartEvent")
 public class RecipeStartEvent extends RecipeEvent {

@@ -57,13 +57,13 @@ public abstract class TileItemBus extends TileMachineComponent {
     private final IOType ioType;
     private int slots;
 
-    /**
-     * {@code protected} since PLAN section 369 so the two transfer subclasses can reach it.
-     *
-     * <p>It was {@code private} while the subclasses were constructor-only shells, which was consistent. Adding the
-     * item buses' transfer logic made it the wrong choice, and it is recorded here because a reader who finds the
-     * modifier has no other way to know it was deliberate.
-     */
+    
+
+
+
+
+
+ 
     protected ItemStackHandler inventory;
 
     /**
@@ -90,28 +90,28 @@ public abstract class TileItemBus extends TileMachineComponent {
         return true;
     }
 
-    /**
-     * Visits every neighbouring {@code ITEM_HANDLER} this bus is allowed to talk to (PLAN section 369).
-     *
-     * <p><b>This walk is SHARED between the input and output buses, and that is a design decision worth stating.</b>
-     * Upstream duplicates it in two classes, and its six rules are exactly the ones that produce a bug when guessed:
-     *
-     * <ol>
-     *   <li>the client is skipped</li>
-     *   <li>the random 5..60 throttle applies</li>
-     *   <li>all six faces are tried</li>
-     *   <li><b>a neighbour that is itself a {@code TileItemBus} is SKIPPED</b> -- buses do not chain, so two side by
-     *       side do not move items between each other</li>
-     *   <li>the capability is queried with {@code facing.getOpposite()} -- the neighbour must be asked for the face
-     *       that points BACK at us</li>
-     *   <li>a neighbour with no handler is skipped</li>
-     * </ol>
-     *
-     * <p>Writing them once is not tidiness: it is the only way a later reader can change the chaining rule without
-     * having to remember that there are two copies of it.
-     *
-     * @param body what to do with a neighbour's handler; called at most once per accepted face
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     protected void forEachNeighbourHandler(java.util.function.Consumer<net.minecraftforge.items.IItemHandler> body) {
         if (level == null || level.isClientSide() || !canWork()) {
             return;
@@ -175,18 +175,18 @@ public abstract class TileItemBus extends TileMachineComponent {
         return variantOf(state).getSlots();
     }
 
-    /**
-     * The per-slot ceiling this bus's inventory enforces.
-     *
-     * <p><b>64 by default, which is exactly Forge's own default, so an ordinary bus behaves as it always did.</b> It exists as a
-     * hook for ONE caller: the Applied Energistics 2 buses, whose upstream form calls
-     * <code>inventory.setStackLimit(Integer.MAX_VALUE, slotIDs)</code> because an ME bus holds network QUANTITIES rather than
-     * 64-capped stacks.
-     *
-     * <p>Recorded here rather than left implicit because a subclass returning {@code Integer.MAX_VALUE} from this method looks
-     * like a typo, and the reason it is not is upstream's own behaviour rather than a porting choice (PLAN section 395.2,
-     * direction B).
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     protected int slotLimit() {
         return 64;
     }
@@ -196,6 +196,9 @@ public abstract class TileItemBus extends TileMachineComponent {
             @Override
             protected void onContentsChanged(int slot) {
                 setChanged();
+                if (level != null && !level.isClientSide && getControllerPos() != null
+                        && level.getBlockEntity(getControllerPos()) instanceof hellfirepvp.modularmachinery.common.tiles.TileController controller)
+                    controller.requestNormalRecipeSearch();
             }
 
             @Override
@@ -241,7 +244,7 @@ public abstract class TileItemBus extends TileMachineComponent {
         return slots;
     }
     public IItemHandler getInventory() {
-        // SELF-HEALING AGAINST THE STATE THE TILE WAS BUILT FROM (PLAN section 279).
+         
         //
         // The client put the F3 line on this and it settled the report:
         //
@@ -259,7 +262,7 @@ public abstract class TileItemBus extends TileMachineComponent {
         //
         // Doing it here rather than in a load hook means it also repairs blocks already placed in saved
         // worlds, which is the population that actually has the bug.
-        // THE LIVE STATE, NOT `getBlockState()` (PLAN section 280).
+         
         //
         // `BlockEntity.getBlockState()` CACHES: it returns its `blockState` field, filling it from the
         // level on FIRST call and never again. If anything reads it before the final state lands, the cache
@@ -294,7 +297,7 @@ public abstract class TileItemBus extends TileMachineComponent {
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        // ItemStackHandler is INBTSerializable<CompoundTag>, so this round-trips without the 1.12.2
+         
         // NBTTagList-walking that the old ItemStack list serialisation needed.
         if (tag.contains("inventory")) {
             inventory.deserializeNBT(tag.getCompound("inventory"));

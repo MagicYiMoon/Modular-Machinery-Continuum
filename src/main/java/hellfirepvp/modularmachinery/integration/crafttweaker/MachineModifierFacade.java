@@ -46,7 +46,9 @@ public final class MachineModifierFacade {
                                                  org.apache.logging.log4j.Logger logger) {
                         return source.id().equals(com.blamejared.crafttweaker.api.CraftTweakerConstants.RELOAD_LISTENER_SOURCE_ID);
                     }
-                    @Override public void apply() { change.accept(machine(machineName)); }
+                    @Override public void apply() {
+                        hellfirepvp.modularmachinery.common.machine.ScriptMachineModifierRegistry.applyAndRegister(machineName, change);
+                    }
                     @Override public String describe() { return "Configure Modular Machinery factory " + machineName; }
                     @Override public String systemName() { return "ModularMachinery"; }
                 });
@@ -132,8 +134,14 @@ public final class MachineModifierFacade {
         return true;
     }
 
-    private static DynamicMachine machine(String machineName) {
-        DynamicMachine machine = MachineReloadListener.getLoader().findByName(machineName);
+    // Initial CT server loading runs before the server thread exists. EffectiveSide
+    // alone would select the empty client snapshot even on a dedicated server.
+    static DynamicMachine machine(String machineName) {
+        var run = com.blamejared.crafttweaker.api.CraftTweakerAPI.getScriptRunManager().currentRunInfo();
+        boolean serverScript = run != null && run.loadSource().id().equals(
+                com.blamejared.crafttweaker.api.CraftTweakerConstants.RELOAD_LISTENER_SOURCE_ID);
+        DynamicMachine machine = (serverScript ? MachineReloadListener.serverDefinitions().machines()
+                : MachineReloadListener.getLoader()).findByName(machineName);
         if (machine == null) throw new IllegalArgumentException("unknown Modular Machinery machine: " + machineName);
         return machine;
     }
@@ -145,7 +153,9 @@ public final class MachineModifierFacade {
                                                            org.apache.logging.log4j.Logger logger) {
                         return source.id().equals(com.blamejared.crafttweaker.api.CraftTweakerConstants.RELOAD_LISTENER_SOURCE_ID);
                     }
-                    @Override public void apply() { change.accept(machine(machineName)); }
+                    @Override public void apply() {
+                        hellfirepvp.modularmachinery.common.machine.ScriptMachineModifierRegistry.applyAndRegister(machineName, change);
+                    }
                     @Override public String describe() { return "Configure Modular Machinery machine " + machineName; }
                     @Override public String systemName() { return "ModularMachinery"; }
                 });

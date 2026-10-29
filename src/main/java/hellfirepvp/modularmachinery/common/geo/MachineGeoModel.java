@@ -36,10 +36,9 @@ public final class MachineGeoModel {
     public ResourceLocation getTexture() { return texture; }
     public ResourceLocation getAnimation() { return animation; }
 
-    /** Adds an animation to the controller's trigger list in declaration order. */
+    /** Adds a sequence stage in declaration order, including repeated names as in the source event. */
     public void addAnimation(String name, boolean loop) {
         if (name == null || name.isBlank()) return;
-        animations.removeIf(a -> a.name().equals(name));
         animations.add(new Animation(name, loop));
     }
 
@@ -49,7 +48,7 @@ public final class MachineGeoModel {
 
     public void clearAnimations() { animations.clear(); }
 
-    /** The first declared animation is the default presentation for a formed machine. */
+    /** First sequence stage; playback uses the whole list. */
     public Animation defaultAnimation() {
         return animations.isEmpty() ? null : animations.get(0);
     }

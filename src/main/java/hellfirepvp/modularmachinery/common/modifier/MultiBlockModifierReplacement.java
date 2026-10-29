@@ -40,7 +40,7 @@ public final class MultiBlockModifierReplacement {
         if (cells == null || cells.isEmpty()) {
             throw new IllegalArgumentException("multiblock modifier needs at least one cell");
         }
-        this.name = name;
+        this.name = name == null ? ModifierReplacement.nextDefaultName() : name;
         this.cells = List.copyOf(cells);
         this.modifiers = modifiers == null ? List.of() : List.copyOf(modifiers);
         this.descriptions = descriptions == null ? List.of() : List.copyOf(descriptions);

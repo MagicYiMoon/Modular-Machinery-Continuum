@@ -37,50 +37,50 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Turns the vanilla furnace's recipes into machine recipes -- upstream {@code AdapterMinecraftFurnace}.
- *
- * <h2>What upstream does, read from the body</h2>
- *
- * <p>Upstream reads {@code FurnaceRecipes.instance().getSmeltingList()} (U53-U54), and for every
- * {@code ItemStack → ItemStack} entry builds one recipe shell whose duration is
- * {@code Math.round(Math.max(1, applyModifiers(duration, 120)))} (U60), attaches a {@code RecipeCheckEvent}
- * handler that stores the smelting experience in the run's data compound (U67-U71), and then adds three
- * requirements through {@code addRequirement}, each gated on the modifier's result being positive
- * (U73-U86):</p>
- *
- * <ul>
- *   <li>the input stack, scaled by the {@code modularmachinery:item} / {@code input} modifiers;</li>
- *   <li>the output stack, scaled by the {@code modularmachinery:item} / {@code output} modifiers;</li>
- *   <li><b>20 FE/tick input</b>, scaled by the {@code modularmachinery:energy} / {@code input} modifiers.</li>
- * </ul>
- *
- * <p>The third one is the part nothing would guess: <b>a furnace adapter recipe costs energy here even
- * though a vanilla furnace burns fuel.</b> It is why the shipped {@code alloy_smelter_furnaces.adapter.json}
- * is attached to the {@code alloy_furnace}, whose pattern contains an energy input hatch.</p>
- *
- * <h2>1.12.2 → 1.20.1</h2>
- *
- * <p>Upstream reads a static map through {@code FurnaceRecipes.instance().getSmeltingList()}, which was the
- * 1.12.2 API and does not exist now. 1.20.1 keeps smelting recipes as ordinary recipes, so the equivalent
- * read is {@link RecipeManager#getAllRecipesFor(RecipeType)} filtered to {@link RecipeType#SMELTING}
- * (verified against the mapped 1.20.1 jar: {@code getAllRecipesFor} is the only list accessor on
- * {@code RecipeManager}, and it is generic over the recipe type).</p>
- *
- * <p><b>One thing upstream carried is dropped here, and it was made inaccessible by the target rather than
- * by choice.</b> Upstream stores the smelting experience in the run's data compound for a JEI page that reads
- * it; this port has no reader of that compound, so carrying a field nothing reads would be the
- * "parsed, stored, never honoured" shape this whole round exists to remove. The value is still read out and
- * reported through {@link Probe}, so it is available the moment a reader exists. The recipe event handler is
- * the same story and is documented on {@link RecipeAdapter} (deviation 2).</p>
- *
- * <h2>This class is the port's vanilla furnace adapter</h2>
- *
- * <p>Upstream ships ~17 (furnace, and one per mod: IC2, TConstruct, TE5, NCO, TC6 in the
- * {@code adapter/} subpackages). The mechanism -- {@link RecipeAdapterRegistry} plus this class plus the
- * expansion path in {@code RecipeLoader} -- is the deliverable of this round; the rest are additive, and
- * each is now a single class plus one registration line. PLAN 750.3's remainder enumerates them.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public final class AdapterMinecraftFurnace extends RecipeAdapter {
 
     /** Upstream's {@code new ResourceLocation("minecraft", "furnace")} (U43) -- the JSON's {@code "adapter"} value. */

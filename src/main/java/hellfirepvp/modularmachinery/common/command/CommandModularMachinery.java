@@ -230,7 +230,7 @@ public final class CommandModularMachinery {
 
         ServerLevel level = ctx.getSource().getLevel();
         Direction facing = controllerFacing(level, pos);
-        // THE FORMED PATTERN, NOT THE DEFINITION'S (PLAN §750): `/modularmachinery check` exists to answer "can this
+         
         // machine run", and a diagnostic that reads the static half reports the dynamic sections' busses as
         // unreachable on a machine whose recipe layer can see them perfectly well -- the report would be wrong in
         // the direction that hides the defect rather than exposing it.

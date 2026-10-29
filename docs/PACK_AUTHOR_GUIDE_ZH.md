@@ -2,7 +2,7 @@
 
 1.1.0 新增：请先阅读[独立控制器、颜色编辑与升级说明](DEDICATED_CONTROLLERS_ZH.md)。新机器身份与首次开启独立工厂控制器需要重启两端。
 
-核对日期：**2026-10-20**。教程入口与历史记录的区别见[文档目录](README.md)。当前网络协议为 **32**，客户端与服务器应使用同一版 JAR。
+核对版本：**MMC 1.4.0**。教程入口与历史记录的区别见[文档目录](README.md)。当前网络协议为 **33**，客户端与服务器应使用同一版 JAR。
 
 本文面向整合包作者，示例全部针对 Forge 1.20.1 移植版。基础机器和配方使用 JSON；需要动态模型、动画或工厂核心线程时，再使用可选的 CraftTweaker 14。
 
@@ -15,7 +15,7 @@ scripts/                               CraftTweaker 脚本
 resourcepacks/<资源包>/assets/         GeckoLib 模型、动画和纹理
 ```
 
-主模组发布文件名为 `modularmachinerycontinuum-1.2.0-1.20.1-all.jar`，GeckoLib Forge 4.8.4 已内嵌，不需要另装。CraftTweaker、JEI、AE2、Mekanism、TOP、Applied Mekanistics、Botania、Blood Magic、Nature’s Aura、社区 Astral Sorcery 和 Extra Utilities Rebirth 均为可选联动，不会内嵌到发布包；各模组的必需前置仍要安装。
+当前发布文件名为 `modularmachinerycontinuum-1.4.0-1.20.1-all.jar`，GeckoLib Forge 4.8.4 已内嵌，不需要另装。CraftTweaker、JEI、AE2、Mekanism、TOP、Applied Mekanistics、Botania、Blood Magic、Nature’s Aura、社区 Astral Sorcery 和 Extra Utilities Rebirth 均为可选联动，不会内嵌到发布包；各模组的必需前置仍要安装。
 
 基础版已在 Forge 47.3.0 验证，全联动组合已在 **47.4.23** 验证。Rebirth 内部版本 1.7.3 需要使用已验证的 47.4.23，不能在 47.3.0 正常加载。社区依赖固定版本与来源见[依赖说明](../libs/optional/README.md)；源质、GP、Impetus 六个接口继续占位。
 
@@ -47,6 +47,14 @@ config/modularmachinery/recipes/<配方文件>.json
 
 编辑器会从服务器读取当前已加载的机器和配方。左栏选择机器，中栏单击配方选中并查看需求，双击同一配方编辑显示名称与运行时间；右栏的输入、输出各有 `+` 按钮，点击后先选择物品、流体或能量。物品与流体可按中文名称或 ID 搜索，也支持 `@模组ID` 和 `#标签`，例如 `铁锭`、`水`、`@minecraft`、`#forge:ingots`。在普通物品或流体列表中，搜索标签用于筛选具体对象。流体显示自身材质，不依赖是否存在对应桶物品。能量直接填写 FE/t。
 
+**1.3.0 新增：** 需求框 `+` →“魔法资源”支持 Botania 魔力的单次／逐 tick 输入输出及 Embers 余烬的单次小数输入。仅显示服务器已有对应模组的选项，不设置概率。详见[魔力教程](BOTANIA_SPARK_ZH.md)、[余烬教程](EMBERS_ZH.md)及[功能范围与测试说明](../TESTING.md)。该入口现已扩展 [Blood Magic LP／意志与自然灵气](BLOOD_AURA_EDITOR_ZH.md)。
+
+**1.3.0 新增：** 安装 PNC 后，需求框 `+` →“气动／温度”可编辑单次／逐 tick 空气、压力／真空及持续 Kelvin 温度条件。已有需求单击编辑，保留选择器及批量等源字段；输出不提供无效的压力设定。详见[PNC 可视化教程](PNEUMATICCRAFT_ZH.md#可视化编辑)。
+
+**1.3.0 新增：** 选中已保存的普通 JSON 配方后，点击配方栏的“复制”，填写新的唯一 ID 并确认，生成原机器下的独立配方文件。原配方不变；成功后自动选中新副本继续编辑。新 ID 使用小写字母、数字、下划线、点或横线，首位为字母或数字，末尾不是点，最长 121 位；已有 ID／文件不会被覆盖。取消未提交的弹窗不写文件。副本保留 NBT、概率、线程和其他 JSON 字段；多机器源文件只复制当前机器实例。脚本、适配器生成配方和未保存草稿暂不支持复制。新 ID 作为独立配方，可与原配方占用不同工厂线程，仍各自遵守同一 ID 最多一个线程的规则。详见[功能范围与测试说明](../TESTING.md)。
+
+1.4.0 支持在复制窗口搜索并选择另一台目标机器。复制前会检查目标机器是否具备源需求引用的接口分组、智能接口类型和核心线程；绑定核心线程白名单时，新 ID 也须被允许。缺少引用会说明原因，不能通过复制自动删除源配方的条件。保存成功后切换到目标机器并选中新副本。
+
 如果输入需要接受一组可互换物品，点击输入栏 `+` 后选择“物品标签（输入）”。列表显示 `#命名空间:路径`、成员数量和示例图标，悬停可查看成员示例。可搜索标签 ID 或成员在当前客户端语言下的名称，使用 `#forge:ingots` 筛选标签 ID，使用 `@forge` 筛选标签的命名空间；这里的 `@` 对应标签归属，而不是成员物品所属模组。选择后设置数量与概率并保存。例如选择 `#minecraft:planks`，数量设为 4，会接受任意一种木板，而不会固定成图标中的木板。数量仍为 1～64；标签必须存在且包含可用物品。标签仅用于输入，输出需要指定具体物品。
 
 上述木板输入对应的配方 JSON 写法：
@@ -65,9 +73,14 @@ config/modularmachinery/recipes/<配方文件>.json
 
 编辑普通物品、物品标签输入或流体需求时，可以点击“重新选择”，通过对应的搜索界面更换对象。标签输入会重新选择标签，普通物品仍选择具体物品；如需改变这两种类型，请先添加新的需求再删除旧需求。窗口会显示当前对象的图标、名称和 ID；更换对象会保留数量、概率以及输入输出方向，也会保留尚未保存的数值输入。在搜索界面点击“返回”或按 Esc 会返回需求窗口；在需求窗口点击“保存”才会一起写入更换结果和数值，点击“取消”或按 Esc 则放弃整次修改。新增需求也可以在保存前重新选择。旧版元数据表达式、带有 NBT 条件或 NBT 显示数据的需求，以及空标签和标签输出暂不支持此替换操作，请修改源文件。
 
+
+**1.3.0 新增：NBT 数据。** 已保存的直接物品／物品标签输入、耐久及直接流体／逐 tick 流体需求，可选中后点击配方栏下方“NBT 数据”；已有 NBT 的需求点击后直接打开该窗口。输入条件／实际输出与显示数据分为两个页签，支持多行 JSON 对象或 MMCE 模式文本、解析预览、清除及保存确认。空白移除字段，`{}` 保留空对象；未编辑页签保留原写法。它不改变数量、概率或对象，候选组／催化剂内部数据自 1.4.0 起也可编辑。模式文本不是完整原版 SNBT，详见[NBT 教程](NBT_EDITOR_ZH.md)。该功能自 1.3.0 提供。
+
 配方栏的 `+` 创建本地草稿，可以先修改名称和运行时间，保存第一个需求时才一起写入服务器的配方 JSON。尚未保存首个需求就关闭编辑器，草稿会丢失。机器需要通过构建工具或命令创建。
 
 双击已保存配方，在名称／运行时间窗口点击“高级设置”。窗口分为“加工与显示”“工厂线程”和“附加说明”三页，切换页签不会丢弃未保存内容。在“加工与显示”页可以调整配方优先级和每 tick 处理失败时是否取消本次加工。优先级为 -2147483648～2147483647 的整数，默认 0，**数值越小越先尝试**，例如 -10 先于 0、0 先于 10；相同优先级继续使用引擎原有排序。这里是配方搜索优先级，与智能接口类型的分配优先级不同。
+
+相同 `priority` 时，按“本次全局登记序号减去输入需求权重总和”从小到大尝试，普通控制器和工厂共用此顺序。权重按每条输入需求累计，不乘以材料数量、能耗或概率：能量 50,000,000，普通物品／标签物品／`any:fuel` 50,000，普通流体／普通气体 100；材料候选组、催化剂、每 tick 流体／气体及其他未声明权重的需求为 0，输出不计权重。登记序号跨机器、跨优先级统一计算，同分保留全部配方并按登记顺序处理。权重大通常先尝试，但登记间隔也参与比较；整合包需要固定先后时，请明确设置不同的 `priority`，例如让首选配方为 -10、备用配方为 0，不要只依赖文件名或需求种类。
 
 “每 tick 处理失败时取消”对应源版 `cancelIfPerTickFails`，默认关闭：资源或输出空间不足时暂停等待；开启后，本次配方在持续处理失败时取消，已经消耗的输入不返还。机器自身失败进度策略及事件脚本仍可影响最终行为，该开关不设置物品或流体概率。
 
@@ -92,6 +105,10 @@ JEI 配方页的长说明会按页宽换行，超过页面剩余空间时显示�
 配方显示名称使用 JSON 中可选的 `"displayName": "&6合金冶炼"`，支持与机器名称相同的颜色和格式代码。配方列表会同时显示名称和原 ID，JEI 页面、工厂普通线程标题使用该名称；悬停 JEI 名称、工厂运行行或普通控制器状态区域可查看完整名称和 ID。工厂预设核心线程保留自己的线程标题，悬停仍可查看当前配方名称。`registryName` 保持不变，不会因改显示名称而改变脚本引用或运行配方的身份。旧配方无需补字段；同名显示名称也不会产生 ID 冲突。
 
 保存操作只允许权限等级 2 的玩家执行，并且由服务器验证物品/流体 ID、数量、概率和配置路径。文件写入使用临时文件替换，保存后会自动重新加载机器和配方。
+
+物品选择窗口可点击“背包”，从主背包、快捷栏、盔甲栏或副手直接选择物品，带入数量和可选 NBT，随后继续编辑并保存；不会消耗背包物品。背包列表也支持名称、`@模组ID`、`#标签` 搜索，候选组和催化剂的物品选择共用此入口。详见[背包选择教程](INVENTORY_PICKER_ZH.md)。
+
+1.4.0 新增“导入模板”入口：选择已注册适配器、设置修改器和追加需求后统一保存生成配方；显示实际导入数量及跳过报告。生成配方继续只读，修改策略应编辑其模板。保存失败保留草稿，磁盘文件保护与具体流程见[导入模板教程](ADAPTER_TEMPLATE_EDITOR_ZH.md)。此入口自 1.4.0 提供。
 
 名称修改、需求增删和机器／配方删除都会等待服务器确认。等待时界面显示保存状态并暂时禁用编辑，成功后刷新为服务器实际加载的内容；失败时显示原因并保留尚未保存的输入。服务器确认和内容同步全部到达后才完成这次操作，其他未保存的新配方草稿会保留。保存等待期间按 Esc 可以退出界面，已提交给服务器的操作仍会继续。若打开界面后定义被其他操作更改，服务器会拒绝旧版本的保存，请重新打开编辑器读取最新内容。
 
@@ -177,7 +194,7 @@ JEI 配方页的长说明会按页宽换行，超过页面剩余空间时显示�
 
 这里 `amount` 表示使用次数，不是工具件数。同一把工具可以承担多次使用；批量倍率 3 时使用 6 次，工具耐久充足时扣 60。剩余耐久不足一次消耗时仍算最后一次使用，然后损坏；多件匹配工具可以分担次数。次数不足时整次输入失败，不会先损坏部分工具。概率 `0` 不扣耐久，但开工仍须提供足够的可用次数。显式扣耐久不受耐久附魔的随机免伤影响，`Unbreakable` 物品不能供应耐久。
 
-标签写成 `"item": "tag:minecraft:pickaxes"`，接受标签内可扣耐久的成员；不可损坏物品不参与。搜索和图标也只显示可扣耐久成员，图标仅为示例，不会将标签改成具体工具。已有 `item_durability` 兼容别名、附加字段、触发时间等源设置在修改时保留。NBT、旧表达式以及超出界面范围的耐久需求仍请修改源文件。
+标签写成 `"item": "tag:minecraft:pickaxes"`，接受标签内可扣耐久的成员；不可损坏物品不参与。搜索和图标也只显示可扣耐久成员，图标仅为示例，不会将标签改成具体工具。已有 `item_durability` 兼容别名、附加字段、触发时间等源设置在修改时保留。带 NBT 的耐久需求可通过源码新增的独立“NBT 数据”入口编辑条件；数量／耐久窗口仍不编辑这类高级需求。旧表达式及超出范围的耐久需求请修改源文件。
 
 输入栏 `+` 的“熔炉燃料（输入）”用于添加任意熔炉燃料需求。直接填写燃烧时间（1～2000000000 tick）和消耗概率（0～1，支持科学计数法），无需搜索某一种燃料。煤炭图标仅为示例，实际接受 Forge 熔炼燃料规则认可的物品，包括其他模组注册的燃料。若需要固定数量的煤炭，应使用普通物品输入。
 
@@ -248,9 +265,9 @@ JEI 配方页的长说明会按页宽换行，超过页面剩余空间时显示�
 
 输入、输出栏的 `+` 均提供“流体/刻”，搜索具体流体后设置速率，范围为 1～2000000000 mB/t 的整数，不设置概率。单击已有持续流体需求可修改速率，点击“重新选择”更换流体；取消不保存，调整窗口大小保留未完成输入，搜索中返回也保留原有速率。需求行显示流体纹理和 `mB/t`，悬停可查看完整流体 ID 与持续输入／输出说明。
 
-每个成功推进的配方 tick 按速率处理流体，批量倍率通常放大速率；例如 100 mB/t、运行 80 tick、批量 2，需要共 16000 mB，时长修改器也会影响总量。缺料或输出满仓时暂停，恢复供应或空间后继续；已完成等待其他产物出料时不继续处理持续流体。普通“流体”仍为一次性数量，二者不会通过修改窗口相互转换，需另建需求。保留源需求的接口分组、触发设置、批量设置和其他附加字段，原有 `chance: 1` 可保留。带 NBT、流体标签等高级选择器请修改源文件，独立的接口分组编辑仍可使用；脚本／适配器来源只读。保存检查源需求及所属机器，拒绝覆盖未经重载的外部修改。
+每个成功推进的配方 tick 按速率处理流体，批量倍率通常放大速率；例如 100 mB/t、运行 80 tick、批量 2，需要共 16000 mB，时长修改器也会影响总量。缺料或输出满仓时暂停，恢复供应或空间后继续；已完成等待其他产物出料时不继续处理持续流体。普通“流体”仍为一次性数量，二者不会通过修改窗口相互转换，需另建需求。保留源需求的接口分组、触发设置、批量设置和其他附加字段，原有 `chance: 1` 可保留。带 NBT 的直接流体可通过源码新增的独立“NBT 数据”入口编辑标签，原数量窗口仍不编辑这类需求；流体标签等高级选择器请修改源文件，独立的接口分组编辑仍可使用；脚本／适配器来源只读。保存检查源需求及所属机器，拒绝覆盖未经重载的外部修改。
 
-适配器生成配方、CraftTweaker 脚本配方和第三方需求类型在当前版本显示为只读或需要回到源文件编辑。NBT 内容仍需修改源文件，但内置需求的接口分组可通过上述独立入口修改。普通物品标签输入、固定数量的候选物品输入组、具体物品的随机输出组、上述普通催化剂、耐久输入、熔炉燃料输入、智能接口数值条件和每 tick 流体需求已支持可视化编辑；流体标签等高级选择器仍请修改源文件。客户端与服务器需要使用同一版 JAR，当前网络协议为 32。
+适配器生成配方、CraftTweaker 脚本配方和第三方需求类型在当前版本显示为只读或需要回到源文件编辑。1.3.0 新增独立“NBT 数据”入口，支持直接物品／耐久／流体／逐 tick 流体的条件、实际输出与独立显示数据，详见[NBT 编辑教程](NBT_EDITOR_ZH.md)；1.4.0 支持候选项和整组默认 NBT，详见同一教程。内置需求的接口分组可通过上述独立入口修改。普通物品标签输入、固定数量的候选物品输入组、具体物品的随机输出组、上述普通催化剂、耐久输入、熔炉燃料输入、智能接口数值条件和每 tick 流体需求已支持可视化编辑；1.3.0 另提供 PNC 空气／压力／温度、Botania 魔力／Embers 余烬及 Blood Magic LP／意志／自然灵气面板（1.3.0）；流体标签等高级选择器仍请修改源文件。客户端与服务器需要使用同一版 JAR，当前网络协议为 33。
 
 配方行上的“只读”表示没有可直接编辑的独立 JSON，悬停可查看原因。例如默认 Alloy Smelter 的 `smelting_…` 配方由 `alloy_smelter_furnaces.adapter.json` 中的 `minecraft:furnace` 适配器从游戏熔炼配方自动生成，每次重载会重新生成。需要统一调整时编辑 `config/modularmachinery/recipes/alloy_smelter_furnaces.adapter.json` 的修改器；需要调整熔炼源配方时修改对应数据包。适配器模板中的修改器会作用于这一组生成配方，不能当作单条配方的修改入口。
 
@@ -330,6 +347,8 @@ JEI 配方页的长说明会按页宽换行，超过页面剩余空间时显示�
 该命令需要权限等级 2，只能由玩家执行；命令方块和服务器控制台没有玩家选区，不能使用此命令。机器名必须使用小写字母、数字、点、下划线或连字符，已加载或已存在的文件不会被覆盖。
 
 如果不需要自定义名称，也可以直接看着控制器右键建造选择工具，继续使用自动生成的 `machine-玩家名-时间.json` 文件名。
+
+建造选择工具只负责选区、导出与清除选区，没有选区时会给出提示，不会补齐方块或尝试成型。自动搭建请使用木棍（或 `auto-assembly-item` 配置的物品），悬停可查看说明。
 
 命令生成的文件为 `config/modularmachinery/machinery/example_machine.json`；直接使用工具自动命名时，生成文件位于：
 
@@ -455,7 +474,7 @@ Mekanism 安装后可以使用 `modularmachinery:gas` 和 `modularmachinery:gas_
 import mods.modularmachinery.FactoryRecipeThread;
 import mods.modularmachinery.MachineModifier;
 
-// 这台机器最多保留 4 个工厂线程。
+// 这台机器最多保留 4 个普通动态线程，核心线程另计。
 MachineModifier.setMaxThreads("example_machine", 4);
 
 // 名为 "gold_line" 的核心线程只搜索列出的配方。
@@ -466,6 +485,265 @@ MachineModifier.addCoreThread("example_machine", goldLine);
 ```
 
 核心线程的配方必须先用 JSON 或 CraftTweaker 注册，再把完整的配方名加入线程。脚本修改后执行 `/reload`。同一配方即使 `maxThreads` 大于 1，在同一台工厂中仍不会被多个线程同时占用。
+
+`createCoreThread("gold_line")` 中的字符串就是核心线程名称，工厂界面和 TOP 会显示它；也可以填写中文，或填写资源包语言文件中的翻译键。配方 `threadName` 必须填写相同的原始字符串。这里是声明命名核心线程；配方高级设置中的同名输入框只限定配方去向，不创建或重命名线程。普通动态线程没有玩家手动改名入口。
+
+预设核心线程可以在挂载前用 `addPermanentModifier` 设置独立效果，完整示例见 [factory_core_threads.zs](examples/factory_core_threads.zs)。升级总线的机器级效果可以用于多个线程。运行中选择、修改指定线程，以及同工厂广播，自 1.3.0 提供，使用方式见下方 5.3。不要直接套用 1.12.2 的全部脚本类型和回调签名。
+
+### 5.2 查询正在运行的配方和线程（1.3.0 新增）
+
+CraftTweaker 回调中的 `event.controller` 现在可以查询 `activeRecipeList` 和 `recipeThreadList`。普通控制器有一个逻辑线程；工厂先列核心线程，再列已有动态线程，空闲线程不出现在活动配方列表中。这里的线程是配方运行槽位。
+
+| 对象 | 可读取属性 |
+| --- | --- |
+| `event.controller` | `isWorking`、`formedMachineName`、`activeRecipe`、`activeRecipeList`、`recipeThreadList` |
+| `event.recipeThread`／`event.factoryRecipeThread` | `valid`、`threadName`、`isWorking`、`activeRecipe`、`context` |
+| 活动配方 | `registryName`、`tick`、`totalTick`、`parallelism`、`maxParallelism`、`completed` |
+| 配方上下文 | `recipeName`、`effectiveDuration`、`requirementDescriptions`、`inputDescriptions`、`outputDescriptions` |
+
+工厂回调中的 `event.factoryRecipeThread` 指向触发事件的具体线程。`controller.activeRecipe` 只取第一条占用线程，遍历全部加工应使用 `activeRecipeList`。普通动态线程的 `threadName` 是空字符串；核心线程保留作者声明的名称。
+
+活动配方是读取时的不可变快照，保存它不会自动刷新进度。上下文是该线程最近实际计算的需求，已包含当时生效的修饰器；需求描述中的数量是单份配方数值，实际批量另读 `parallelism`。运行时间会随当前修饰器重新计算；修改后重新读取 `activeRecipe.totalTick` 和 `context.effectiveDuration`，保留的旧快照不会变化。
+
+可空属性须先判断 `!= null`。结束回调仍能读取刚完成的配方；线程回到空闲后，其 `activeRecipe` 和 `context` 为 null。读档、解除成型或定义重载后，重新计算前不会提供旧上下文；移除的线程句柄 `valid` 为 false，作者应重新查询线程列表。保留事件／上下文只用于观察当次数据，不应用它代表下一次加工。预检查事件可能尚未分配配方，它的零进度信息描述正在检查的候选。
+
+完整示例见 [runtime_recipe_queries.zs](examples/runtime_recipe_queries.zs)。预设用的 `FactoryRecipeThread.createCoreThread()` 与运行时 `RecipeThread` 是两类对象。
+
+### 5.3 运行中修改指定线程与工厂广播（1.3.0 新增）
+
+在服务端配方或升级事件回调内，通过 `event.recipeThread` 操作触发事件的线程；工厂事件也可以用 `event.factoryRecipeThread`。可遍历 `event.controller.recipeThreadList`，按 `threadName` 找指定核心线程。操作前判断句柄非 null 且 `valid`；不要在异步任务中操作世界或保留已删除的线程句柄。
+
+| 调用位置 | 添加／删除／查询 | 作用范围与保留规则 |
+| --- | --- | --- |
+| 线程 | `addModifier(key, modifier)`／`removeModifier(key)`／`hasModifier(key)` | 当前线程的半永久效果，配方完成或被销毁时清空 |
+| 线程 | `addPermanentModifier(key, modifier)`／`removePermanentModifier(key)`／`hasPermanentModifier(key)` | 当前线程的永久效果，跨配方和存档保留，线程被移除时随之消失 |
+| 控制器 | `addModifier(key, modifier)`／`removeModifier(key)` | 普通机器作用于其唯一线程；工厂广播到当时已存在的核心和动态线程，包括空闲线程；以后创建的线程不继承 |
+| 控制器 | `addPermanentModifier(key, modifier)`／`removePermanentModifier(key)`／`hasModifier(key)` | 控制器全局效果，影响该控制器下的各线程；查询检查全局键，不检查广播或线程私有键 |
+
+同一个作用域内，同名键替换旧值；在每 tick 回调反复添加同名效果不会叠加。同名键在不同作用域仍是独立效果，会共同参与计算。时间、输入输出数量和概率等目标沿用 `RecipeModifierBuilder` 的规则。
+
+修改后会重新计算当前线程上下文；当前事件的 `event.context` 保留当次观察，读取更新值请重新取 `thread.context`。PRE tick 回调内的修改会用于本 tick 的持续耗能、延迟输入与完成产出；开始事件发生在开工输入支付之后，不能追溯修改已扣除的材料。运行时间最少为 1 tick；缩短到当前进度以内时，将进度限制到新时长并继续走正常完成检查。
+
+升级物品的事件回调也可使用这些接口，只改变指定线程，或通过控制器广播。取出升级后不再触发该物品的后续回调；已经授予的半永久效果仍持续到本次配方结束，永久效果仍需显式删除。这与直接根据“当前装了什么升级”计算的声明式修改器不同，作者应自行安排撤销逻辑。
+
+核心线程的预设同步不会覆盖运行时同名替换，也不会每 tick 恢复已删除或完成清空的效果。定义重载后仍允许更新未被运行时覆盖的默认效果。工厂动态线程会按原有空闲超时清理，永久不表示跨线程删除保留。
+
+示例见 [runtime_recipe_modifiers.zs](examples/runtime_recipe_modifiers.zs)。控制器自定义数据见 5.4；世界操作及可写配方进度等源版接口仍未完整开放，不应直接照搬源版全部脚本 API。
+
+### 5.4 控制器自定义数据 customData（1.3.0 新增）
+
+在 CraftTweaker 14 的服务端事件回调中，用 `event.controller.customData` 读取／写入当前控制器的 NBT。普通和工厂控制器用法相同；同一工厂的所有线程共享控制器数据，不同世界位置的控制器各自保存。它可用于累计加工次数、记录脚本模式或给多个线程共享计数，不会自动改变配方输入输出。
+
+支持两种写法：
+
+```zenscript
+import crafttweaker.api.data.IData;
+
+// 整份替换，只接受复合数据；写入时复制，避免与另一控制器或局部变量共享可修改数据。
+event.controller.customData = {crafts: 0, settings: {mode: 1}} as IData;
+
+// 获取当前可修改视图；可直接改键或嵌套数据，无需再次赋值整份数据。
+val data = event.controller.customData;
+data["crafts"] = (data["crafts"].asInt() + 1) as IData;
+data["settings"]["mode"] = 2 as IData;
+```
+
+以上内容需放在已有事件回调中，不能直接放在脚本顶层使用 `event`。计数示例应在完成回调执行，不能每 tick 重置；完整可用示例见 [controller_custom_data.zs](examples/controller_custom_data.zs)。工厂各线程完成时共用同一个计数器，实际执行仍在服务端主线程。
+
+根值必须是复合 `IData`（NBT Compound）；不接受数字、字符串、列表或 null 作为整份数据。清空用 `{}` as IData。支持字符串、各类 NBT 数字、复合数据、同类型列表，以及字节／整数／长整数数组。与 CT 的原生 IData 一样，列表成员须符合 NBT 的同类型规则，布尔值存为字节。
+
+`put`、索引赋值、`remove`、`merge` 以及列表 `add` 等操作沿用 CT14 的含义；修改嵌套对象或从列表取出的复合对象也会保存。直接变更会触发数据同步，不发方块变化更新；读取或写入相同值不重复同步。`asMap()`／`asList()` 返回的集合本身是 CT 风格的集合视图副本，向集合新增／删除元素不等于修改 NBT；请用 IData 的 `put`／`remove`／`add`。其中取得的嵌套对象仍可通过 IData 修改。
+
+需要保留历史值时，使用 `data.copy()` 获取独立的深复制；这是控制器受控视图提供的快照行为，不改变其他 CT 对象的实现。CT14 的 Java 方法 `copyInternal()` 没有导出给脚本，不能直接调用。底层 Java NBT 和原始数组的读取提供副本；通过 IData 修改数组索引才会影响控制器。
+
+配方完成或线程空闲不清空控制器数据，数据随方块实体存档、读档及同步恢复。正常机器／配方／CT 脚本重载不直接清空它；结构失效是否清空由全局 `clean-custom-data-on-structure-check-failed` 决定，默认关闭。开启时结构检查失败会清空控制器数据和全局自定义修改器。挖掉控制器后重新放置不自动继承原位置的数据。
+
+读档、整份替换、清空，或机器绑定变更后应重新获取 `customData`，不要长久缓存旧视图。旧视图不能修改当前新数据；已移除控制器或非服务端主线程的写入也不会应用。客户端动画回调可读取最近同步的观察值，不可修改服务器数据。
+
+### 5.5 控制器位置、朝向与相对坐标（1.3.0 新增）
+
+服务端机器／配方事件和 GeckoLib 动画事件都可通过 `event.controller` 查询：
+
+| 接口 | 含义 |
+| --- | --- |
+| `controller.pos` | 控制器的整数世界坐标，CT14 `crafttweaker.api.util.math.BlockPos` |
+| `controller.facing` | 当前控制器方块朝向，CT14 `crafttweaker.api.util.Direction`；用 `.getName()` 获取 `north`／`west`／`south`／`east` |
+| `controller.blockState` | 当前控制器的方块状态，CT14 `BlockState`，可用 `getPropertyValue("facing")` 或 `getPropertyValue("formed")` 查询属性 |
+| `controller.rotateWithControllerFacing(offset)` | 按控制器朝向旋转一个相对坐标，返回相对坐标，不自动加上世界位置 |
+
+普通、工厂及每台机器独立的控制器共用这些接口，不要求结构已经成型。位置与状态查询不执行结构扫描或加载其他区块。动画侧读取当前客户端方块状态；未收到同步时不能据此推断服务器刚发生的变化。未绑定世界的预览对象使用自身已有的位置和状态，并非可操作的服务器机器。
+
+结构坐标沿用源版的北向基准，旋转结果如下，Y 不变：
+
+| 朝向 | 输入 `(x,y,z)` 的旋转结果 |
+| --- | --- |
+| 北 `north` | `(x,y,z)` |
+| 西 `west` | `(z,y,-x)` |
+| 南 `south` | `(-x,y,-z)` |
+| 东 `east` | `(-z,y,x)` |
+
+在已有回调里使用：
+
+```zenscript
+// 文件顶部导入：import crafttweaker.api.util.math.BlockPos;
+val controller = event.controller;
+val relative = controller.rotateWithControllerFacing(new BlockPos(2, -3, 5));
+val worldPos = controller.pos.offset(relative);
+// worldPos.x / .y / .z 是世界坐标；relative 仍是相对偏移。
+val facingName = controller.facing.getName();
+val formedProperty = controller.blockState.getPropertyValue("formed");
+```
+
+完整服务端示例见 [controller_spatial_queries.zs](examples/controller_spatial_queries.zs)。该示例只记录世界位置，不放置或破坏方块。`pos` 和旋转返回值为不可变坐标；CT 的 `asMutable()`、`offset()` 或 `blockState.withProperty()` 得到的新值不会自动移动、旋转或修改世界中的控制器。这些属性本身没有 setter。旧版 `IBlockPos`／`IFacing` 的 import 需替换为 CT14 对应类型；本节没有导出完整 `world` 操作接口。
+
+### 5.6 查询结构升级和物品升级（1.3.0 新增）
+
+在服务端机器／配方事件中，控制器提供以下源版接口，普通和工厂控制器共用：
+
+| 调用 | 返回内容 |
+| --- | --- |
+| `controller.foundModifiers` | 当前匹配的结构修改器名称数组；没有时为空 |
+| `controller.hasModifierReplacement(name)` | 指定名称的结构条件是否匹配 |
+| `controller.hasMachineUpgrade(name)` | 是否有适用于当前机器的指定物品升级 |
+| `controller.getMachineUpgrade(name)` | 指定类型的 `MachineUpgrade[]`；没有时为空数组，不返回 null |
+
+结构修改器指单方块替换和 `MultiBlockModifierBuilder` 声明的可选结构条件，不是 `addModifier(key, ...)` 的运行时键。单方块 JSON 条目沿用源版自动名称 `ReplacementModifier - 数字`，不适合在脚本中硬编码，重载后数字可能变化。需要稳定名称时，给多方块修改器构建器传入显式名称。查询使用当前朝向和实际已加载方块，当前版本按调用时重新匹配声明的条件，因而可能比源版的周期结构检查更早反映变化；不要每 tick 重复查询大型条件。
+
+物品升级先过滤机器兼容性。静态升级按类型汇总为一个对象，`stackSize` 不超过该类型上限；不会修改背包里实际的物品数量。数据对应绑定顺序中的第一个提供该类型的总线，写入不会广播到其他总线。动态升级保留每个槽位的独立对象，同类型的两个动态升级返回两个元素，不会因为类型相同就合并，也不会共用物品耐久。
+
+返回的基类提供 `stackSize`。访问具体数据时，按该升级实际使用的构建器转换类型：
+
+```zenscript
+// 文件顶部：import mods.modularmachinery.SimpleMachineUpgrade;
+// 同时导入：import crafttweaker.api.data.IData;
+val upgrades = event.controller.getMachineUpgrade("my_static_upgrade");
+if (upgrades.length > 0) {
+    val installed = upgrades[0] as SimpleMachineUpgrade;
+    installed.customData["enabled"] = true as IData;
+}
+```
+
+`SimpleMachineUpgrade.customData`、`SimpleDynamicMachineUpgrade.customData` 支持整份赋值、嵌套对象和集合原地修改，实际变化才保存／同步总线。数据属于**总线／升级类型**，不是某个线程；同一总线内同类型动态升级共享这份总线数据。动态升级另有 `itemData`、`parentStack`、`valid` 和 `decrementItemDurability(amount)`：`itemData` 保存到原物品，`parentStack` 是用于观察的物品副本，耗尽耐久会移除原槽位的物品。读取不会消耗耐久。动态物品写入会保存其升级身份，消耗耐久后读档或取出再放回仍能识别；对应的升级注册仍须保留。
+
+查询只处理已成型控制器的已记录、已加载且仍归属它的总线，不扫描结构体积或加载区块。客户端／预览／离线控制器及异步调用返回空数组或 false。数据写入要求服务端主线程、仍有效的机器和总线绑定、原升级实例仍安装。取出／替换物品、总线读档或改绑后请重新查询；旧引用不能写入新实例。升级事件也复用这些数据与槽位规则，动态物品不再被复制成失去总线关联的临时对象。
+
+完整示例见 [runtime_upgrade_queries.zs](examples/runtime_upgrade_queries.zs)。示例依赖作者已有的机器和升级声明，不会创建机器。
+
+同一物品同时附带多种动态升级的独立数据与连续写入已在 1.3.0 补齐，详见下一节；已包含在 1.3.0。
+
+### 5.7 同一物品附带多种动态升级（1.3.0 新增）
+
+可把同一个物品分别绑定到两个已注册的动态升级类型：
+
+```zenscript
+// 文件顶部：import mods.modularmachinery.MachineUpgradeHelper;
+MachineUpgradeHelper.addFixedUpgrade(<item:minecraft:diamond_pickaxe>, "module_alpha");
+MachineUpgradeHelper.addFixedUpgrade(<item:minecraft:diamond_pickaxe>, "module_beta");
+```
+
+两个类型必须分别用 `DynamicMachineUpgradeBuilder` 注册。固定绑定仍匹配物品和声明时的 damage；也可用已有的支持物品／返回带升级物品的方式添加多个类型。完整声明示例见 [multi_dynamic_upgrades.zs](examples/multi_dynamic_upgrades.zs)。
+
+同一槽位中的 `module_alpha.itemData` 和 `module_beta.itemData` 各自保存，支持整份赋值、嵌套与集合修改；写入其中一份不会覆盖另一份。两个升级操作的是同一个实体物品，因此共用**该物品本身的耐久**：先扣 1、再扣 2，合计扣 3；`parentStack` 读取当前槽位物品的副本。不同槽位的物品仍独立。
+
+任一升级耗尽耐久后，该物品移除、同槽位的全部动态类型立即失效；它附带的静态升级效果也会停止。其他槽位的升级继续正常执行。多个升级的回调都能消耗耐久，作者应据此安排总消耗，不要误以为每个类型拥有独立耐久槽。数据仍按类型保存，而 `customData` 仍是前节描述的总线／升级类型数据。
+
+旧移植版的平面物品数据继续可读。若物品没有新版类型数据表，原数据会作为各个现有动态类型的初始副本；首次真正写入或消耗耐久时保存成按类型分开的数据。已有类型表时，缺少的类型从空数据开始，不再回退到旧平面数据，避免旧值重新出现。读取和设置相同值不会触发迁移。旧格式未记录类型归属，无法事后恢复其原本想属于哪个类型；有这类旧数据的整合包作者应确认初始值。
+
+物品原有其他标签、暂时未注册类型的已保存数据和当前耐久会保留。磨损后读档、取出再放回仍能恢复已附带的动态与静态升级，但对应的物品和升级注册仍须存在。替换物品或总线读档后应重新查询，旧升级引用和旧 `itemData` 视图不能写入新的实例。
+
+### 5.8 查询动态结构和结构内方块（1.3.0 新增）
+
+结构事件中的 `event.controller` 现在支持：
+
+| 查询 | 返回结果 |
+| --- | --- |
+| `getDynamicPattern("line")` | 已测量的动态结构信息；不存在或尚未成型返回 `null` |
+| `getBlocksInPattern("minecraft:stone")` | 已成型结构中当前实际为该方块的数量，包含动态段和末端 |
+| `getBlockPosInPattern("minecraft:stone")` | 对应的相对偏移数组；偏移已随控制器朝向旋转 |
+
+动态结构信息提供只读 `name`、`size`、`minSize`、`maxSize`、`facing`。`size` 是成型实际段数，不是声明的最大值；允许零段的结构返回 `size == 0` 的信息对象，和不存在的 `null` 不同。保留旧信息对象不会跟着下一次伸缩改变，应在每次结构更新重新查询。`facing` 忠实于源版实际实现，返回 **大写**枚举名，例如 `NORTH`、`UP`；源版注释声称小写，但代码返回枚举 `name()`。水平字段沿用源版 `getTrueFacing` 规则，不能把它当作方块坐标偏移直接使用。
+
+数量和坐标查询还可传入 `<item:minecraft:stone>`、`<blockstate:minecraft:stone>` 或 `(state) => ...` 条件。字符串采用现有机器 JSON 的方块描述格式：裸方块 ID 接受该方块所有状态，已支持的旧 `@metadata` 映射选择具体状态。`BlockState` 选择确切状态，方块物品选择其默认状态；物品数量和 NBT 不参与匹配，木棍等非方块物品匹配零个位置。1.12 的 `IBlockStateMatcher` 不再照搬类型，用 1.20.1 原生 `BlockState` 或 `IBlockStatePredicate` 代替。
+
+```zenscript
+// 文件顶部：import mods.modularmachinery.MMEvents;
+MMEvents.onStructureUpdate("example_machine", (event) => {
+    val c = event.controller;
+    if (c.formedMachineName == null) return;
+    val line = c.getDynamicPattern("line");
+    if (line != null) println("实际动态段数：" + line.size);
+    println("石头数量：" + c.getBlocksInPattern("minecraft:stone"));
+    for offset in c.getBlockPosInPattern("minecraft:stone") {
+        val worldPos = c.pos.offset(offset);
+        // worldPos 为世界坐标；offset 已旋转，不要再次旋转。
+    }
+});
+```
+
+只统计实际成型结构声明的位置，重叠位置计一次，不包含附近或包围盒内未声明的方块，也不自动把控制器本身计入；空气始终过滤，熔岩等流体方块可以匹配。读取当前世界状态，因此从方块变化到复检之间可能观察到尚未通过结构复检的新方块。成功复检会触发结构更新事件，事件看到新的动态段数；首次成型依次触发成型与更新，失效时更新事件的查询返回空。
+
+建议只在结构更新时扫描并将需要的数值存进 `customData`，不要每 tick 反复统计。未成型、异步服务端查询、旧控制器、机器定义重载后尚未重新成型／重绑，均返回零或空数组；任一记录位置所在区块未加载时整次方块查询返回空，不返回部分数量，不加载区块。同步后的客户端／离线观察对象能读取动态结构元数据，但不执行世界方块查询。旧存档缺少当前版本附加信息时，服务端成型／重绑后自动重建。
+
+完整脚本见 [structure_runtime_queries.zs](examples/structure_runtime_queries.zs)。当前版本仅补这组查询，并未提供完整的 world 改块或放置 API。
+
+### 5.9 世界与所有者查询（1.3.0 新增）
+
+`event.controller` 新增以下源版属性，普通、工厂和机器独立控制器共用：
+
+| 属性 | 含义与空值 |
+| --- | --- |
+| `world` | 控制器当前所属的原生 `Level`，维度随控制器所在位置决定；没有真实世界、已移除或服务端异步查询返回 `null` |
+| `ownerUUID` | 已记录的所有者 UUID 字符串；没有所有者返回 `null`，同步后的离线观察对象也可读取 |
+| `ownerName` | 服务端本地 GameProfile 缓存中的名称；没有所有者、缓存缺失或没有当前服务端实例时返回 `null` |
+| `ownerPlayer` | 服务端按 UUID 找到的在线玩家；不在线返回 `null`，可以与机器位于不同维度 |
+
+新放置控制器沿用已有的放置者归属规则，带所有者 UUID 的掉落物重新放置仍保留原所有者；这些属性只读，不提供脚本转移所有权的 setter。名称只是缓存值，身份判断优先使用 UUID；`ownerName` 有值不代表玩家在线，`ownerPlayer` 应单独检查。名称查询只按 UUID 读取本地缓存，不发起网络查询，也不把玩家强制上线。
+
+```zenscript
+// 文件顶部：import mods.modularmachinery.MMEvents;
+MMEvents.onStructureUpdate("example_machine", (event) => {
+    val c = event.controller;
+    val world = c.world;
+    if (world == null) return;
+    println("机器维度：" + world.dimension.path);
+    val owner = c.ownerPlayer;
+    if (owner != null) println("在线所有者 UUID：" + owner.getStringUUID());
+    if (world.isLoaded(c.pos)) {
+        val currentState = world.getBlockState(c.pos);
+    }
+});
+```
+
+`world` 使用 CraftTweaker 14 的 `crafttweaker.api.world.Level`，支持其现有原生世界接口，例如 `dimension`、`gameTime`、`isLoaded(pos)`、`getBlockState(pos)` 和 `setBlockAndUpdate(pos, state)`。旧版 `IWorld` 的类型名和所有方法名不能原封不动照抄。世界属性是实际对象，并非只读副本；涉及放置、改块或实体操作时，应在服务端机器事件中执行并先检查目标位置已加载。MMCE 的 getter 仅验证当前控制器；后续调用原生 `Level` 方法是否加载别处区块由具体方法决定。不要把世界或玩家对象放进持久化数据或异步任务，下一次事件应重新查询。客户端实际世界若可用则代表客户端世界，修改它不会替代服务端操作；未挂载世界的离线观察对象返回 `null`。蓝图预览若已建立隔离场景，`world` 仅指向该模拟 Level，其方块坐标为预览坐标，改块会被场景丢弃，不能视作机器在真实世界的位置。
+
+完整用法见 [controller_world_and_owner.zs](examples/controller_world_and_owner.zs)。源版直接提供世界脚本对象，本版衔接 CT14 原生对象，没有额外仿造一套同名世界 API。
+
+### 5.10 控制器运行时间与额外线程数（1.3.0 新增）
+
+`event.controller.ticksExisted` 是当前控制器方块实体自加载以来经过的 tick 数，并非世界时间或配方进度。未成型、空闲、等待材料和红石暂停时仍计时。START／END 机器事件读取本 tick 增长前的同一个值，事件完成后加一；新实例从 0 开始，不写入存档，也不与客户端同步。客户端真实控制器独立计时；重新应用同一实例的 NBT 不会清零，重新创建实例才清零。蓝图预览不执行真实世界的控制器 tick，不应使用该属性代替预览动画时钟。
+
+`extraThreadCount` 可读写，是工厂动态线程上限的**增减值**：有效动态额度为 `max(0, 机器 maxThreads + extraThreadCount)`。普通控制器始终返回 0，赋值无效。它不改变核心线程数量、机器 JSON 或批量倍率，也不是创建 Java 工作线程。
+
+```zenscript
+// 文件顶部：import mods.modularmachinery.MMEvents;
+MMEvents.onStructureFormed("example_machine", event => {
+    // 若机器 maxThreads 为 4，工厂动态额度变为 6；普通控制器忽略该赋值。
+    event.controller.extraThreadCount = 2;
+});
+MMEvents.onMachinePreTick("example_machine", event => {
+    val c = event.controller;
+    if (c.ticksExisted % 20 == 0) {
+        println("本次加载后经过的 tick：" + c.ticksExisted);
+        println("额外动态线程数：" + c.extraThreadCount);
+    }
+});
+```
+
+赋值会替换增减值，不是叠加。不要在每 tick 回调里无条件 `+= 2`。负数可以降低动态额度；总额度最低为 0、最高为 `2147483647`，使用较大的值不会一次性分配同等数量的空线程。额度降低后，已扣料的配方继续推进，只有新开工受额度限制；核心线程仍按自己的预设工作，同一种配方仍不能同时占用多个线程。
+
+额外线程数按完整 int 保存并通过既有控制器 NBT 同步，旧存档缺字段时取 0；读写旧数字标签时不会故意复制源版 short 写入／byte 读取的截断问题。确认结构失效时该值清零，与“结构失效是否清空 customData”配置无关，成功复检、红石暂停及正常保存不清零。推荐在成型事件中设置需要的值。
+
+setter 仅接受当前服务端主线程上的真实控制器，离线观察对象、客户端、异步任务、已移除／被替换实例和未加载控制器区块都不能修改。客户端的额外线程数来自同步，运行时间则是客户端自己的本地计时。完整只读示例及赋值写法见 [controller_runtime_limits.zs](examples/controller_runtime_limits.zs)。
 
 ## 6. 智能接口：用一个数字切换多条配方
 
@@ -530,6 +808,49 @@ MachineModifier.addSmartInterfaceType("example_machine", mode);
 
 如果 JSON 已经声明了同名类型，脚本不会重复添加。
 
+### 6.3 运行时查询与修改（1.3.0 新增）
+
+在服务端机器／配方事件回调中，可读取已成型控制器绑定的智能接口：
+
+```zenscript
+val mode = event.controller.getSmartInterfaceData("mode");
+if (mode != null) {
+    val previous = mode.value;
+    mode.value = 2 as float;
+}
+val all = event.controller.smartInterfaceDataList;
+```
+
+`getSmartInterfaceData(type)` 没找到时返回 null；`smartInterfaceDataList` 没有数据时返回空数组。列表按控制器记录的部件顺序列出各智能接口的主数据，保留同类型的多个接口；按类型查询固定返回其中第一个。同类型接口各自保存数值，修改一个不会广播到其他接口。不同工厂线程查询同一控制器时，共享这些接口数据，不能把它当作线程独立变量。
+
+返回类型为 `mods.modularmachinery.SmartInterfaceData`：
+
+| 属性 | 含义 |
+| --- | --- |
+| `pos` | 数据所属控制器的世界坐标，CT14 BlockPos |
+| `parentMachineName` | 声明该数据的机器注册名；不是显示名称，也不是命名空间 |
+| `interfaceType` | 声明的类型名，例如 `mode` |
+| `value` | 可读写的 float 数值，与源版一致；只接受有限数值 |
+
+设置 `value` 会直接修改现有接口提供器，后续配方条件检查立即读到新值；不强制重启或取消已经开始的配方。实际变化会保存并同步接口数据，读取或设置相同值不重复同步。该 setter 与源版一样不再次触发 `SmartInterfaceUpdateEvent`，可在更新回调里校正规则而不递归：
+
+```zenscript
+// 文件顶部导入：import mods.modularmachinery.MMEvents;
+MMEvents.onSmartInterfaceUpdate("example_machine", (event) => {
+    val data = event.newData;
+    if (data != null && data.interfaceType == "mode") {
+        if (data.value < (0 as float)) data.value = 0 as float;
+        if (data.value > (2 as float)) data.value = 2 as float;
+    }
+});
+```
+
+完整示例见 [smart_interface_runtime.zs](examples/smart_interface_runtime.zs)。`event.interfacePos` 是接口方块坐标，`event.newData.pos` 是控制器坐标。类型初次发布时，结构绑定可能尚未完成，此时应直接处理 `event.newData`；控制器的一般查询只列出已成型、已绑定且当前区块已加载的接口。不会为了查询加载区块或创建数据。
+
+写入仅允许当前服务端主线程、仍在世界内且绑定相符的控制器／接口，以及仍由提供器持有的那条数据。解除成型、改绑、移除部件或接口读档替换数据后，应重新查询；旧句柄不能修改新的数据。客户端动画可读取已加载并同步的接口观察值，setter 不会修改服务器。未绑定世界的预览控制器或异步服务端查询返回空列表；它们不能据此访问远处机器。本节只开放源版的数字数据接口，没有新增字符串配方条件。
+
+源版 `parentMachineName` 的实现实际返回 `ResourceLocation.getNamespace()`。本版按该属性描述返回实际机器注册名，旧脚本若曾依赖这一命名空间错误，需要调整比较字符串。
+
 ## 7. GeckoLib 动态模型、纹理和动画（高级）
 
 当前移植版的 GeckoLib 渲染链绑定的是**控制器方块实体**，普通控制器和工厂控制器共用同一个渲染器。模型只在机器成型后接管控制器外观；未成型时仍显示普通控制器方块。蓝图和 JEI 的模拟成型预览也会使用已绑定的模型。
@@ -585,7 +906,7 @@ MachineModifier.setMachineGeoModel(
     "examplepack:animations/dream_core.animation.json"
 );
 
-// 第一个声明的动画会作为默认动画。
+// 声明默认播放序列；此处只有一个循环动画。
 MachineModifier.addGeoMachineAnimation(
     "dream_energy_core",
     "animation.dream_core.idle",
@@ -618,25 +939,55 @@ MachineModifier.setMachineGeoModel("dream_energy_core_factory", "dream_core_visu
 
 ### 7.4 多个动画和动画回调
 
-可以声明多个动画，顺序就是默认候选顺序：
+本节动画队列与新增上下文自 1.3.0 提供。
+
+可以声明多个动画，成型后按声明顺序播放。前面的非循环动画结束后才进入下一段：
 
 ```zenscript
-MachineModifier.addGeoMachineAnimation("dream_energy_core", "animation.dream_core.idle", true);
+MachineModifier.addGeoMachineAnimation("dream_energy_core", "animation.dream_core.start", false);
 MachineModifier.addGeoMachineAnimation("dream_energy_core", "animation.dream_core.active", true);
 ```
 
-需要在每次 GeckoLib predicate 执行时改写动画列表时，可以注册：
+`false` 明确表示只播放一次，即使动画文件自身声明循环也会覆盖；`true` 明确表示循环。循环段会持续播放，所以不要把它放在仍需播放的后续段前面。同名动画可重复加入队列。
+
+需要按机器是否工作切换动画时，可以注册：
 
 ```zenscript
 import mods.modularmachinery.MMEvents;
 
-MMEvents.onControllerModelAnimation("dream_energy_core", function(event) {
-    event.setAnimation("animation.dream_core.active", true);
+MMEvents.onControllerModelAnimation("dream_energy_core", (event) => {
+    event.transitionLengthTicks = 2.5;
+    if (event.controller.isWorking) {
+        event.setAnimation("animation.dream_core.start", false);
+        event.addAnimation("animation.dream_core.active", true);
+    } else {
+        event.setAnimation("animation.dream_core.idle", true);
+    }
     event.playState = 0;
 });
 ```
 
-在当前移植版中，`playState = 0` 继续播放，非零值停止。回调每次渲染都会执行，脚本应保持轻量；事件对象只修改本次 predicate 的动画列表，不会污染全局模型注册表。要切换 geometry、纹理和动画文件的整套模型，可以注册多个命名模型，再使用 `MMEvents.onControllerModelGet` 修改 `modelName`。
+相同队列在连续帧之间保持进度，不会每帧重播启动段。`setAnimation` 清空本次事件的列表再加入一段，`addAnimation` 向末尾追加；不调用它们时使用选中模型的默认序列。清空后的空列表停止播放，不会恢复默认段。
+
+动画事件可以读取以下信息：
+
+| 属性 | 含义 |
+| --- | --- |
+| `controller.isWorking` | 当前控制器是否工作；工厂只要有一个线程工作即为 true，红石停止或全部阻塞时为 false |
+| `controller.formedMachineName` | 已成型机器的注册名，未成型为 null |
+| `currentModelName` | 模型选择事件最终选中的命名模型，找不到所选模型时回退到绑定模型 |
+| `currentAnimationName` | GeckoLib 当前播放的动画段，尚无动画时为 null |
+| `animationTick`、`animationSpeed` | GeckoLib 事件时间和当前播放速度 |
+| `animationState` | 0 运行、1 过渡、2 停止；GeckoLib 4 的暂停也映射为 2 |
+| `transitionLengthTicks` | 可读写的过渡时间，单位 tick，支持非负小数 |
+| `partialTick`、`limbSwing`、`limbSwingAmount`、`moving` | 当前 GeckoLib 事件参数；方块实体通常没有步行动作 |
+| `playState` | 可读写，0 继续、非零停止 |
+
+回调在客户端渲染期间执行，机器状态查询读取客户端已有的同步状态，不应在这里消耗物品、修改世界或执行服务器配方操作。当前 `IMachineController` 仅导出上表的两个只读查询，尚非源版完整运行时脚本接口。
+
+非零 `playState` 停止后重新允许播放，会从队列开头开始；全部非循环段自然播放完成后保持结束状态，不会因为下一帧再次提交相同队列而自动重播。结构重新成型、所选模型变化或资源重载会重新开始。脚本异常会暂停该机器的动画回调直至脚本重载，并只记录一次错误。
+
+回调应保持轻量；事件对象只修改本次 predicate 的动画列表，不会污染全局模型注册表。要切换 geometry、纹理和动画文件的整套模型，可以注册多个命名模型，再使用 `MMEvents.onControllerModelGet` 修改 `modelName`；动画队列与上下文也会跟随选中的模型。
 
 ### 7.5 资源和脚本的刷新顺序
 
@@ -652,18 +1003,42 @@ MMEvents.onControllerModelAnimation("dream_energy_core", function(event) {
 
 ## 8. 配置分发与开发验证
 
+环境条件教程见[环境检测器](ENVIRONMENT_ZH.md)，包含维度、群系／标签、高度、时间段、夜间月相与天气，支持 JSON／CraftTweaker 和运行期间检查；自 1.3.0 提供，1.4.0 增加可视化编辑。可直接使用[环境实验台示例](../examples/environment/README.md)。
+
 整合包应分发自己的 `config/modularmachinery/`、所需的 `scripts/` 和已启用的资源包。专用服务器的 JSON 与脚本放在服务器实例；模型、动画和纹理需要发给客户端，定义同步不会代替资源包分发。不要为刷新模板而删除真实实例的配置目录；需要检查首次初始化时使用新的隔离实例。
 
-源码工作区的自动回归方法及最近结果见 [VERIFY](../VERIFY.md)。自测会操作测试世界和配置，应使用专门运行目录；普通整合包作者无需安装 Gradle。JSON 修改后用 `/reload`，资源修改后用客户端 `F3+T`。服务端回归不能代替客户端模型与界面验证。
+源码工作区的自动回归方法及最近结果见 [功能范围与测试说明](../TESTING.md)。自测会操作测试世界和配置，应使用专门运行目录；普通整合包作者无需安装 Gradle。JSON 修改后用 `/reload`，资源修改后用客户端 `F3+T`。服务端回归不能代替客户端模型与界面验证。
 
-结构、NBT、动态结构等补充说明见 [ADDING_MACHINES.md](ADDING_MACHINES.md)，CraftTweaker 14 示例见 [recipe_builder.zs](examples/recipe_builder.zs) 和 [factory_core_threads.zs](examples/factory_core_threads.zs)。带日期的交付记录中旧文件名、哈希和缺口仅对应当时版本。
+结构、NBT、动态结构等补充说明见 [ADDING_MACHINES.md](ADDING_MACHINES.md)，CraftTweaker 14 示例见 [recipe_builder.zs](examples/recipe_builder.zs) 和 [factory_core_threads.zs](examples/factory_core_threads.zs)。
 
+### 8.1 控制器性能显示
+
+通用与机器独立的普通／工厂控制器界面，在状态区下方显示三行诊断信息：
+
+| 信息 | 含义 |
+| --- | --- |
+| 平均，µs/t | 当前这一台控制器最近 100 次已记录 tick 的平均服务端耗时；1,000 µs＝1 ms |
+| 搜索，ms | 最近 20 次实际配方搜索的平均耗时，保留两位小数；跳过搜索的 tick 不作为零值加入 |
+| 工作模式 | 当前引擎实际使用的“同步”，即机器加工与世界能力访问在服务器主线程执行 |
+
+统计不足窗口长度时使用已有样本。尚未记录显示 `—`；已有样本但耗时低于显示精度会显示 `0`／`0.00`。搜索行是最近搜索样本的平均值，不是每 tick 搜索预算，也不是整台服务器的 MSPT。统计属于控制器实例，不存档，实例重新创建后重新采样；打开不同控制器会读取各自的数据。
+
+性能信息位置固定，悬停可查看完整文字。上方机器名称、脚本附加信息、状态及并行量会自动换行；内容较多时，在该区域滚动鼠标或拖动其右侧滚动条查看。普通控制器的滚动条位于蓝图槽左侧；工厂控制器的左侧配方线程列表仍独立滚动，下方物品栏不参与滚动。普通控制器受红石暂停时，上方保留源版的暂停提示，页脚仍可查看统计。
+
+“工作模式”仅用于说明当前执行方式，没有切换按钮。工厂配方线程表示独立加工状态，不等同于 Java 工作线程；核心线程、动态线程与批量倍率沿用已有规则。
+
+
+### 8.2 第三方仓室与总线
+
+允许一个外部方块匹配结构，不等于它会自动参与配方 IO。源码现已提供 Java 部件代理注册入口，附属模组可明确注册外部部件的物品／流体／FE 处理器、输入输出方向，沿用结构选择器与加工批量规则；没有新增 JSON 或 ZenScript 注册语法。
+
+本体没有自动接管所有外部仓室。2026-10-28 源码已内置 [GTCEu Modern 7.5.3 普通物品总线、流体仓与 EU 能量仓适配](GTCEU_ZH.md)，已包含在 1.3.0；激光和特殊 ME 仓等继续待实现；EU 能量固定按 1 EU = 4 FE 换算，余数随仓室存档。第三方作者应先阅读[部件代理扩展教程](COMPONENT_PROXIES_ZH.md)，按其内部能力、权限及模拟／执行规则实现。已有 MMC 的 AE2 样板供应器与镜像继续使用原生隔离逻辑。
 
 ## 普通流体仓与 FE 能量仓容量
 
 配置文件为实例的 `config/modularmachinery-common.toml`。容量按档位配置，同档位普通输入／输出仓共用设置；ME 总线不使用这些配置。
 
-从本轮起，普通 FE 仓的初始容量调整为：
+当前默认普通 FE 仓的初始容量调整为：
 
 ```toml
 [energyhatch.size]
@@ -677,9 +1052,13 @@ MMEvents.onControllerModelAnimation("dream_energy_core", function(event) {
     ultimate = 2147483647
 ```
 
-单位为 FE，最高档使用有符号 32 位整数上限；次高档为十亿，其后每降一级除以 10。此调整只改变容量，`[energyhatch.limit]` 下各档对外传输设置保留原值；可单独调整为所需 FE/t。两类值均允许 1～2147483647。
+单位为 FE，最高档使用有符号 32 位整数上限；次高档为十亿，其后每降一级除以 10。容量允许 1～2147483647。
 
-**已有配置优先于新默认值。** 新 JAR 不覆盖旧值，需要把上述容量值合并到已有 `[energyhatch.size]` 段；不要重复添加同名段，也不要用片段覆盖完整配置。[可复制的容量片段](../examples/config/energy-capacities.toml)只包含这八项。修改后重启客户端／服务器，让已放置仓重新读取容量，单独 `/reload` 不会重建仓。调小容量前先清空对应仓。
+**1.3.0 更新：** `[energyhatch.limit]` 各档默认改为 `0`，表示自动使用当前配置容量的 10%，向下取整，最低 1 FE。默认八档上限依次为 100、1000、10000、100000、1000000、10000000、100000000、214748364 FE/t。同档输入／输出共用；设为 1～2147483647 可覆盖为固定上限。普通 FE 仓所附加的 Flux 能力也沿用这个储能限制；专用 Flux 接口不使用这张表。
+
+保持已有 Forge Energy 调用语义：上限限制每次能力调用，输出仓每 tick 主动推送另有各面共享预算；没有新增多外部调用者的全局每 tick 累计限流。单一调用者每 tick 转移一次、供能／接收不受其他限制时约 10 tick 满／空；最高档向下取整后剩余 7 FE 需再转移一次。
+
+**已有配置优先于新默认值。** 新 JAR 不覆盖旧值，需要把上述容量值合并到已有 `[energyhatch.size]` 段；不要重复添加同名段，也不要用片段覆盖完整配置。[可复制的容量与传输片段](../examples/config/energy-capacities.toml)包含八档容量与自动上限。旧 `[energyhatch.limit]` 正数仍生效，需要自动跟随容量时将对应档改为 `0`。修改后重启客户端／服务器，让已放置仓重新读取容量和速率，单独 `/reload` 不会重建仓。调小容量前先清空对应仓。
 
 流体仓仍使用 `[fluidhatch]` 下的同名档位键，例如 `normal = 64000` 表示 64 桶；单位为 mB（1000 mB＝1 桶），最高档名为 `vacuum`，容量允许 1～2147483647。流体仓的初始容量此次未调整。
 
@@ -716,7 +1095,21 @@ MMEvents.onControllerModelAnimation("dream_energy_core", function(event) {
 - 输入配置可使用 AE2 存储卡复制；普通 `modularmachinery:gas`、持续 `modularmachinery:gas_pertick`、批量和选择器均能使用这些缓存。
 - 未安装所需依赖时保留方块 ID 和外观，右击会提示缺失依赖，不提供气体网络功能。
 
+## 定向能源输出端口
+
+源码新增独立定向 FE 输出部件，默认正前方 3 格，使用已有 energy 输出需求与选择器，支持普通／工厂批量，见[端口教程](ENERGY_OUTPUT_PORT_ZH.md)。有持久缓冲与容量 10% 的共享输出限额，自 1.3.0 提供。
+
+## Embers Rekindled 余烬
+
+源码新增八档余烬输入仓、原生接收器供能、一次性小数配方与采集储量保留，须另装 Embers Rekindled 1.20.1-1.4.7 beta。JSON／CraftTweaker 用法见[余烬教程](EMBERS_ZH.md)，完整结构见[实验台示例](../examples/embers/README.md)。自 1.3.0 提供；没有余烬输出或逐 tick 需求。
+
+## PneumaticCraft 压缩空气
+
+PneumaticCraft 的独立压缩空气仓及 bar／mL 需求见[压缩空气教程](PNEUMATICCRAFT_ZH.md)；这是单独的可选联动，不使用 Botania 魔力或 Mekanism 气体接口，自 1.3.0 提供。
+
 ## Botania 魔力输入／输出接口
+
+源码新增的百万容量火花输入／输出仓见[火花魔力仓教程](BOTANIA_SPARK_ZH.md)，沿用下述魔力需求格式；自 1.3.0 提供。
 
 安装 Forge 1.20.1 的 Botania 及其必需依赖 Patchouli、Curios 后，原命名空间中的两个方块启用：
 
@@ -859,7 +1252,7 @@ JEI 显示强度与星座摘要，文字区悬停可查看全部需求。未安�
 
 ## Extra Utilities Rebirth：相邻虹彩运行检测
 
-此适配针对 [AuramMods/ExtraUtilities 的发布标签 1.0.0](https://github.com/AuramMods/ExtraUtilities/releases/tag/1.0.0) 中 `ExtraUtilities.jar`，**JAR 内部版本为 1.7.3，mod ID 为 `extrautilitiesrebirth`**。安装时按内部版本辨认；需要支持其初始化方式的新版 Forge，本轮验证目标为 47.4.23。依赖单独安装，不内嵌在本模组中。
+此适配针对 [AuramMods/ExtraUtilities 的发布标签 1.0.0](https://github.com/AuramMods/ExtraUtilities/releases/tag/1.0.0) 中 `ExtraUtilities.jar`，**JAR 内部版本为 1.7.3，mod ID 为 `extrautilitiesrebirth`**。安装时按内部版本辨认；需要支持其初始化方式的新版 Forge，当前版本验证目标为 47.4.23。依赖单独安装，不内嵌在本模组中。
 
 在结构中加入 `modularmagic:blockrainbowprovider`，并在其六个面任意一侧紧贴放置虹彩发电机的主体 `extrautilitiesrebirth:rainbow_generator`。发电机可以在结构之外，距离超过相邻一格、只有底座、或者发电机停止，都不满足条件。
 

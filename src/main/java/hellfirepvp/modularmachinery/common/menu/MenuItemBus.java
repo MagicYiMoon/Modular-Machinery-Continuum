@@ -139,7 +139,7 @@ public class MenuItemBus extends AbstractContainerMenu {
      * @return the menu, or {@code null} when the position holds no item bus
      */
     public static MenuItemBus forBus(int windowId, Inventory playerInventory, TileItemBus bus) {
-// ONE SOURCE FOR THE TIER: THE HANDLER'S SLOT COUNT (PLAN section 275).
+ 
         //
         // This read the tier from the BLOCKSTATE and the handler from the TILE -- two reads of one tile that
         // can disagree, and did: `Slot 6 not in valid range - [0,6)`, a menu built for a larger tier over a

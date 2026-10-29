@@ -115,7 +115,7 @@ public class MEItemOutputBus extends MEItemBus implements SettingsTransfer {
      */
     public static final int DEFAULT_STACK_SIZE = Integer.MAX_VALUE;
 
-    /** Upstream's NBT key, verbatim (U167/U178) -- a save written by this port and one written by upstream agree. */
+     
     public static final String STACK_SIZE_TAG_KEY = "configuredStackSize";
 
     /**

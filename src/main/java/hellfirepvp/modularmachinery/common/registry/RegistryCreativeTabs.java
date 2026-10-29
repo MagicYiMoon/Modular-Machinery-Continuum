@@ -75,7 +75,14 @@ public final class RegistryCreativeTabs {
                     RegistryItems.fluidOutputHatch,
                     RegistryItems.energyInputHatch,
                     RegistryItems.energyOutputHatch,
+                    RegistryItems.energyOutputPort,
                     RegistryItems.blockFactoryController,
+                    RegistryItems.sparkManaInput,
+                    RegistryItems.pressureInput,
+                    RegistryItems.emberInput,
+                    RegistryItems.pressureOutput,
+                    RegistryItems.sparkManaOutput,
+                    RegistryItems.environmentDetector,
                     RegistryItems.smartInterface,
                     RegistryItems.parallelController,
                     RegistryItems.upgradeBus,
@@ -117,7 +124,8 @@ public final class RegistryCreativeTabs {
                     // §731: the two `type=` families were missing from this list, and that omission WAS the report
                     // ("we do not have different tiers of the upgrade bus and the parallel controller").
                     RegistryItems.parallelController,
-                    RegistryItems.upgradeBus);
+                    RegistryItems.upgradeBus,
+                    RegistryItems.emberInput);
 
     public static final RegistryObject<CreativeModeTab> MAIN = CREATIVE_TABS.register("main",
             () -> CreativeModeTab.builder()
@@ -140,7 +148,7 @@ public final class RegistryCreativeTabs {
                 for (ItemStack blueprint : RegistryItems.blueprintVariants()) {
                     output.accept(blueprint);
                 }
-                        // ONE STACK PER TIER (PLAN section 270), FOR EVERY FAMILY IN THE ONE LIST ABOVE.
+                         
                         //
                         // The hatch and bus sizes are BLOCKSTATE VARIANTS of a single block each, and one
                         // BlockItem per block means the creative tab can only ever offer the DEFAULT tier.
@@ -178,25 +186,25 @@ public final class RegistryCreativeTabs {
         return sweep(VARIANT_FAMILIES);
     }
 
-    /**
-     * THE ONE RULE THAT SAYS WHICH STACKS CARRY WHICH TIER -- read by the CREATIVE TAB and by the SELF-TEST.
-     *
-     * <p><b>Why this is a list and not a write.</b> It was written straight into {@code output} until the fluid
-     * hatch report ("all fluid input and output hatches are 1000 mB", PLAN 719), which asked whether the eight
-     * tiers are REACHABLE. A check answering that has to compare its expectation against the very stacks the tab
-     * shows. Asserting against a SEPARATE re-implementation would have passed even if the tab's own sweep
-     * regressed -- the shape PLAN 629 measured, where the item and the TOP provider each re-derived the variant
-     * and drifted apart. TWO CALLERS READING ONE METHOD CANNOT DISAGREE; that is the whole reason this exists.
-     *
-     * <p><b>Why the block is reached through the ITEM.</b> {@link net.minecraft.world.item.BlockItem#getBlock()}
-     * means this needs no reference to {@code RegistryBlocks}' field names, so the sweep can be added or trimmed
-     * by editing one list. A name that does not match would be a compile error either way, but this way there is
-     * only one name per entry instead of two.
-     *
-     * <p><b>Why the property values are strings.</b> A blockstate property serialises by NAME, not by ordinal or
-     * by the enum constant's Java name -- {@code size=big}, not {@code size=2}. Writing the ordinal would place
-     * the wrong tier or fail to parse, and it would look like a data problem rather than a code one.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static java.util.List<ItemStack> variantStacks(
             java.util.function.Supplier<? extends net.minecraft.world.item.Item>... items) {
         return sweep(java.util.Arrays.asList(items));

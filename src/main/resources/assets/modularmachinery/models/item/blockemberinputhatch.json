@@ -1,0 +1,53 @@
+{
+  "parent": "modularmachinery:block/blockemberinputhatch_tiny",
+  "overrides": [
+    {
+      "predicate": {
+        "modularmachinery:tier_tiny": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_tiny"
+    },
+    {
+      "predicate": {
+        "modularmachinery:tier_small": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_small"
+    },
+    {
+      "predicate": {
+        "modularmachinery:tier_medium": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_medium"
+    },
+    {
+      "predicate": {
+        "modularmachinery:tier_reinforced": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_reinforced"
+    },
+    {
+      "predicate": {
+        "modularmachinery:tier_big": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_big"
+    },
+    {
+      "predicate": {
+        "modularmachinery:tier_huge": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_huge"
+    },
+    {
+      "predicate": {
+        "modularmachinery:tier_ludicrous": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_ludicrous"
+    },
+    {
+      "predicate": {
+        "modularmachinery:tier_extreme": 1
+      },
+      "model": "modularmachinery:block/blockemberinputhatch_extreme"
+    }
+  ]
+}

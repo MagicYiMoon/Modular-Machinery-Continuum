@@ -133,18 +133,18 @@ public final class MachineSelfTest {
      * @param inputsPerRequirement multiplier applied to each INPUT requirement's amount, so one craft is
      *                             supplied exactly (1) or repeated (n)
      */
-    /** Runs once per self-test: places a real ME block and forces its block entity to be read.
-     *
-     * <p>This exists because of a USER-REPORTED CRASH neither server configuration could see (PLAN 485).
-     * The chain was: level.getBlockEntity -> LevelChunk constructs the block entity -> clearRemoved created
-     * the AE2 grid node -> AE2 scanned NEIGHBOURS synchronously -> each was constructed -> each created ITS
-     * node and scanned ITS neighbours -> unbounded, StackOverflowError. It needed AE2 present AND a world with
-     * the block placed, which is why standalone (no AE2) and integrated (no world, no player) both missed it.</p>
-     *
-     * <p>setBlock plus getBlockEntity IS the reproduction: that is what a real world does on chunk load. Nothing
-     * here simulates a player, so this still cannot see the 483 right-click crash or the 486 client rendering.
-     * IT CLOSES ONE THIRD OF THE BLIND SPOT AND SAYS SO RATHER THAN IMPLYING MORE.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     private static boolean meBlockLifecycleChecked = false;
 
     private static void checkMEBlockEntityLifecycle(ServerLevel level, BlockPos origin, java.util.List<Check> checks) {
@@ -181,7 +181,7 @@ public final class MachineSelfTest {
         } catch (StackOverflowError e) {
             // Caught so the report NAMES the failure instead of dying inside it.
             checks.add(new Check("ME block entity lifecycle (place, then read)", false,
-                    "StackOverflowError -- node creation is recursing again; see PLAN section 485"));
+                    "StackOverflowError -- node creation is recursing again; see regression check"));
         } catch (Throwable t) {
             checks.add(new Check("ME block entity lifecycle (place, then read)", false,
                     t.getClass().getSimpleName() + ": " + t.getMessage()));
@@ -260,7 +260,7 @@ public final class MachineSelfTest {
         }
         controller.setFormed(true);
 
-        // --- 3b. A WORLD RELOAD MUST RE-BIND (PLAN 627.4). ---
+         
         //
         // THIS IS THE CHECK FOR THE DEFECT THE USER REPORTED FROM THE CLIENT: on every entry to the world the
         // controller showed "宸叉垚鍨嬶紙0 涓儴浠讹級" and the machine could not run until they shift-clicked it.
@@ -280,7 +280,7 @@ public final class MachineSelfTest {
         // findByName returns null and MachineTicker returns at its `machine == null` guard, WHICH SITS BEFORE THE
         // RE-BIND -- so the check reported "nothing re-bound" for a reason that had nothing to do with the fix.
         // saveAdditional writes BOTH keys (TileController L447-L448), so a real reload carries both.
-        // THE MACHINE NAME IS READ, NOT WRITTEN (PLAN 634). THE FIRST VERSION HARDCODED "alloy_furnace"
+         
         // -- AND THIS METHOD BUILDS THE CENTRIFUGE, whose recipes are 120-180 ticks (S266-S267). load then set
         // the controller own machine to the WRONG one, the ticker resolved the alloy furnace for a centrifuge
         // structure, and NO RECIPE COULD EVER BE SELECTED -- so the craft check 30 lines below failed with
@@ -320,7 +320,7 @@ public final class MachineSelfTest {
         }
         int started = guard;
 
-        // THE SHORTFALL PATH, EXERCISED (PLAN 534.3, 536). This is the ONLY path that fires RecipeFailureEvent, and
+         
         // before this check it had never been observed: the test machines always had enough energy, so the fire was
         // reasoned rather than witnessed.
         //
@@ -329,7 +329,7 @@ public final class MachineSelfTest {
         // destruct == false, and it is observable in exactly two ways: the recipe does not advance, and it is not
         // torn down.
         int ticksBeforeStall = controller.getRecipeTicks();
-        // THE SHORTFALL'S KEY, ASKED OF THE LOADED RECIPE rather than written out (PLAN 712). The same derivation
+         
         // the stall branch writes, so this check fails if either the writer or the derivation changes -- and the
         // whole point of asserting it against the ticker's own method is that a literal that happens to be a
         // valid value is still the wrong value.
@@ -341,7 +341,7 @@ public final class MachineSelfTest {
                 drained > 0 && ticksAfterStall == ticksBeforeStall && controller.hasActiveRecipe(),
                 "drained=" + drained + " ticks " + ticksBeforeStall + "->" + ticksAfterStall
                         + " stillActive=" + controller.hasActiveRecipe()));
-        // THE STALL NAMES ITS REASON, WHICH IS WHAT MAKES THE WARNING APPEAR (PLAN 712, closing PLAN 711.9).
+         
         //
         // UPSTREAM RETURNS A FAILURE HERE -- ActiveMachineRecipe.tick U88-U98 returns
         // CraftingStatus.failure(check.getFirstErrorMessage("")) and never reaches its own this.tick++ U101 --
@@ -375,7 +375,7 @@ public final class MachineSelfTest {
         // machine left dry would fail a check that has nothing to do with this one. The stall is measured and then
         // undone -- the machine resuming is the second half of the claim above, and this line is where it is honoured.
         //
-        // AND THE REASON IS CLEARED BY THAT RESUMPTION (PLAN 712), asserted rather than assumed: upstream's status
+         
         // is OVERWRITTEN every tick -- CraftingStatus.working() on the success path (ActiveMachineRecipe U84/U102,
         // type CRAFTING) -- so a machine whose power is back must stop being red. WITHOUT the clear-on-resume half
         // a machine would carry `craftcheck.failure.energy.input` FOREVER and stay red while running normally,
@@ -467,16 +467,16 @@ public final class MachineSelfTest {
         // every probabilistic output was guaranteed and nothing anywhere reported the divergence.
         checks.add(verifyChanceParsed());
 
-        // THE SHIPPED MACHINE'S GATING, WHICH THE SYNTHETIC CHECKS ABOVE CANNOT SEE (PLAN 692).
+         
         checks.add(verifyShippedInterfaceGating());
 
         // AUDIT ROWS 37 AND 40 -- the upgrade subsystem, and the tier values that must be configurable.
-        // Both are placed HERE, before every check that builds a structure, because this round's deliverable is
+         
         // exactly these two and a run that stopped early must not be able to report a pass without asking them.
         checks.addAll(verifyConfigurableTierValues());
         checks.addAll(verifyUpgrades(level, origin));
 
-        // THE RECIPE REGISTRY AND ADAPTER CONTRACT (PLAN 750 rows: 閰嶆柟娉ㄥ唽琛ㄣ€佹煡琛ㄤ笌閲嶅悕妫€娴?/ 閰嶆柟 JSON
+         
         // 閿€昏〃 / 閰嶆柟閫傞厤鍣ㄦ敞鍐岃〃 + 鍘熺増鐔旂倝閫傞厤). One method for the three, because they share one surface
         // -- RecipeLoader and RecipeAdapterRegistry -- and because an adapter template is a recipe FILE that
         // the other two checks would otherwise see as an unregistered oddity.
@@ -496,12 +496,12 @@ public final class MachineSelfTest {
         // saved with them would turn them into air when AE2 is removed.
         checks.addAll(verifyMEBlocks());
 
-        // PLAN B3 鈥?the ME fluid input bus's CONFIGURATION dimension, end to end. Placed here beside the other
+         
         // ME checks because 搂649(b)'s defect lived in this family: `setConfigured` had a reader, an NBT round trip
         // and no writer at all, so every rule of `doBusWork` always took its "nothing configured" branch.
         checks.addAll(verifyMEFluidBusConfig(level, origin));
 
-        // PLAN 686 鈥?THE ME ITEM INPUT BUS'S OPEN PATH, which was the client-reported defect: the block had no
+         
         // `use`, no menu type and no screen, so it could not be opened at all. This is a SEPARATE check from the
         // fluid bus's because the two answers differ (see the method): the block-side contract IS measurable here
         // without AE2, and the registration is not -- and the check says which half it measured.
@@ -523,14 +523,14 @@ public final class MachineSelfTest {
         // both halves. It needs no AE2 for the same reason the two above do not.
         checks.add(verifyMEItemOutputBusScreenBinding());
 
-        // PLAN 712 鈥?THE PATTERN PROVIDER'S OWN GEOMETRY, which no check had ever looked at. The client's report
+         
         // was a screen whose pattern area showed grey squares, and the reason was measurable without a client: the
         // menu placed NO slot at all (AE2 15.x's menus never position anything -- see the check), so the texture's
         // 36 wells had nothing on them. The check asserts both halves: the art's own panel size and well grid, and
         // the coordinates of the slots the menu really builds.
         checks.addAll(verifyMEPatternProviderGeometry(level, origin));
 
-        // PLAN 737 -- THE INDEPENDENT STORAGE AND THE WORK MODE, which are the two halves of the user's report that
+         
         // 搂729 left open: "鐙珛瀛樺偍鏆備笉鍙敤 ... 涓嬫柟鐙珛瀛樺偍搴斾负鎵€鏈夐厤鏂瑰叡鍚岃瘑鍒殑妲戒綅", plus the mode button.
         //
         // 鈿?THE GUARD IS HERE, OUTSIDE THE THREE METHODS, AND THAT IS A FIX RATHER THAN A STYLE CHOICE. The first
@@ -540,7 +540,7 @@ public final class MachineSelfTest {
         //     java.lang.ClassNotFoundException: appeng.menu.AEBaseMenu
         //     ... at ServerSelfTestTrigger.onServerStarted(ServerSelfTestTrigger.java:73)
         // -- a crash on the dedicated server of a mod whose entire ME subsystem is optional, which is 搂452/搂478/搂481/
-        // 搂712's class of defect at the level this round had not yet hit. THE RULE THIS ADDS TO THE LIST: a guard
+         
         // inside a method protects that method's BODY, not its SIGNATURE or its call site; what must be guarded is the
         // first place an AE2-connected type is NAMED, and for a check that means the call.
         //
@@ -572,14 +572,14 @@ public final class MachineSelfTest {
             checks.addAll(verifyMEItemOutputBusSurface(level, origin));
         }
 
-        // PLAN 745 -- THE TWO BUTTONS' HOVER TEXT. Deliberately OUTSIDE the AE2 guard and outside the three methods in
+         
         // it: the tooltip's lines come from an AE2-free, CLIENT-free builder, the keys come out of the two shipped
         // language files, and the screen is READ from its class file rather than loaded (搂708) -- so a server without
         // AE2 can assert every clause, which is the configuration where the reported defect was least visible. The
         // one clause that needs the MENU is in `verifyMEPatternProviderWorkMode` above, where the menu already is.
         checks.addAll(verifyMEPatternProviderTooltips());
 
-        // PLAN 690 鈥?THE RIGHT-CLICK ITSELF, ON A SERVER WITHOUT AE2. The 686 check above reads the shipped class
+         
         // file because the call it wanted to make threw NoClassDefFoundError; the throw was the FINDING, and this
         // is the fix's own instrument: the same click is now performed for real, on every ME block that opens a
         // menu, plus a class-file scan of the whole block family that fails on the shape of that defect.
@@ -686,13 +686,13 @@ public final class MachineSelfTest {
         // off-screen, so the two numbers are checked together.
         checks.addAll(verifyFactoryController(level, origin));
 
-        // FACTORY MODE (PLAN 662). Placed here, before the main structure is built at `origin`, because it
+         
         // builds its own structure at a far offset and because the parallelism checks later in this method
         // MUTATE this machine's internalParallelism -- a factory check running after them would be reading a
         // machine another check had reconfigured.
         checks.addAll(verifyFactoryMode(level, origin));
 
-        // FACTORY OUTPUT-FULL HOLD (PLAN 708, DEFECT B). Its own plot at +500, and it runs here with the other
+         
         // factory checks so a later check that reconfigures this machine cannot be what makes it read a
         // different duration.
         checks.addAll(verifyFactoryOutputHold(level, origin));
@@ -709,14 +709,14 @@ public final class MachineSelfTest {
         // that its one-constant enum can never produce, and NOTHING checked the two against each other.
         checks.addAll(verifyBlockstateVariants(level));
 
-        // EVERY FLUID HATCH TIER, ALL THE WAY TO A MEASURED TANK (PLAN 719). The check above proves the
+         
         // blockstate JSON and the enum agree; it cannot see whether a player can OBTAIN the tier, whether its
         // NAME resolves, or whether the tank that gets built holds what the tier declares. Reported to the
         // user as "all fluid input and output hatches are 1000 mB", which is exactly what NORMAL -- the
         // DEFAULT variant -- holds.
         checks.addAll(verifyFluidHatchTiers(level, origin));
 
-        // AND THE TWO FAMILIES THAT HAD NO TIER PATH AT ALL (PLAN 731). The user's report -- "the original mod
+         
         // has different tiers of the upgrade bus and the parallel controller, ours does not" -- and it was right:
         // both blocks carry a five-constant `type=` property, both had five language keys, five blockstates and
         // five models, and both ITEMS were bare BlockItems that were never handed to the tab's variant sweep. The
@@ -724,11 +724,11 @@ public final class MachineSelfTest {
         // that list IS the defect.
         checks.addAll(verifyControllerAndBusTiers(level, origin));
 
-        // AND THE SMALL LINE UNDER THE ITEM'S NAME (PLAN 732). The user: "鐜板湪鏈変簡锛岃鍍忓師鐗堜竴鏍蜂笅闈㈠皬瀛楀啓鏈夊灏?
+         
         // 骞惰鎴栬€呭彲浠ユ斁澶氬皯鍗囩骇" -- the tiers are there now, so print under the name how much parallelism or how
         // many upgrades they give, like the original. The keys had shipped since the asset conversion and NOTHING
-        // READ THEM (PLAN 731's own "what I could not do" list, item 4) -- this project's most repeated defect
-        // shape (PLAN 647, 649, 731). The check asserts the BUILT LINE and ITS NUMBER, not that a key exists.
+         
+         
         checks.addAll(verifyTierTipLines());
 
         // AND THE HALF THAT CHECK ABOVE CANNOT SEE: the STACK's tier reaching the TANK.
@@ -756,7 +756,7 @@ public final class MachineSelfTest {
         checks.addAll(verifyParallelControllerSetting(level, origin));
         checks.addAll(verifyUpgradeBusSlotDerivation(level, origin));
 
-        // AND THE SIX INTERCHANGEABILITY GROUPS OF PLAN 743: the shipped definitions now name the directional
+         
         // groups from `machinery/variables/casings.var.json`, and BOTH halves are asserted at a real position --
         // every member (and every tier state) satisfies it, and every block outside the group is refused there.
         checks.addAll(verifyInterchangeableParts(level, origin));
@@ -1149,7 +1149,7 @@ checks.add(new Check("every registered block has a loot table",
                         + (untranslated.length() == 0 ? ", every name resolves"
                                 : "; UNRESOLVED: " + untranslated.toString().trim())
                         + (filesRead == 0 ? "  -- NO FILE READ: the check is vacuous" : "")));
-        // VARIANT NAMES MUST BE REACHABLE, NOT MERELY PRESENT (PLAN 629).
+         
         //
         // THE CHECK ABOVE IS A DIFFERENT QUESTION: it asks whether a block base name resolves in every language
         // file, and A CASING VARIANT PASSES IT WHILE STILL REACHING THE PLAYER AS "鏈哄櫒澶栧３". The blocks do not use
@@ -1196,10 +1196,10 @@ checks.add(new Check("every registered block has a loot table",
                         + (variantsSeen == 0
                                 ? "  -- VACUOUS: no block declares size, casing or type, so this proves nothing"
                                 : "")));
-        // THE NAME LISTS ARE GONE, AND THIS CHECK IS REWRITTEN RATHER THAN DELETED (PLAN 636, 641 step 3).
+         
         //
         // WHAT IT USED TO ASK: "is every machine and recipe file on disk named in its loader list" -- which
-        // caught the defect that motivated it (PLAN 636.1: I added a machine file, the suite passed 142/142,
+         
         // and the machine did not exist, because the loader read the jar by a hardcoded name list and a file
         // that was not in it was skipped with NO ERROR AND NO LOG LINE).
         //
@@ -1325,7 +1325,7 @@ checks.add(new Check("every registered block has a loot table",
                                         ? "  -- THE RECIPE WALK AND THE RECIPE LOAD DISAGREE"
                                         : "  WALKED BUT NOT LOADED: " + machinesNotLoaded)));
 
-        // THE AUTHORING TOOL'S FILE IS A REAL MACHINE, ASSERTS THE ROUND TRIP (PLAN 641 step 5).
+         
         //
         // WHY THIS EXISTS. Everything check 2 above proves is that files ALREADY on disk are read. The
         // authoring tool (step 4) makes new ones, and "the file appears" is the shape of claim 636 showed
@@ -1734,7 +1734,7 @@ checks.add(new Check("every registered block has a loot table",
                         hellfirepvp.modularmachinery.common.menu.MenuMEItemInputBus.PLAYER_INV_Y,
                         hellfirepvp.modularmachinery.common.menu.MenuMEItemInputBus.PLAYER_HOTBAR_Y,
                         hellfirepvp.modularmachinery.common.menu.MenuMEItemInputBus.CONFIG_COLUMNS),
-                // PLAN 712  -- the ME pattern provider's player grid, measured off mepatternprovider.png: the three
+                 
                 // rows' top borders at 113/131/149 and the hotbar's at 171, i.e. cells at 114/132/150 and 172 --
                 // which is upstream ContainerMEPatternProvider C44's bindPlayerInventory(..., 0, 114) exactly.
                 // The screen's PATTERN grid (36 wells, 9 x 4 at (8, 28)) is checked by
@@ -1924,7 +1924,7 @@ checks.add(new Check("every registered block has a loot table",
                                     : "; MISALIGNED: " + gridTrouble.toString().trim())));
         }
 
-        // THE FACTORY SCREEN'S SIX RUN ROWS, AND THE BAR THAT BELONGS INSIDE EACH ONE (PLAN 693).
+         
         //
         // TWO RELATIONS, because the client's report ("the progress bar is in the wrong place") turned out to be
         // two defects in the same screen and only one of them was a coordinate:
@@ -2131,7 +2131,7 @@ checks.add(new Check("every registered block has a loot table",
                             + (barTrouble.length() == 0 ? "" : "; MISMATCH: " + barTrouble.toString().trim())));
         }
 
-        // (c) THE PANEL ORIGIN -- THE ONE NUMBER THE TWO CHECKS ABOVE COULD NOT SEE (PLAN 708).
+         
         //
         // WHY THE TWO ABOVE PASSED WITH THE BARS IN THE WRONG PLACE, which is the question this check exists
         // to answer: they asserted the MENU's six row coordinates against the art's wells and asked the screen
@@ -2239,7 +2239,7 @@ checks.add(new Check("every registered block has a loot table",
                         .append(doubledX + rowWNow - 1);
                 // WHAT THAT RECTANGLE ACTUALLY COVERED, computed from the art's own columns rather than
                 // described: the well's interior is 8..92, the scrollbar's track column is 94..105 and the
-                // status text field is 112..246 (all measured from guifactory.png this round). A doubled row
+                 
                 // therefore sat across all three, which is the "green bar over the status text" the client
                 // reported -- and the second row, 33 pixels lower, sat in the field below it with no text.
                 rectangles.append(" -- ").append(overlap(doubledX, rowWNow, rowXNow, rowWNow))
@@ -2255,16 +2255,16 @@ checks.add(new Check("every registered block has a loot table",
                                     ? "" : "; MISMATCH: " + originTrouble.toString().trim())));
         }
 
-        // (d) WHAT THE RUN'S PROGRESS LINE SAYS, AND WHAT COLOURS ITS BAR (PLAN 710).
+         
         //
         // The origin check above is what the client's SECOND report turned on. This one is its FIRST report,
-        // verbatim: "鎴戝ソ鍍忚寰楀師mod娌℃湁鏄剧ず杩愯鍒伙紝鏄樉绀虹殑杩愯鐧惧垎姣旓紝濡傛灉绌洪棿涓嶈冻杩涘害鏉′細鍙樼孩鎻愮ず" -- a
+         
         // PERCENTAGE, and a RED bar when there is not enough space. Both were true of upstream and one of them
         // was not true here: `drawFactoryStatus` fed `progress + " / " + duration + " t"` into
         // `gui.controller.status.crafting.progress`, whose only upstream use passes `progress + "%"`.
         checks.addAll(verifyFactoryStatusDisplay());
 
-        // (e) AND THE SAME TWO QUESTIONS FOR THE OVERLAY ABOVE THE PANEL (PLAN 711).
+         
         //
         // The client's screenshot carried BOTH readers of the same run: the screen's tick line (fixed in (d))
         // and, above it, TheOneProbe's header -- "杩涘害锛?97 / 60 鍒?, a raw counter past its own duration. The
@@ -2272,7 +2272,7 @@ checks.add(new Check("every registered block has a loot table",
         // the same key, with its bar's colour from the tile's own isCrafting().
         checks.addAll(verifyTopProbeOverlay());
 
-        // EVERY DECLARED MACHINE MODIFIER MUST PARSE, AND NAME A TYPE THE PORT CAN APPLY (PLAN section 225.4).
+         
         //
         // Section 224 found the shipped machinery JSON declaring modifiers that nothing read, wrote or called --
         // including a `description` that advertises the effect to the player. Section 225 read the block and found
@@ -2282,7 +2282,7 @@ checks.add(new Check("every registered block has a loot table",
         // declared modifier became a RecipeModifier, and whether its target is a type id the port actually has.
         // A modifier naming a type that does not exist would apply to nothing and be silent.
         //
-        // THE WHITELIST IS NO LONGER A LITERAL HERE (the duration gap, PLAN section 353.3): it was a three-entry
+         
         // Set in this method, which meant the check and the implementation could disagree about what "a type the
         // port has" is -- and they did, because `modularmachinery:duration` was a target the mod's own shipped
         // content used while this list did not know it and no code path could act on it. It is now
@@ -2317,7 +2317,7 @@ checks.add(new Check("every registered block has a loot table",
                         + (machinesDeclaringModifiers == 0
                                 ? "  -- NONE PARSED: the check is vacuous and the loader is not reading them" : "")));
 
-        // AND EVERY REPLACEMENT MUST CARRY ITS STRUCTURE CONDITION (PLAN section 234.3).
+         
         //
         // A modifier without its `elements`/`x`/`y`/`z` cannot be known to be active, and applying it anyway
         // would grant the vent bonus whether or not the vent exists -- a NEW wrong behaviour, which is worse
@@ -2363,10 +2363,10 @@ checks.add(new Check("every registered block has a loot table",
         // fluid half was fixed by MIRRORING it (rule B) and the two must not drift apart.
         checks.addAll(verifyFluidChanceModifiers());
 
-        // THE DURATION TARGET, WHICH MATCHED NOTHING AND SAID NOTHING (AUDIT_RECIPES row 13; PLAN section 353.3).
+         
         checks.addAll(verifyDurationTargetModifier(level, origin));
 
-        // AND EVERY MODIFIER CONDITION MUST RESOLVE, OR ITS BONUS SILENTLY NEVER APPLIES (PLAN section 237).
+         
         //
         // Section 236 wired the application end to end. But `matches` returns FALSE when the block id cannot be
         // resolved -- deliberately, because an unresolvable condition must not grant its bonus -- and that makes
@@ -2396,7 +2396,7 @@ checks.add(new Check("every registered block has a loot table",
                                 : "; UNRESOLVABLE (their bonus can never apply): " + unresolvable.toString().trim())
                         + (conditionsChecked == 0 ? "  -- NONE FOUND: vacuous" : "")));
 
-        // AND EVERY MODIFIER POSITION MUST BE ONE THE PATTERN VISITS (PLAN section 240).
+         
         //
         // StructureMatcher consults a machine's modifier replacements INSIDE its per-part loop, because a
         // replacement is an alternative for a position the pattern already names. A modifier at a position the
@@ -2431,7 +2431,7 @@ checks.add(new Check("every registered block has a loot table",
                                 : ""
                         + (modifierPositions == 0 ? "  -- NONE FOUND: vacuous" : ""))));
 
-        // EVERY BLOCKSTATE MUST HAVE AN ITEM MODEL, AND EVERY MODEL IT NAMES MUST EXIST (PLAN section 243).
+         
         //
         // The client reported `Unable to load model: modularmachinery:blockmegasinputbus#inventory` at startup.
         // That `#inventory` suffix is vanilla asking for a BLOCK ITEM's model, and it happens when the item form
@@ -2619,7 +2619,7 @@ checks.add(new Check("every registered block has a loot table",
             int coalLeft = countItems(level, inputPos, Items.COAL);
             checks.add(new Check("inputs consumed", coalLeft == 0, coalLeft + " coal remaining"));
 
-            // --- 6b. PARALLELISM (PLAN 616-619): the SAME craft, granted a parallelism, must do N times the work. ---
+             
             //
             // THIS IS THE CHECK THAT CLOSES THE CHAIN. Everything in the chain compiled and passed without it, because
             // every self-test machine had a parallelism of one -- so all five multipliers evaluated to one and NONE
@@ -2631,7 +2631,7 @@ checks.add(new Check("every registered block has a loot table",
             // 64 + 16 AND PRODUCE 2. Reading the amounts off the requirement objects instead would make the check
             // agree with whatever the code believes, which is the rule 84 established and 1420 records again.
             // ==============================================================================================
-            // THE DEFINITION IS RE-RESOLVED HERE, AND THIS IS THE FIX FOR FOUR FAILURES (PLAN 810).
+             
             // ==============================================================================================
             //
             // `machine` was resolved ONCE, at the top of run() (L450). THREE checks that run EARLIER IN THIS
@@ -2653,7 +2653,7 @@ checks.add(new Check("every registered block has a loot table",
             // "parallelism 1 for recipe alloy_furnace_diamond (no parallel controller ...)" -- the CEILING
             // arriving as one -- and no "reduced to" line at all, so no requirement reduced anything.
             //
-            // THIS IS THE DEFECT THE FILE ALREADY RECORDS TWICE (PLAN 645.3, and the load-bearing placement
+             
             // comments at L2668 and L2695): a reload above this block invalidates the object it mutates. Both
             // earlier rounds answered it by moving the reloading check to the END. THAT REMEDY DOES NOT HOLD
             // HERE: two independent new checks reload above this point and each belongs where its own subject
@@ -2679,12 +2679,12 @@ checks.add(new Check("every registered block has a loot table",
             insertItems(level, inputPos, Items.TNT, 16);
 
             // ---------------------------------------------------------------------------------------------
-            // PLAN 810.3 -- THE NUMBER ITSELF, PINNED, BECAUSE THE FOUR CHECKS BELOW ONLY EVER REPORT IT.
+             
             // ---------------------------------------------------------------------------------------------
             //
             // Each of the four assertions below measures a DERIVED quantity: a diamond count, a coal remainder,
             // a value read back OFF THE CONTROLLER after the craft. Every one of them stayed green-looking while
-            // the grant was 1 -- "a green-looking story around a broken thing" (PLAN 636). ONE assertion on the
+             
             // grant itself would have named this defect in one line instead of four symptoms, and this is it.
             //
             // IT ASKS THE PRODUCTION CHAIN, IN THE PRODUCTION ORDER: MachineTicker.resolvedRun (K494) is the
@@ -2765,7 +2765,7 @@ checks.add(new Check("every registered block has a loot table",
             // Restore, so a later check in this method sees the machine as it was.
             machine.setInternalParallelism(0);
 
-            // --- 6c. THE MIN REDUCTION (PLAN 609, 620.3): asking for MORE than the supplies allow must yield LESS. ---
+             
             //
             // THIS IS THE PATH 620.3 NAMED AS UNWITNESSED. Everything above grants what the machine's own base and
             // its definition ceiling allow, and the requirements then confirm they can supply it. HERE THE CEILING IS
@@ -2810,36 +2810,36 @@ checks.add(new Check("every registered block has a loot table",
             machine.setInternalParallelism(0);
         }
 
-        // PLAN 739 -- THE GHOST BLOCKS' SUBJECT. Placed HERE rather than with the render code, because a
+         
         // client class cannot be loaded on this harness at all (搂737.4: the boundary list ends at LOCAL
         // VARIABLE), so what is asserted is the pattern the renderer's loop iterates and the states its cells
         // resolve to -- both server-side data. It also sits above the checks below, because those reload the
         // definition loaders and would swap the machine instance this one reads.
         checks.addAll(verifyPreviewDrawList(level, origin));
-        // PLAN 741 -- THE SAME PREVIEW'S OTHER THREE DECISIONS (the 32-block drop, the skip of already-built
+         
         // cells, the red marker for a misplaced one). Placed beside 739's check because it reads the same
         // machine and the same plot arithmetic, and above the reloading checks below for 739's own reason.
         checks.addAll(verifyPreviewCellDecisions(level, origin));
 
-        // PLAN 683 -- THE TWO CLIENT-REPORTED DEFECTS OF ONE THEME ("a machine keeps running when it should
+         
         // stop"). Placed HERE, before the authoring block, because both hold a DynamicMachine reference and the
         // authoring/interface checks below reload the loaders (see the two comments on their placements).
         checks.addAll(verifyStructureRecheck(level, origin));
         checks.addAll(verifyOutputFullHold(level, origin));
         checks.addAll(verifyParallelOutputRoom(level, origin));
-        // PLAN 704 -- THE RULE A0 DEVIATION (the multi-output allocation). It AUTHORS AND DELETES its own
+         
         // machine and recipe files and RELOADS the definitions in its finally block, so it sits HERE for the
         // same reason the three above do: everything below this line -- the authoring round trip especially --
         // must be free to resolve its own objects AFTER the last reload. It re-resolves its own machine by name
         // after its reload, so it does not hold a stale instance either.
         checks.addAll(verifyMultiOutputAllocation(level, origin));
-        // PLAN 699.7 / 704.9:1 -- THE FLUID HALF OF THE SAME WORK, WHICH HAD NO END-TO-END WITNESS. It authors
+         
         // and deletes its own machine and recipe files and reloads in its finally, exactly as the check above
         // does, so it sits beside it for the same reason: every check below this line must be free to resolve
         // its own objects after the last reload.
         checks.addAll(verifyFluidOutputAllocation(level, origin));
 
-        // THE AUTHORING TOOL'S FILE IS A REAL MACHINE, ASSERTS THE ROUND TRIP (PLAN 641 step 5).
+         
         //
         // WHY THIS EXISTS. Everything the config-directory checks prove is that files ALREADY on disk are
         // read. The authoring tool (step 4) makes new ones, and "the file appears" is the shape of claim
@@ -2862,8 +2862,8 @@ checks.add(new Check("every registered block has a loot table",
         // plausible. This check therefore does NOT reload at all: it parses its own file directly, and it
         // runs last so that even a future change to it cannot reach an earlier check's object.
         // THE TOOL'S OWN ARMS, asserted before the round trip and through the ITEM rather than through the
-        // helper (PLAN 655.2). The round trip below proves the file; these three prove the clicks that
-        // decide what goes in it, which is the half of the behaviour this round changed and the half a
+         
+         
         // helper-level test cannot see -- wiring the modifier backwards would leave every one of them
         // passing.
         checks.add(authoringCornerArms(level, origin));
@@ -2873,33 +2873,33 @@ checks.add(new Check("every registered block has a loot table",
 
         checks.add(authoringRoundTrip(level, origin));
 
-        // THE SMART INTERFACE CHANNEL, END TO END (PLAN 663, B2 + B4). LAST, and deliberately so: it writes a
+         
         // machine definition and a recipe into the config directories and reloads the loaders, which swaps every
         // DynamicMachine and MachineRecipe INSTANCE. The comment at authoringRoundTrip's parseMachineFile call
         // records why that matters -- a later check holding an old reference would silently compare against a
         // definition nothing else has any more. Everything before this point has already finished with its own.
         checks.addAll(verifyInterfaceRequirement(level, origin));
 
-        // WHICH RECIPE A FACTORY PICKS (PLAN 664), and it is LAST FOR THE REASON ABOVE RATHER THAN BY TASTE:
+         
         // it authors its own machine and three recipes and reloads the loaders in a `finally`, which swaps
         // every DynamicMachine instance -- and the parallelism checks earlier in this method MUTATE one of them
         // (internalParallelism), so a reload placed before them silently resets the value they set and their
         // four assertions fail. That was measured, not foreseen: the first run of this check was placed next to
-        // verifyFactoryMode and cost exactly those four failures (178/183, PLAN 664).
+         
         checks.addAll(verifyFactoryRecipeSelection(level, origin));
 
-        // AND THE SAME QUESTION FROM THE OTHER END (PLAN 713): a factory whose ceiling is TWENTY and whose
+         
         // recipe list is six must not put the first recipe on all twenty. LAST, for the reason above -- it
         // authors a machine and six recipes and reloads in a `finally`.
         checks.addAll(verifyFactoryRecipeSpread(level, origin));
 
-        // THE USER'S USE CASE (PLAN 688): ONE MACHINE, SEVERAL RECIPES, AND WHICH ONE RUNS IS DECIDED BY THE
+         
         // NUMBER IN THE SMART INTERFACE. LAST, for the reason the two checks above are last -- it authors a
         // machine and two recipes and reloads the loaders in a `finally`, which swaps every DynamicMachine
         // INSTANCE; running it here means nothing that follows can be holding a stale reference.
         checks.addAll(verifyInterfaceRecipeSelection(level, origin));
 
-        // THE VENT, PLACED BY A PLAYER, AND WHAT THE OUTPUT BUS GETS (PLAN 723.3). LAST, for the reason every
+         
         // check above it is last: it authors a machine and a recipe and reloads the loaders in a `finally`,
         // which swaps every DynamicMachine and MachineRecipe INSTANCE. It is also the FIRST check in this suite
         // ever to place a modifier replacement, which is why the scaling branch of
@@ -2956,19 +2956,19 @@ checks.add(new Check("every registered block has a loot table",
         return leftBorder && border >= 15;
     }
 
-    /**
-     * Reads one of the mod's GUI textures, from the two paths a test run can see it at (PLAN 693).
-     *
-     * <p>The two candidate paths are the ones the wells check and the ME item input bus's config-grid check
-     * already use -- {@code ../src/main/resources/...} from the {@code run} directory Forge starts the harness
-     * in, and the bare path for a working directory one level shallower. This method exists so the two checks
-     * 搂693 adds share one loader rather than being a third and fourth copy of it; the older two are left
-     * untouched.</p>
-     *
-     * @param fileName the file's name under {@code assets/modularmachinery/textures/gui/}
-     * @return the image, or {@code null} when it cannot be found or decoded  -- which every caller must report
-     *         as a MISMATCH rather than as a skip (搂677(b))
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static java.awt.image.BufferedImage readGuiArt(String fileName) {
         java.io.File png = new java.io.File(
                 "../src/main/resources/assets/modularmachinery/textures/gui/" + fileName);
@@ -2987,11 +2987,11 @@ checks.add(new Check("every registered block has a loot table",
     }
 
     // ------------------------------------------------------------------
-    // Reading a CLIENT-ONLY class's compiled bytes (PLAN 708)
+     
     // ------------------------------------------------------------------
     //
     // WHY THIS EXISTS: a dedicated server cannot LOAD the client's screen classes (搂203's RuntimeException),
-    // so a check that must see what a screen DOES has to read its class file rather than run it. PLAN 693 did
+     
     // the coarse version -- a constant-pool string search -- and that is exactly why its check passed while the
     // factory's run rows were drawn a whole panel-origin away from their wells: "the screen names
     // MenuFactoryController" is true whether or not the screen adds the panel origin to the menu's numbers.
@@ -3003,20 +3003,20 @@ checks.add(new Check("every registered block has a loot table",
     // absence it is testing for. A desynchronised walk therefore fails the check loudly instead of quietly
     // answering "no field reads". The operand table and the switch arithmetic were cross-validated
     // instruction-by-instruction against ASM 9.7 over 1 957 methods of this mod and 10 000+ of the mapped
-    // 1.20.1 jar (PLAN 708), which is also how the one wrong multiplier in this reader was found.
+     
 
     /** One method of a compiled class: its name, its descriptor and the bytes of its Code attribute. */
     private record CompiledMethod(String name, String descriptor, byte[] code) {
     }
 
-    /**
-     * A compiled class's constant pool, in the shapes the walk needs.
-     *
-     * @param utf8         index -&gt; the Utf8 entry, or null for a non-Utf8 index
-     * @param refNameType  index -&gt; for a Fieldref/Methodref/InterfaceMethodref, its NameAndType index
-     * @param nameTypeName index -&gt; for a NameAndType, its name's utf8 index
-     * @param stringUtf8   index -&gt; for a {@code CONSTANT_String}, the Utf8 index it wraps (PLAN 710)
-     */
+    
+
+
+
+
+
+
+ 
     private record CompiledClass(String[] utf8, int[] refNameType, int[] nameTypeName, int[] stringUtf8) {
         String utf8At(int index) {
             return index > 0 && index < utf8.length ? utf8[index] : null;
@@ -3071,7 +3071,7 @@ checks.add(new Check("every registered block has a loot table",
                     utf8[i] = new String(classBytes, at + 2, len, java.nio.charset.StandardCharsets.UTF_8);
                     at += 2 + len;
                 }
-                case 8 -> {                                     // String -> the Utf8 it wraps (PLAN 710)
+                case 8 -> {                                      
                     stringUtf8[i] = classU2(classBytes, at);
                     at += 2;
                 }
@@ -3079,7 +3079,7 @@ checks.add(new Check("every registered block has a loot table",
                 case 15 -> at += 3;                             // MethodHandle
                 case 3, 4, 9, 10, 11, 12, 17, 18 -> {           // Integer/Float, refs, NameAndType, Dynamic
                     // 18 is InvokeDynamic, whose layout is a Methodref's: a bootstrap index then a
-                    // NameAndType. Its NAME is what `makeConcatWithConstants` is spelled as (PLAN 710), which
+                     
                     // is how a string concatenation becomes visible to the walk at all -- javac emits ONE
                     // invokedynamic with a recipe in BootstrapMethods rather than an `ldc` of each fragment, so
                     // the fragments a `+` produces are NOT String constants a literal scan could find.
@@ -3283,7 +3283,7 @@ checks.add(new Check("every registered block has a loot table",
                         + " is not an instruction opcode");
             }
             // invokevirtual / invokespecial / invokestatic, invokeinterface (whose operands are the same two
-            // index bytes first), and invokedynamic (PLAN 710).
+             
             //
             // INVOKEDYNAMIC IS HERE BECAUSE A `+` ON STRINGS IS ONE OF THESE AND NOT AN `ldc`: javac compiles
             // every concatenation into a single `invokedynamic StringConcatFactory.makeConcatWithConstants`
@@ -3301,20 +3301,20 @@ checks.add(new Check("every registered block has a loot table",
         return called;
     }
 
-    /**
-     * Every {@code String} constant the given code <b>loads</b> through {@code ldc}/{@code ldc_w}, in code
-     * order  -- the literals a method can concatenate into what it draws (PLAN 710).
-     *
-     * <p>WHY THE LITERALS AND NOT ONLY THE CALLS, which is the reason this third walk exists: a check that only
-     * asserts "the method calls the pinned percentage arithmetic" is satisfied by a method that calls it AND
-     * spells a tick pair beside it. The literals are what a tick form is MADE of  -- a separator and a unit  -- so
-     * "no such literal is loaded here" is the negative half that the call assertions cannot supply.</p>
-     *
-     * <p>{@code ldc} is also how a {@code float} constant arrives ({@code 0.6F} is not an {@code fconst}), so a
-     * non-String index is SKIPPED rather than reported: the caller's positive assertion  -- that a literal it
-     * KNOWS the method loads is present  -- is what proves this walk resolved anything at all, which is the same
-     * self-checking shape the other two walks use.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static java.util.List<String> loadedStringsIn(byte[] code, CompiledClass pool)
             throws java.io.IOException {
         java.util.List<String> strings = new java.util.ArrayList<>();
@@ -3555,39 +3555,39 @@ checks.add(new Check("every registered block has a loot table",
     private static final String RELOAD_LISTENER_RESOURCE =
             "/hellfirepvp/modularmachinery/common/machine/MachineReloadListener.class";
 
-    /**
-     * THE RELOAD PATH IS WIRED, ASSERTED AT THE CALL SITES (audit row 12; PLAN 782).
-     *
-     * <p><b>Why this reads class files.</b> The defect it closes was "after {@code /reload} the engine has the
-     * new recipes and JEI still shows the old ones", and this unit has now found <b>five</b> defects of the
-     * shape "the method exists and nothing calls it". A check that asserts an entry point exists therefore
-     * passes on exactly the broken wiring it is meant to catch. Every assertion below is about a
-     * <b>reference</b>: which method's code calls which member, and which member some method handle names.
-     * The classes are ours and are on the classpath in <b>both</b> configurations; their bytes are read
-     * without loading them, which is also why this runs with JEI absent.</p>
-     *
-     * <p>What each assertion would catch, and what it cannot:</p>
-     * <ol>
-     *   <li>{@code MachineReloadListener.load} calls {@code DistExecutor.runWhenOn}. Without it nothing is
-     *       dispatched after a reload  -- the original defect.</li>
-     *   <li>A <b>method handle</b> to {@code JeiPluginModularMachinery.requestReload} exists in the reload
-     *       listener's own constant pool, i.e. the argument the dispatch runs is that method and not another.
-     *       A lambda body's target is otherwise invisible: its {@code invokedynamic} carries the
-     *       compiler-generated name {@code lambda$load$0}, not the method's.</li>
-     *   <li>The dispatcher is a lambda or access method of that same class, so the handle above is invoked by
-     *       the reload listener rather than merely mentioned.</li>
-     *   <li>The plugin overrides {@code onRuntimeAvailable} <b>and</b> that method reads JEI's own index
-     *       ({@code getRecipeManager}).</li>
-     *   <li>The plugin's code calls {@code hideRecipes} <b>and</b> {@code addRecipes}: the two calls the fix is
-     *       made of. A version that only added entries fails here.</li>
-     *   <li>The rebuild goes through the plugin's own {@code collectRecipes}, which is the reuse the audit
-     *       asked for  -- one traversal, reached by both the start-up path and the reload path.</li>
-     * </ol>
-     *
-     * <p><b>WHAT IT CANNOT SHOW, AND DOES NOT CLAIM TO.</b> Nothing here runs on the client. It proves the
-     * reload path is reached as a matter of bytecode and that the rebuild calls those two methods; it cannot
-     * show JEI then draws the new page. JEI's internals are not observable from a dedicated server.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static java.util.List<Check> verifyJeiReloadPath() {
         java.util.List<Check> out = new java.util.ArrayList<>();
         final String wiring = "the JEI reload path is wired at the CALL SITE, not merely declared";
@@ -3752,56 +3752,56 @@ checks.add(new Check("every registered block has a loot table",
         return out;
     }
 
-    /**
-     * THE JEI-TYPED CODE IS BEHIND THE GATE  -- AND "BEHIND THE GATE" IS DEFINED BY THE CALL SITE, NOT BY THE
-     * POOL.
-     *
-     * <p>PLAN 737's rule is "the guard protects the CALL, not the FRAME": ModLauncher resolves the types a class
-     * <b>uses</b> while transforming it, so a JEI type in a descriptor, in a StackMapTable frame or in an
-     * invoked instruction is resolved for every player  -- whereas a JEI type that only a <b>lambda's
-     * {@code invokedynamic}</b> can reach is resolved when that call site is first executed, which on a
-     * dedicated server never happens. <b>"A handle exists" and "the class is resolved" are therefore two
-     * different things, and this check judges the second.</b></p>
-     *
-     * <p><b>Why the FIRST version of this check failed on working code, and what actually changed.</b> It
-     * asserted that the reload listener's pool holds no JEI class name. That is not the rule: a
-     * {@code MethodHandle} constant legitimately lives in the class that passes it, and it carries a
-     * {@code CONSTANT_Class} with it. Measured on the compiled class:</p>
-     *
-     * <pre>
-     * #128 = Utf8        hellfirepvp/modularmachinery/integration/jei/JeiPluginModularMachinery
-     * #129 = Class       #128
-     * #132 = Methodref   #129.#131   // ...JeiPluginModularMachinery.requestReload:()V
-     * #133 = MethodHandle 6:#132     // REF_invokeStatic ...requestReload:()V
-     * BootstrapMethods 2: ... #133 REF_invokeStatic ...requestReload:()V
-     * </pre>
-     *
-     * <p> -- the <b>safe</b> form, exactly what PLAN 737's fifth boundary prescribes: {@code load}'s descriptor,
-     * its StackMapTable and every invoked instruction contain <b>zero</b> JEI mentions, and the handle is
-     * reachable only as a {@code BootstrapMethods} argument (the inner
-     * {@code () -> JeiPluginModularMachinery::requestReload} lambda factory). The predicate was over-strict, not
-     * the code. It is now four assertions, and the failure condition is the <b>eager</b> site:</p>
-     *
-     * <ol>
-     *   <li><b>NEGATIVE  -- no eager reference.</b> No JEI name in any descriptor, and no JEI member invoked
-     *       directly: a JEI type used in a signature or called from code fails here, and so does the whole class
-     *       of defect this check exists for.</li>
-     *   <li><b>NEGATIVE  -- no applied {@code invokedynamic} targets JEI.</b> Sites are read from {@code Code},
-     *       not from the pool, because a site's target is resolved when the instruction runs.</li>
-     *   <li><b>POSITIVE  -- every JEI class reference is a method handle's</b>, and the handle names a member.
-     *       Asked per handle, so an ownerless Class cannot hide.</li>
-     *   <li><b>POSITIVE  -- that handle is DEFERRED.</b> It must sit in a bootstrap whose own arguments include a
-     *       lambda body of this class, and be reachable from an applied site naming that bootstrap. A method
-     *       reference written straight into {@code load()} lands in a bootstrap too  -- but not in a
-     *       <b>lambda's</b>  -- so that form fails. This is what makes "deferred" proven rather than assumed.</li>
-     *   <li><b>AND THE SCAN PROVES IT WALKED.</b> The class must still name JEI somewhere and must have been
-     *       parsed: an unreadable file or an empty pool is a FAILURE, never a pass, because "no reference found"
-     *       is otherwise indistinguishable from "no scan happened".</li>
-     * </ol>
-     *
-     * <p>What it still cannot show: that the class <i>loads</i> without JEI. The standalone configuration
-     * proves that; this proves the reason it can.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static Check verifyJeiTypesStayBehindTheGate() {
         final String name = "the reload listener reaches JEI only through a DEFERRED method handle, with no eager"
                 + " JEI reference";
@@ -4001,7 +4001,7 @@ checks.add(new Check("every registered block has a loot table",
                         + parsed.sites().size() + ", eager sites "
                         + (eager.length() == 0 ? "none" : eager.toString().trim())
                         + (trouble.length() == 0
-                                ? "   -- PLAN 737's distinction holds HERE: the handle exists, and the class is not"
+                                ? "   -- regression check's distinction holds HERE: the handle exists, and the class is not"
                                         + " resolved until the client-only call site runs (no descriptor, no frame,"
                                         + " no invoked instruction names JEI)"
                                 : "; MISMATCH: " + trouble.toString().trim()
@@ -4507,38 +4507,38 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
     }
 
-    /**
-     * THE SHIPPED CONTENT IS GATED TOO (PLAN 692), NOT ONLY THE MACHINES THIS FILE AUTHORS.
-     *
-     * <p>Three checks in this file author their own machine definition and their own recipes, so all three
-     * would still pass if the SHIPPED {@code iron_centrifuge} had no smart interface anywhere -- which is
-     * exactly the state the user reported (they had built the multiblock and no recipe used the interface).
-     * This check reads the shipped recipes out of the recipe registry and asserts, on the objects the
-     * machine would really run, the property the feature exists for: the number in the interface decides
-     * WHICH recipe applies.</p>
-     *
-     * <p>What is asserted, and what each assertion is there to catch:</p>
-     * <ol>
-     *   <li>EVERY recipe of this machine carries EXACTLY ONE interface requirement. A recipe that lost its
-     *       gate fails here instead of quietly becoming runnable in every mode.</li>
-     *   <li>That gate's io-type is {@code input}, and its type name is one the MACHINE declares
-     *       ({@code resolveType != null}). A name the machine does not declare can never be satisfied: it
-     *       yields "Not Found Bound Machine" and a recipe that never runs, with no error anywhere.</li>
-     *   <li>All of them name the SAME declared type -- otherwise "the number" would be several numbers.</li>
-     *   <li>The ranges are PAIRWISE DISJOINT, so no single value satisfies two recipes: the value selects a
-     *       group rather than merely being read.</li>
-     *   <li>There are at least TWO distinct ranges. Asserted separately, because disjointness alone is
-     *       satisfied by every recipe asking for {@code 1..1} -- one mode, which is the state this check
-     *       exists to rule out.</li>
-     *   <li>The definition's own {@code default-value} falls inside EXACTLY ONE of those ranges, so a
-     *       freshly formed machine runs one group -- not two, and not none.</li>
-     * </ol>
-     *
-     * <p><b>EVERY NUMBER AND NAME BELOW IS READ OFF THE LOADED OBJECTS</b> -- min, max, type name, default
-     * value and the declared-type set -- so a literal in this file cannot stand in for content that is
-     * wrong. The two literals are the machine's registry name and the machine registry name key the recipe
-     * loader indexes by, and both are the name the definition itself carries.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static Check verifyShippedInterfaceGating() {
         final String name = "the shipped iron_centrifuge gates its recipes on a declared interface number";
         String machineName = "iron_centrifuge";
@@ -4659,16 +4659,16 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
      * <p>Checks the three things that can independently break: id resolution, a real tank satisfying
      * {@code canStart} through the capability, and an actual drain.
      */
-    /**
-     * Places one template's parts into the world at a pattern-space offset (PLAN section 334).
-     *
-     * <p>Used by the dynamic-pattern walk's positive check, which needs to rebuild a section AND its cap at
-     * known offsets. The positions are collected so the caller can put the world back -- section 289 recorded
-     * that {@code run/world} persists between runs, so a check that leaves blocks behind changes what the NEXT
-     * run sees, which is the "flakiness" that was not flakiness.
-     *
-     * @return how many blocks were placed
-     */
+    
+
+
+
+
+
+
+
+
+ 
     private static int placeTemplate(net.minecraft.server.level.ServerLevel level, BlockPos base,
                                      net.minecraft.core.Direction facing, MachinePattern template,
                                      BlockPos offset, MachineVariables vars, BlockStateResolver res,
@@ -4774,7 +4774,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         MachineContext probe = new MachineContext(level, origin, Direction.NORTH,
                 MachineReloadListener.getLoader().findByName("alloy_furnace"),
                 MachineReloadListener.getLoader().getVariables(),
-                // THE DEFINITION'S PATTERN IS EXPLICIT HERE AND THAT IS NOT A REGRESSION (PLAN 搂750): the next line
+                 
                 // replaces the component list wholesale, so the pattern this probe would otherwise resolve is never
                 // read. The engine paths pass the controller's FORMED pattern instead -- see MachineTicker.
                 MachineReloadListener.getLoader().findByName("alloy_furnace").getPattern());
@@ -5009,7 +5009,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
 
             // CHARGE IT FIRST 鈥?the check cannot prove anything about an empty hatch (搂124.4.2).
             // This hatch is at (0,0,2), reached by the pattern's own offset, and it is NOT the one the
-            // case-2 setup fills at `plan.energy()`. So on a CLEAN world it reads 0, `consumeInternal(1000)`
+             
             // has nothing to draw, and `storedAfter` is 0 too:
             //   FAIL  energy gauge data is live, not a snapshot 鈥?
             //         stored 0 -> 0 after drawing 1000 FE (equal values would mean a cached snapshot)
@@ -5142,72 +5142,72 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
      * assets live 鈥?the {@code modularmagic} blocks use a second namespace and mixing the two up would
      * make every model fail to bind while the blocks still existed.
      */
-    /**
-     * Asserts that {@code modularmachinery:blockmeiteminputbus} can be OPENED 鈥?the check 搂686 exists for.
-     *
-     * <h2>The defect, and why no existing check could see it</h2>
-     *
-     * <p>The user reported "ME item input bus cannot be opened by right-click, and shift-right-click does not work
-     * either". The cause was measured, not guessed: {@code BlockMEItemBus} declared no {@code use} method at all, there
-     * was no {@code me_item_input_bus} menu type in ANY registry, and no screen binding existed 鈥?against upstream,
-     * whose {@code BlockMEItemInputBus.onBlockActivated} (U33-U53) opens {@code GuiType.ME_ITEM_INPUT_BUS} and whose
-     * {@code GuiMEItemInputBus} is 262 lines long.</p>
-     *
-     * <p><b>Every check in this suite passed while that was true.</b> {@code verifyMenuTypeSet} asserted a SET of
-     * names, and the name was never in it; {@code verifyPanelSizes} asserts sizes for menus that exist; neither asks
-     * "does anything OPEN this". <b>A menu type being registered is not the same as a menu being openable</b> 鈥?搂166
-     * wrote that sentence about the group-input screen and it was still true here, four hundred sections later.</p>
-     *
-     * <h2>What makes this check FAIL on the broken behaviour</h2>
-     *
-     * <p><b>(1) The block's own {@code use}, resolved at RUNTIME through the class hierarchy.</b>
-     * {@code getMethod("use", ...)} returns the most specific override, so it names {@code BlockMEItemBus} only when
-     * this block has one 鈥?remove the override and it degrades to {@code BlockBehaviour.use}, which returns
-     * {@code PASS} and opens nothing. <b>Removing the override therefore flips this check to FAIL</b>, and the check
-     * compares the declaring class against {@code BlockMEItemBus} rather than merely asserting that some {@code use}
-     * exists. {@code Class.getMethod} is used because it walks the hierarchy, and <b>{@code getDeclaredMethod} would
-     * not have caught the inheritance case this defect is: "the block has no override" and "there is no method" are
-     * different failures and only the first one is this bug.</b></p>
-     *
-     * <p><b>(2) The block CLASS must be loadable, and its {@code use} must be reachable in the class file.</b> The
-     * first version of this check CALLED the override with a null level and required {@code SUCCESS}, and it failed
-     * with <b>{@code NoClassDefFoundError: appeng/api/networking/IInWorldGridNodeHost}</b> 鈥?a real finding rather
-     * than a test artefact, recorded verbatim in PLAN 搂686: the click reached {@code MEBusTiles}, whose own method
-     * bodies name the AE2-connected tiles, so <b>NO {@code use} ON THIS BLOCK COULD BE EXERCISED WITHOUT AE2, and a
-     * right-click on a server without AE2 threw that error rather than returning</b>. The check therefore did not
-     * pretend: it loads the class through the MODULE's own class loader and asserts the open step is in its constant
-     * pool, which is a claim about the shipped class file rather than about a call it could not make. <b>If the
-     * {@code use} override is removed, the method is gone and this FAILS; if the body stops calling the open step, the
-     * constant is gone and this FAILS.</b></p>
-     *
-     * <p><b>搂690 FIXED THE THROW AND ADDED THE CLICK ITSELF.</b> The guard is now in the block's {@code use}, so
-     * {@code verifyMEBlockRightClickWithoutAE2} performs the right-click for real and would have failed on the shipped
-     * code with that exact error. This check is kept as it stands rather than replaced: it asserts a different fact
-     * (the override exists and still names the open step), and a check that is deleted when a second one arrives is a
-     * check that stops guarding the first defect.</p>
-     *
-     * <p><b>(3) The menu type must actually be registered, through the AE2-GUARDED registry's own accessor.</b> This
-     * is the link the audit named: {@code use} -> menu provider -> {@code MenuType} registration -> client screen. The
-     * accessor is {@code RegistryMEMenus.ME_ITEM_INPUT_BUS}, whose value is NOT a compile-time constant, so reading
-     * {@code isPresent()} goes through the deferred register 鈥?and the answer on this harness is false BY DESIGN,
-     * which the check reports instead of asserting.</p>
-     *
-     * <p><b>(4) The menu class itself is loaded and asked for the two methods the open path needs</b> 鈥?the constant
-     * used by the registered factory ({@code (int, Inventory, BlockPos, int)}) and the {@code forBus} factory the
-     * block's open step calls. This is NOT a "does the class exist" assertion: {@code getConstructor} /
-     * {@code getMethod} throw {@code NoSuchMethodException} if either signature drifts, and either drift means the
-     * block's own call cannot compile against what the registry constructs. Loading the class is safe here and the
-     * reason is stated rather than assumed 鈥?{@code MenuMEItemInputBus} names {@code MEItemInputBus}, which names AE2,
-     * so <b>this half CANNOT run without AE2 and does not pretend to</b>; it is reached only when
-     * {@code ME_ITEM_INPUT_BUS.isPresent()}.</p>
-     *
-     * <h2>What it still cannot measure, said plainly</h2>
-     *
-     * <p>The SCREEN BINDING (a client-side fact 鈥?搂84's limit), the actual opening of a window, and, before 搂690, the
-     * block-side SUCCESS contract (blocked by (2)'s linking finding 鈥?that half is now measured by the click in
-     * {@code verifyMEBlockRightClickWithoutAE2}). The one thing that would prove the whole chain is a client
-     * with AE2 installed, which this harness is not.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEItemInputBusMenu() {
         List<Check> checks = new ArrayList<>();
 
@@ -5996,68 +5996,68 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * The AE2 firewall measured by EXECUTION, on the server configuration that has no AE2 at all (PLAN 690).
-     *
-     * <h2>The defect, and why every check in this suite passed while it was there</h2>
-     *
-     * <p>The user's report was a right-click: on a server WITHOUT AE2, right-clicking the ME item bus threw</p>
-     *
-     * <pre>
-     *   java.lang.NoClassDefFoundError: appeng/api/networking/IInWorldGridNodeHost
-     * </pre>
-     *
-     * <p><b>Nothing in this suite could see it, and the 686 check is the proof rather than the exception:</b> that
-     * check had to be rewritten to READ {@code BlockMEItemBus.class} instead of calling the method, because calling
-     * it threw exactly this error. A check that reads a class file proves the open step is reachable; it does not
-     * prove the click can happen, and the difference between those two claims is the whole of this defect.</p>
-     *
-     * <h2>Why the error happens at all, stated as the JVM rule it is</h2>
-     *
-     * <p>A class file's method bodies NAME the types they use, and the type names a body carries are resolved when
-     * the class is LINKED (the verifier checks operand-stack assignability, which requires loading them) -- not when
-     * the method runs. So {@code BlockMEItemBus.use} calling {@code MEBusTiles.openItemInputBusMenu} makes
-     * {@code MEBusTiles} a LOAD of the block's right-click path, and {@code MEBusTiles}' own bodies name
-     * {@code MEItemInputBus}/{@code MEItemOutputBus}, whose hierarchy implements AE2's {@code IInWorldGridNodeHost}
-     * (via {@code MEMachineComponent}). The AE2 guard that section 429 put in
-     * {@code BlockMEMachineComponent.newBlockEntity} protects TILE CREATION; a {@code use} is a SECOND unconditional
-     * entry point, and it had no guard -- the same miss section 483 records for {@code BlockMEPatternProvider}, found
-     * the same way, and fixed the same way.</p>
-     *
-     * <p><b>AND THE SAME SHAPE EXISTED A SECOND TIME, in {@code BlockMEFluidInputBus.use}, where the tile is named
-     * INLINE</b> ({@code instanceof MEFluidInputBus}) rather than reached through {@code MEBusTiles}. Both blocks are
-     * registered unconditionally (all 8 ME blocks are, by design), so both are right-clickable on a server without
-     * AE2. <b>It did not throw, and the reason is measured rather than guessed:</b> {@code instanceof} answers false
-     * for a NULL operand WITHOUT resolving the class, and without AE2 that position never holds a block entity 鈥?so
-     * that site is a LATENT load-time dependency (one non-null operand away) plus a live DEFECT of the other kind: the
-     * click returned {@code SUCCESS}, swallowing it without opening anything. Both halves are asserted below; the
-     * third check asserts the SHAPE over the whole family, because the shape is the defect and the null operand is an
-     * accident of today's world state.</p>
-     *
-     * <h2>What makes each check FAIL on the broken code</h2>
-     *
-     * <ol>
-     *   <li><b>the click on {@code blockmeiteminputbus}</b>: with the guard absent, the call raises
-     *       {@code NoClassDefFoundError}, which this check catches and reports as the verdict. Measured that way
-     *       before the fix -- the log is the negative control.</li>
-     *   <li><b>the click on {@code blockmefluidinputbus}</b>: the same SHAPE, measured to have a DIFFERENT effect 鈥?
-     *       the inline {@code instanceof} did not throw (a null operand short-circuits without resolving the class),
-     *       so what fails here is the degradation: {@code SUCCESS} swallowed the click without opening anything.</li>
-     *   <li><b>the class-file scan</b>: it walks the block family derived from {@code RegistryMEBlocks} (so a ninth
-     *       ME block is covered the moment it is registered) and asserts that NO class in it names an AE2-side type
-     *       or any {@code appeng/} class. That is the defect's SHAPE, independent of which method carries it, and it
-     *       fails on {@code BlockMEFluidInputBus} before the fix.</li>
-     * </ol>
-     *
-     * <p><b>Both clicks also assert the DEGRADATION, not merely the absence of a crash:</b> with AE2 absent the
-     * block must be INERT -- the click returns {@code PASS} (nothing consumed), which is the contract section 483
-     * established for the pattern provider and the reason an unguarded {@code SUCCESS} would be a bug even without
-     * the error. A crash and a swallowed click are different failures and both are checked.</p>
-     *
-     * <p><b>The plots are cleared first and the clearing is verified</b> (section 659.4): {@code setBlock} to the
-     * SAME state is a no-op, so a bus left standing by a previous run would be read as this run's block, and the
-     * check reports whether anything had to be cleared rather than implying the plot was always empty.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEBlockRightClickWithoutAE2(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         boolean ae2 = net.minecraftforge.fml.ModList.get().isLoaded("ae2");
@@ -6221,48 +6221,48 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                 : "; none of the " + forbidden.length + " forbidden name(s) appears in any of them"));
     }
 
-    /**
-     * Asserts the ME pattern provider's own geometry: the ART's panel and well grid, and the slots the MENU builds
-     * (PLAN 712).
-     *
-     * <h2>Why this check exists, and what the client's report turned out to be</h2>
-     *
-     * <p>The report was a screen whose 36 pattern wells were inert grey squares, with the pattern grid "looking like
-     * 9x5". Both halves were answered by reading rather than by rendering, and the answer is not what either number
-     * suggested:</p>
-     *
-     * <ul>
-     *   <li><b>THE ART IS FINE AND ALWAYS WAS.</b> {@code mepatternprovider.png} is byte-for-byte upstream's own
-     *       copy (SHA-256 equal), it draws its panel to 256x196, and it draws <b>36 wells at (8 + 18c, 28 + 18r)</b>
-     *       -- 9 columns, 4 rows, every one of them with an 18/19-pixel dark top border. Nothing AE2-shaped was
-     *       missing from it.</li>
-     *   <li><b>THE SLOTS WERE NOWHERE.</b> {@code MenuMEPatternProvider} added its pattern slots and its player
-     *       slots and never set a coordinate, which is not an oversight in that file: <b>AE2 15.4.11 positions every
-     *       slot from the SCREEN's style JSON</b>. Measured with {@code javap}: {@code AppEngSlot}'s constructor is
-     *       {@code Slot(EMPTY_INVENTORY, index, 0, 0)}, {@code AEBaseMenu.createPlayerInventorySlots} builds
-     *       {@code Slot(inventory, i, 0, 0)}, and {@code AEBaseMenu} contains <b>no</b>
-     *       {@code putfield net/minecraft/world/inventory/Slot.x} at all -- the assignment lives in
-     *       {@code AEBaseScreen.repositionSlots}, which a vanilla {@code AbstractContainerScreen} never runs. So
-     *       every slot of this menu sat at (0, 0), and the wells had nothing on them: <b>the "grey squares" were
-     *       the art, and the defect was that they were not slots.</b></li>
-     * </ul>
-     *
-     * <h2>What is asserted, and how each half would pass while broken</h2>
-     *
-     * <p><b>(a) THE ART, in BOTH configurations.</b> The panel's width is the widest fully-opaque row of the PNG and
-     * its height is the last row the panel's own columns (x=3..105, which the sprite sheet does not cover) are
-     * opaque on -- both are the art's own pixels, and both are compared against the menu's constants. The 36 wells
-     * are then looked for with the SAME rule the player-row check applies (搂206/搂686): a dark left border in a
-     * three-pixel window and at least 15 of the 19 pixels of the top border row. The constants are inlined at this
-     * reference site, so this half needs no AE2 and loads no AE2-connected class.</p>
-     *
-     * <p><b>(b) THE MENU, AE2-gated.</b> A real provider block is placed on a cleared plot and the real menu is
-     * built over it, then every slot's own {@code x}/{@code y} is compared with the grid -- which is the half that
-     * would have caught this defect, because (a) passed all along. <b>The pass-while-broken risk is named:</b> if
-     * the block could not be placed, or the menu could not be built, this half reports a FAILURE with the reason
-     * rather than skipping (the 677(b) rule), and the AE2-absent configuration reports the skip in words on a line
-     * that says which half ran.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEPatternProviderGeometry(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         String artCheck = "the pattern provider's art is the panel its menu declares, with 36 wells on its grid";
@@ -6417,7 +6417,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
         // THE MENU'S TOTAL IS NOT `declaredSlots + playerSlots` ANY MORE, AND IT DID NOT STOP BEING IT QUIETLY.
         //
-        // PLAN 737 added the independent storage's two wells, so the total a correct menu builds is patterns + storage
+         
         // + the player's 36. This assertion failed on the first integrated run of the round with exactly that
         // arithmetic -- "the menu holds 74 slot(s) in total, and 36 + 36 were placed" -- and the two candidate
         // explanations are worth telling apart: the slots were added twice (a defect) or the expectation was written
@@ -6450,37 +6450,37 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * <b>PLAN 737, item 鈶? THE INDEPENDENT STORAGE IS ONE STORAGE, AND EVERY PATTERN REACHES IT.</b>
-     *
-     * <h2>What the user reported, and what this measures instead of paraphrasing it</h2>
-     *
-     * <p>Their sentence is "鎴戜滑鐨勭嫭绔嬪瓨鍌ㄦ殏涓嶅彲鐢?... 涓嬫柟鐙珛瀛樺偍搴斾负鎵€鏈夐厤鏂瑰叡鍚岃瘑鍒殑妲戒綅" 鈥?the independent storage is
-     * unusable, and it should be the slot all recipes recognise TOGETHER. Read against this port, "unusable" has a
-     * precise cause: {@code TileMEPatternProvider} exposed NO item or fluid capability at all, so
-     * {@code MachineContext.capabilities(ITEM_HANDLER, INPUT)} -- the ONLY path by which a requirement finds what it
-     * may consume ({@code RequirementItem.countAvailable} L422-L435, {@code MachineTicker.extract} L1395-L1410) --
-     * returned nothing for this block. The container existed and nothing could see it.</p>
-     *
-     * <h2>The three things asserted, each of which fails for its own reason</h2>
-     *
-     * <ol>
-     *   <li><b>A recipe can READ it.</b> An item goes in through the MACHINE's door (the tile's own
-     *       {@code machineItemHandler()}, which is the object the capability hands out) and comes back out through
-     *       {@code MachineContext.capabilities(...)}, i.e. the list the requirement machinery walks.</li>
-     *   <li><b>EVERY pattern gets the SAME object.</b> Two calls -- and, more importantly, a second resolution off a
-     *       context whose component list was rebuilt -- must return the identical instance, because a handler rebuilt
-     *       per caller is precisely how "each recipe has its own storage" happens by accident. This is the user's word
-     *       "鍏卞悓", and it is why the check compares OBJECTS and not contents: contents copied into a second container
-     *       would read the same and BE a second storage.</li>
-     *   <li><b>The two wells write into the same object the machine reads.</b> {@code insertItem(0, ...)} on the
-     *       view must land where {@code getStackInSlot(0)} on the context's handler finds it -- otherwise the wells
-     *       are the dead slots 搂729 refused, and the refusal would have been right.</li>
-     * </ol>
-     *
-     * <p><b>Nothing here is AE2-gated except the block itself</b>, so this check runs on the integrated configuration
-     * and is reported as skipped on the standalone one, where the ME blocks are placeholders by design (搂478).</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEPatternProviderSharedStorage(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         String name = "the pattern provider's independent storage is ONE storage every pattern reaches";
@@ -6520,7 +6520,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 MachineReloadListener.getLoader().findByName("alloy_furnace"),
                 MachineReloadListener.getLoader().getVariables(),
                 // Explicit for the same reason as the probe above: the next line overrides the component list, so
-                // the pattern is never resolved against. PLAN 搂750.
+                 
                 MachineReloadListener.getLoader().findByName("alloy_furnace").getPattern());
         context.overrideComponentPositions(List.of(pos));
 
@@ -6700,38 +6700,38 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * <b>PLAN 745: THE TWO BUTTONS' HOVER TEXT -- WRITTEN, KEYED, SHIPPED, AND NEVER CALLED.</b>
-     *
-     * <h2>The defect, and why this check has the shape it has</h2>
-     *
-     * <p>The user's report is one sentence: moving the mouse onto the two top-left buttons used to say what they do and
-     * which mode is on, and here it said nothing. The tooltip CODE existed: this port's screen already overrode
-     * {@code renderTooltip} with upstream's five-line list and the {@code [Currently Enabled]} marker, the two keys of
-     * the return-items button were in it too, and all nine keys were already in BOTH language files. <b>Nothing called
-     * it.</b></p>
-     *
-     * <p>On 1.12.2 nothing had to: upstream's list is queried from {@code AEBaseGuiContainerDynamic.renderHoveredToolTip}
-     * (U-L54-L70), a {@code GuiScreen} hook that vanilla's {@code drawScreen} invokes, and it draws it with
-     * {@code drawHoveringText} (U-L68). <b>On 1.20.1 {@code AbstractContainerScreen.render} does NOT invoke
-     * {@code renderTooltip}</b> -- measured with {@code javap -p -c} over the mapped 47.3.0 jar: the class contains the
-     * declaration and the {@code GuiGraphics.renderTooltip} call INSIDE it, and no call site at all; vanilla's own
-     * {@code ContainerScreen.render} does {@code renderBackground}, {@code super.render}, then
-     * {@code invokevirtual renderTooltip}. So on this version a screen must call its own hook, and an override with no
-     * caller is INVISIBLE.</p>
-     *
-     * <p><b>AND THAT IS EXACTLY THE FAILURE A KEY-EXISTENCE CHECK CANNOT SEE</b> (this file's 搂732 lesson, one widget
-     * family over): the keys were present before this round, so a check asserting only that they resolve would have been
-     * green on a screen that showed no tooltip at all. Hence clause (1) below, which reads the SCREEN'S OWN INSTRUCTION
-     * STREAM -- a client-only class cannot be loaded here (搂203/搂481) but its bytes can be read (搂708) -- and fails on
-     * the pre-745 tree while every other check stays green. Clauses (2) and (3) are 搂732's shape: the keys are taken
-     * OFF THE COMPONENTS THE PRODUCTION BUILDER RETURNS rather than from a list written here, and they are compared
-     * against the two shipped language files.</p>
-     *
-     * <p><b>WHAT THIS CANNOT DO, said rather than implied:</b> it reads bytes and strings, not pixels. It proves the
-     * call is in the shipped instruction stream and that the text the builder produces names the mode it was built for;
-     * it cannot watch a tooltip appear, and it does not claim to. The user's screenshot is the other half.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEPatternProviderTooltips() {
         List<Check> checks = new ArrayList<>();
         var modes = hellfirepvp.modularmachinery.common.tiles.me.WorkModeSetting.values();
@@ -7056,33 +7056,33 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return sentence.substring(0, cut).trim();
     }
 
-    /**
-     * <b>PLAN 737, item 鈶? THE WORK MODE IS REAL STATE, IT CYCLES, AND IT SURVIVES A SAVE.</b>
-     *
-     * <h2>What is asserted here, and what is deliberately NOT</h2>
-     *
-     * <p>This check asserts that the MODE STATE and its cycling are real and persisted.  The source-compatible
-     * isolation routing is covered separately by the 36-handler check in the storage suite above.</p>
-     *
-     * <ol>
-     *   <li><b>The enum is upstream's, and the check READS its constants rather than naming them.</b> The first version
-     *       of this idea was a list of five literals in the check, which would have passed for a port whose enum had
-     *       five constants of any names at all. Here every ordinal used in the message comes out of
-     *       {@code values()[i].name()}.</li>
-     *   <li><b>The mode moves through the PACKET PATH and the move is read back.</b> The menu is built for the block,
-     *       is made the player's open menu, and {@code PktMEPatternProviderAction.apply} is called exactly as the wire
-     *       handler calls it. The target mode is chosen to be NOT the default -- a check that sets DEFAULT on a
-     *       provider that already was DEFAULT passes for the wrong reason, which is the trap this file keeps naming.</li>
-     *   <li><b>It survives a save.</b> The live tile's own {@code getUpdateTag()} is loaded into a fresh tile, which is
-     *       what a client's {@code onDataPacket} does; and the value is also checked against {@code saveAdditional}'s
-     *       tag, because "the update tag carries it" and "the save carries it" are two different claims and a provider
-     *       whose mode lived only in memory would pass the first.</li>
-     * </ol>
-     *
-     * <p><b>AND THE AUTHORIZATION HALF IS ASSERTED TOO, NEGATIVELY:</b> with no menu open for this block, the same
-     * call must REFUSE. Without that clause the check would pass on an {@code apply} that ignored its guard -- and an
-     * unguarded {@code apply} lets any client set any provider's mode.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEPatternProviderWorkMode(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         String name = "the pattern provider's work mode moves through the packet path and survives a save";
@@ -7260,10 +7260,10 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                         + "; default before the call was " + startingMode.ordinal()
                         + (trouble.length() == 0 ? "" : "  MISMATCH: " + trouble.toString().trim())));
 
-        // PLAN 745 -- THE HOVER TEXT'S MARKER FOLLOWS THE NUMBER THE SCREEN READS, AND THAT NUMBER IS THE MENU'S.
+         
         //
         // The screen draws the button's sprite AND marks the tooltip's line from ONE reader: `menu.workModeOrdinal()`,
-        // the data slot (PLAN 737's probe calls `broadcastChanges` once, because `addDataSlots` only ALLOCATES the
+         
         // slots -- without it this whole clause would read DEFAULT for every mode). So what is asserted here is the
         // chain that ends in the player's hover text: the mode the TILE holds (`afterTileOrdinal`, the server's own
         // truth) must be the mode the marker lands on when the tooltip is built from the number the MENU reports
@@ -7326,18 +7326,18 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * <b>PLAN 737, items 鈶?and 鈶?in the WINDOW: the two wells and the mode's data slot.</b>
-     *
-     * <p>This is {@code verifyMEPatternProviderGeometry}'s sibling and it exists because that check's subject is the
-     * 36 pattern wells; this one's is the <b>independent storage's two cells</b> at (181, 172) and (199, 172), which
-     * 搂729 measured in the art and refused as slots, plus the one data slot the mode needs.</p>
-     *
-     * <p>The wells are compared against the ART as well as against the constants, for the same reason the pattern
-     * grid is: a coordinate that agrees with a constant this round wrote and disagrees with the texture has moved the
-     * slot off its cell. The art's bottom row is measured elsewhere (729's own geometry check asserts the third well
-     * and the "F"), so what is added here is the pair to the LEFT of it, which no check had looked at.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEPatternProviderStorageSlots(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         String name = "the pattern provider's menu puts the independent storage on the art's two wells";
@@ -7549,29 +7549,29 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * The wire format of the ME fluid input bus configuration packet, measured with no AE2 and no client (PLAN B3).
-     *
-     * <p><b>Why this is its own check rather than a line inside the end-to-end one.</b> The end-to-end check needs AE2, and
-     * <b>this project's own harness does not have AE2</b> 鈥?so a single combined check would report PASS for a feature it had
-     * not measured, which is the defect class the whole 搂5xx series is about. The codec touches no ME type (a position, a slot
-     * index and a fluid registry id), so it can be measured here, and it is the one part of the feature where a wrong value is
-     * silent: a fluid written and read back as a different fluid produces no error anywhere.</p>
-     *
-     * <p>Three cases, and the third is the reason it is not a two-line assertion:</p>
-     *
-     * <ol>
-     *   <li><b>a real fluid round-trips</b> 鈥?id and amount, read back as the same fluid;</li>
-     *   <li><b>"nothing" round-trips as nothing</b> 鈥?the clear gesture the slot's configureFrom applies when the player's
-     *       hand is empty, which is how a configuration is removed;</li>
-     *   <li><b>an out-of-range id decodes to nothing rather than to a fluid</b> 鈥?a payload that names a fluid the registry
-     *       does not have must fail CLOSED.</li>
-     * </ol>
-     *
-     * <p>The ids in the detail line are READ from the registry and printed, so a reader can see which numbers were sent 鈥?a
-     * literal that happens to be a valid id is still the wrong value, and a line that printed only "ok" could not be audited
-     * against that.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static Check verifyMEFluidBusConfigCodec() {
         var water = new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1234);
         var lava = new FluidStack(net.minecraft.world.level.material.Fluids.LAVA, 4321);
@@ -7626,66 +7626,66 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
     }
 
-    /**
-     * Asserts the ME fluid input bus's configuration dimension end to end (PLAN B3).
-     *
-     * <h2>Why this check exists in this shape</h2>
-     *
-     * <p>搂649(b) found a value with a READER and no WRITER: {@code MEFluidInputBus.setConfigured} had zero call sites while
-     * {@code getConfigured} was read by {@code doBusWork} and the array was round-tripped through NBT. <b>The defect was not
-     * that a method was missing 鈥?it was that a value could not come into existence.</b> A check that merely asserted the menu
-     * type or the new class would therefore have certified the right shape of thing while measuring nothing about the defect, so
-     * this one drives the whole chain and reads the resulting value back from the TILE:</p>
-     *
-     * <pre>
-     *   a carried water bucket  ->  the real click path  ->  MenuMEFluidInputBus.clicked
-     *                           ->  ConfigSlot.configureFrom  ->  MEFluidInputBus.setConfiguredFluid
-     *                           ->  setConfigured  ->  getConfigured(slot)  ->  the menu's ContainerData
-     *   and SEPARATELY PktMEFluidInputBusConfig.apply, which is what the packet's handler calls and which no client in this
-     *   project reaches: {@code send} has no call site at all (搂667.5(a)). Its guards are asserted; its path is NOT the one
-     *   production takes, and no check here implies otherwise any more.
-     * </pre>
-     *
-     * <h2>The five things it separates, each of which the others cannot see</h2>
-     *
-     * <ol>
-     *   <li><b>a click with a bucket configures the tank</b> 鈥?the producer the defect lacked;</li>
-     *   <li><b>a second click clears it</b> 鈥?an empty hand must take a configuration away, or a mis-click would be
-     *       permanent;</li>
-     *   <li><b>a click writes only for the menu the player has open</b> 鈥?the call vanilla's server itself makes when a
-     *       {@code ServerboundContainerClickPacket} arrives, paired with its own refusal. <b>This is the check that used to
-     *       drive {@code apply} directly and to be named as the production write;</b> it now drives the write production
-     *       performs and keeps the packet's guards as a separate check (see the note below);</li>
-     *   <li><b>and that refusal is not vacuous</b> 鈥?the refused click carries LAVA and aims at a second menu for the SAME bus
-     *       and the SAME slot, so only the "has this player got this menu open" guard can explain the tile being left alone,
-     *       and the accepted click then carries WATER. A refusal that passes because nothing could have been written anyway is
-     *       搂663.5's defect, the one this project keeps re-learning;</li>
-     *   <li><b>the packet's own guards, kept as a check of their own</b> 鈥?another position's bus while this one is open, and an
-     *       index that is not a config slot, must both be refused, and what it writes when it is allowed is its own payload.
-     *       Without this the packet's authorization would be untested; with it named as the production path, it certified a
-     *       path production never takes.</li>
-     * </ol>
-     *
-     * <p><b>THE DECISION ABOUT THE PACKET'S CHECK, RECORDED:</b> it is <b>KEPT</b> as a second check and <b>RENAMED</b>, not
-     * deleted 鈥?the guard logic it exercises is real, and deleting it would certify nothing. What changed is the CLAIM: no
-     * client sends this packet, so its check now says in its own name that it asserts the packet's authorization rather than
-     * the write a player performs.</p>
-     *
-     * <p><b>AND WHAT THE BODIES SAID THAT THE JAVADOC DID NOT:</b> {@code PktMEFluidInputBusConfig.apply} reaches
-     * {@code ConfigSlot.configureFrom(player, fluid)} 鈥?the TWO-argument overload, which stores the fluid it is given 鈥?so the
-     * packet writes ITS PAYLOAD; only the one-argument overload, the one {@code clicked} calls, re-derives the fluid from the
-     * player's cursor. The channel's own javadoc still says the server re-derives from the carried container "first" and falls
-     * back to the payload, which the body does not do. That is a documentation defect left on the record rather than silently
-     * edited here, and it is why the packet's check below puts LAVA in the payload while the cursor holds WATER: the two paths
-     * must not be able to pass for each other.</p>
-     *
-     * <p><b>The client half of {@code clicked}'s own guard cannot be driven here:</b> it returns early when
-     * {@code player.level().isClientSide()}, and a dedicated server has no client level. What runs is the server half, which is
-     * the half that decides whether the write happens.</p>
-     *
-     * <p>The detail lines name the tank capacity, because the value the tile stores is NORMALISED to it: a check that asserted
-     * the bucket's own 1000 mB would be asserting the pre-port behaviour rather than the bus's.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMEFluidBusConfig(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -8221,15 +8221,15 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 735, DEFECT A -- the setting the screen read as 0
+     
     // ------------------------------------------------------------------
 
-    /**
-     * This round's own region: x = 235..241 at y = 6, z = 0 鈥?clear of the fluid-hatch tiers (180-197), the
-     * placed-stack check (200-207), the 731 tier sweeps (220-224, 230-234) and the two plots that start at
-     * 250 and 280. Every position is CLEARED before it is placed into, because {@code setBlock} to the state
-     * that is already there is a no-op and this world persists between runs (PLAN 289).
-     */
+    
+
+
+
+
+ 
     private static final int CHANNEL_CHECK_X = 235;
     private static final int CHANNEL_CHECK_Y = 6;
 
@@ -8238,37 +8238,37 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 net.minecraft.world.level.block.Block.UPDATE_ALL);
     }
 
-    /**
-     * DEFECT A: "骞惰鏁拌緭鍏ュ悗涓嶄細淇濆瓨锛岄粯璁や负0".
-     *
-     * <h2>What was broken, and which END of the channel it was</h2>
-     *
-     * <p><b>The write end was NOT broken, and this check establishes that rather than assuming it:</b> the
-     * number is entered the way a player enters it (through {@code PktSetParallelism.apply}, which IS the
-     * packet handler's body 鈥?the screen's buttons and its text field both end there), and it is then read
-     * back three ways: off the tile, off a save/load round trip, and off the menu's own data slots.</p>
-     *
-     * <p><b>The read end was.</b> {@code ScreenParallelController.init()} sets its text field from
-     * {@code menu.getParallelism()}, and on the client that is the client's {@code SimpleContainerData}, which
-     * is all zeros until the server's first {@code broadcastChanges} after the window packet 鈥?the ORDER is in
-     * {@code NetworkHooks.openScreen} (L208 sends the window packet, L212 creates the menu) and in
-     * {@code DataSlot.checkAndClearUpdateFlag} ({@code prevValue} starts at 0, so the first update is what
-     * fills the client's store). Nothing re-read the field afterwards, so a controller holding 3 displayed 0
-     * on every open 鈥?which is why the report reads "defaults to 0" rather than "wrong number".</p>
-     *
-     * <h2>Why the assertion is the WINDOW PAYLOAD and not the tile</h2>
-     *
-     * <p>Asserting the tile's field alone would have PASSED on the broken behaviour: the tile was always
-     * right. So the third half builds the payload through the same writer the block uses
-     * ({@code MenuParallelController.writeOpenData}) and decodes it through the menu type's OWN registered
-     * factory 鈥?the lambda a real client runs 鈥?and asserts the number the screen's data slots report. That
-     * is the half that fails without the fix (it reported 0 while the block held the value).</p>
-     *
-     * <p>WHAT THIS DOES NOT COVER: no screen is constructed and nothing is drawn 鈥?a dedicated server has no
-     * renderer, no font and no {@code Screen} class. What is asserted is the data the screen reads; that the
-     * frame, the buttons and the field are painted from it is unchanged from PLAN 159/201 and unverifiable
-     * here.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyParallelControllerSetting(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -8378,35 +8378,35 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 735, DEFECT B -- the bus whose slot count came from the handler
+     
     // ------------------------------------------------------------------
 
-    /**
-     * DEFECT B: "鍗囩骇鎬荤嚎榛樿鍏ㄦ爮浣嶅彲鐢紝娌℃湁鎸夎鏄庣粰鏍忎綅" 鈥?a bus exposing all eighteen slots where its tooltip
-     * (PLAN 732) says three.
-     *
-     * <h2>What was reversed</h2>
-     *
-     * <p>{@code MenuUpgradeBus.forBus} asked the HANDLER how many slots it had and looked the tier up from
-     * that ({@code UpgradeBusData.forSlotCount(handler.getSlots())}, PLAN 275's shape). The direction is now
-     * tier -> count: the tier comes from the BLOCK's own state ({@code TileUpgradeBus.getTier()}), the tier
-     * gives the count, and {@code TileUpgradeBus.getUpgradeInventory()} rebuilds a handler that disagrees.
-     * That reversal is what the two last parts below measure 鈥?they are the states in which the handler's
-     * size and the tier's count differ, and in which the old direction displayed the handler.</p>
-     *
-     * <h2>Why the counts are read from the enums and never from a table here</h2>
-     *
-     * <p>A literal table would let both sides drift together and still pass. Every expectation below is
-     * {@code tier.getUpgradeSlots()} for a tier obtained from the block's own property values, so a renamed,
-     * added or re-ordered constant is measured rather than assumed.</p>
-     *
-     * <h2>The reported number itself is NOT re-derived here</h2>
-     *
-     * <p>Where the over-large handler came from is established in {@code TileUpgradeBus}'s javadoc from two
-     * bodies: {@code ItemStackHandler.deserializeNBT} resizes the handler from the tag's own {@code Size}
-     * (Forge L188) and {@code TileUpgradeBus.load} feeds it a saved tag. The last part below builds exactly
-     * that state and nothing else about it is guessed.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyUpgradeBusSlotDerivation(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -8488,7 +8488,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                             .append(" declared=").append(declared).append("] ");
                 }
 
-                // AND THE TOOLTIP, WHICH IS THE OTHER SIDE OF THE SAME CONTRACT (PLAN 732's line). It is
+                 
                 // obtained the way a player obtains it -- the ITEM's own appendHoverText on the tab's own
                 // tagged stack -- and its argument is then required to EQUAL the slots the menu exposed. The
                 // two numbers travel by different paths (TierTipValue.getTipValue() vs the blockstate's tier),
@@ -8754,7 +8754,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 "stone=" + (rejectsJunk ? "refused" : "ACCEPTED") + " blueprint="
                         + (acceptsBlueprint ? "accepted" : "REFUSED")));
 
-        // THE SLOT NAMES THE MACHINE (PLAN section 266).
+         
         //
         // This is the link that did not exist: the slot accepted blueprints, the item carried a key, the
         // menu drew the slot, and nothing read one -- so the ONLY way to bind a controller was to type a
@@ -8799,7 +8799,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                             + (legacyResolves ? "" : "  <-- the findByName fallback is not working")));
             inv.extractItem(0, 1, false);
         }
-        // requires-blueprint IS PARSED, AND ABSENT MEANS FALSE (PLAN sections 292, 309).
+         
         //
         // The key shipped in this port own JSON from the asset conversion and nothing read it for the whole
         // session (section 263). These two assertions pin the direction as well as the parse:
@@ -8820,7 +8820,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                     declared != null && !declared.isRequiresBlueprint(),
                     declared == null ? "assembly_line is not loaded"
                             : "assembly_line declares false, read as " + declared.isRequiresBlueprint()));
-            // ABSENT MEANS FALSE, which is upstream's value (PLAN section 309).
+             
             //
             // This check used to assert the OPPOSITE, because the port had chosen true and the assertion was
             // written to agree with the PORT rather than with the mod. An assertion that is calibrated against
@@ -8831,7 +8831,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                             : "alloy_furnace omits the key, read as " + omitted.isRequiresBlueprint()));
         }
 
-        // failure-action IS PARSED, AND AN UNKNOWN NAME FALLS BACK (PLAN section 310).
+         
         //
         // Three assertions, because the key has three possible outcomes and the port had NONE of them:
         //
@@ -8867,7 +8867,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                     .byName("not-a-real-action")));
         }
 
-        // color IS READ, AND ITS DEFAULT IS THE CONFIG VALUE (PLAN section 319).
+         
         //
         // Two assertions, because the key has two outcomes and the port had neither:
         //
@@ -8894,7 +8894,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                     + " (config 0x" + Integer.toHexString(configColor) + ")"));
         }
 
-        // dynamic-patterns IS READ, AND ONLY WHERE THE DATA DECLARES IT (PLAN section 325).
+         
         //
         // The shipped assembly_line declares ONE pattern named `line`, minSize 5, maxSize 15, with an 8-part
         // template and a 9-part cap. Every number here comes from reading that file, not from an estimate --
@@ -8926,7 +8926,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 checks.add(new Check("the line runs on the north face, as the JSON declares",
                         line != null && line.getFaces().contains(net.minecraft.core.Direction.NORTH),
                         line == null ? "no pattern named 'line'" : "faces=" + line.getFaces()));
-                // INSTANTIATION (PLAN section 326). The shipped line is an 8-part template plus a 9-part cap, so a
+                 
                 // size of N yields 8N + 9 parts -- 49 at the minimum 5 and 129 at the maximum 15. Both numbers are
                 // computed from the templates' own sizes rather than written down, so a template that changes
                 // changes the expectation with it.
@@ -8942,7 +8942,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                     checks.add(new Check("instantiate(0) is empty but still carries the cap",
                             line.instantiate(0).size() == 9,
                             "size 0 -> " + line.instantiate(0).size() + " parts (want 9, the cap alone)"));
-                    // THE WALK AGAINST THE WORLD (PLAN sections 328-330). This asserts the CATASTROPHIC case only:
+                     
                     // a position in mid-air has no line, so matchSize must return 0. A port that returned a
                     // positive count here would form the machine anywhere, which is the worst failure this method
                     // has and the only one testable without placing blocks.
@@ -8957,7 +8957,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                         checks.add(new Check("the walk finds no line in mid-air",
                                 found == 0, "matchSize in empty air returned " + found));
 
-                        // THE POSITIVE CASE (PLAN section 331). ONE section is placed, not a valid line: the
+                         
                         // template has 8 parts and the cap 9, so a single section must read as size 1 -- a count
                         // BELOW minSize 5, which is exactly what makes the count meaningful rather than a boolean.
                         //
@@ -8973,7 +8973,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                 line.getStructureSizeOffsetStart().getX(),
                                 line.getStructureSizeOffsetStart().getY(),
                                 line.getStructureSizeOffsetStart().getZ());
-                        // THE CAP IS MANDATORY, SO A LONE SECTION IS NOT A LINE (PLAN section 334).
+                         
                         //
                         // The first version of this check placed one section and expected 1. It got 0, and the
                         // walk was RIGHT: upstream's loop (DynamicPattern:150-159) ends at the first non-matching
@@ -9011,7 +9011,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                             : "alloy_furnace has " + omitted.getDynamicPatterns().size() + " pattern(s)"));
         }
 
-        // THE FORMATION GATE REFUSES A MACHINE WHOSE LINE IS ABSENT (PLAN sections 335-336).
+         
         //
         // The suite passed 124/124 with the gate in and could not SEE it, because every existing formation check
         // uses test_multiblock, which declares no dynamic pattern. This is the cheapest assertion that
@@ -9053,7 +9053,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                         (attempt.formed() ? "FORMED" : "refused") + " a wall with no line"
                                 + (message.isEmpty() ? "" : " -- " + message)));
 
-                // AND WITH A VALID LINE IT FORMS (PLAN section 337).
+                 
                 //
                 // The refusal above cannot tell a working gate from a gate that refuses everything, which is why
                 // this half is here rather than assumed. Five sections is exactly the declared minimum, so this
@@ -9091,7 +9091,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                     + (unresolved.length() == 0 ? "" : "; unresolved:" + unresolved)));
 
                     // ==================================================================================================
-                    // THE DYNAMIC SECTIONS' COMPONENTS MUST BE BOUND, NOT MERELY MATCHED (PLAN 搂750).
+                     
                     //
                     // THE AUDIT NAMED THIS GAP EXACTLY: "the suite only asserts `formed`, never `boundCount`". The
                     // check above is the one it was talking about -- it PASSES on the broken behaviour, and it
@@ -9168,7 +9168,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                     }
 
                     // THE EXPECTED TOTAL IS COUNTED THE SAME WAY THE ENGINE COUNTS IT, AND THAT CORRECTION WAS
-                    // FORCED BY A REAL FAILURE (PLAN §750.2). The first version derived it from the two template
+                     
                     // cells this check names by hand -- the item input bus and the cap's output bus -- and asked
                     // for 2. The run reported **11**, and the ENGINE WAS RIGHT: a section's template declares
                     // SEVEN component positions, not one (`casings_item_input` plus the fluid/ME input cells at
@@ -9230,7 +9230,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                     }
 
                     // AND THE TEMPLATE'S OWN BUS CELLS ARE REQUIRED TO BE IN THE BOUND SET, NAMED, ON TOP OF THE
-                    // UNDECLARED MERGE (PLAN §750.2 negative control): the comparison against the formed pattern's
+                     
                     // own component cells is DEGENERATE ON ITS OWN -- a pattern with no sections and a walk that
                     // bound nothing agree on 0 and would pass. These two cells are the ones only a merged pattern
                     // can reach, so requiring them is what makes the check fail on the defect.
@@ -9305,7 +9305,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                             + " section bus(es) do NOT point at the controller: " + unwired
                                             + " -- the requirement path would find no handler there"));
 
-                    // AND BREAKING ONE SECTION UNFORMS IT (PLAN section 339).
+                     
                     //
                     // The gate above refuses a WRONG line at build time; this is the other half, which upstream
                     // does on every check (T690) -- a machine whose line is broken AFTER formation must stop
@@ -9353,7 +9353,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             }
         }
 
-        // THE REQUIREMENT-TYPE SEAM IS OPEN, NOT MERELY PRESENT (PLAN section 382).
+         
         //
         // Section 374 established what was missing by the port's own behaviour: `RecipeLoader` collected the
         // requirement types it could not load into a list and REPORTED them, because a three-case switch cannot be
@@ -9393,7 +9393,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                             : "the registry returned " + fetched));
         }
 
-        // THE NBT PATTERN PIPELINE, ASSERTED ON THE BEHAVIOURS THAT FAIL SILENTLY (PLAN section 389).
+         
         //
         // Ten files were written for this feature and none had a caller, so "it compiles" was the only evidence. These
         // checks target the four rules whose WRONG implementation still loads every recipe, still logs nothing, and simply
@@ -9465,7 +9465,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             checks.add(new Check("the pattern text parser is reachable", parser != null, "NbtPatternParser loaded"));
         }
 
-        // fillMissing IS IDEMPOTENT, AND IT ONLY PLACES WHAT IS MISSING (PLAN section 286).
+         
         //
         // Section 267 wrote fillMissing and the client confirmed it works by hand, but NO assertion has ever
         // touched it. That is the same gap as section 267 itself recorded, and it is the last piece of this
@@ -9492,7 +9492,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 level.setBlock(base, hellfirepvp.modularmachinery.common.registry.RegistryBlocks
                         .blockController.get().defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
 
-                // CLEAR THE AREA FIRST (PLAN section 289).
+                 
                 //
                 // This check passed on 2026-10-01 and failed on 2026-10-02 with the same code, and the reason
                 // is not flakiness: `run/world` PERSISTS between runs. The first run placed the eleven parts;
@@ -9541,7 +9541,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             }
         }
 
-        // THE REPAIR ITSELF, NOT MERELY AGREEMENT (PLAN section 285).
+         
         //
         // Section 284 found the bus size bug only after four rounds, and the three checks above did not catch
         // it because they assert handler == menu -- which is true whenever the handler was built correctly in
@@ -9585,7 +9585,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             }
         }
 
-        // EVERY TIER'S MENU MUST FIT ITS HANDLER (PLAN section 275).
+         
         //
         // This is the check that would have caught the crash. `Slot 6 not in valid range - [0,6)` came from
         // a menu built for one tier over a handler of another, and NOTHING tested it -- because before the
@@ -9663,30 +9663,30 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * FACTORY MODE, END TO END (PLAN 662).
-     *
-     * <p>What this has to prove, and why each part is a check rather than a reason: factory mode's whole point
-     * is that ONE structure carries MORE THAN ONE recipe run, and every failure mode of it is silent --
-     * a block whose ticker was never overridden runs the single-craft engine (which consumes inputs and crafts
-     * nothing), a thread list that is never persisted loses the work, and an event whose flags do nothing is a
-     * class that exists. SO THE CLAIMS BELOW ARE ABOUT THE RUNS, NOT ABOUT THE CLASSES: two runs in flight at
-     * once, each paying its own inputs and producing its own output; a starved run held rather than destroyed
-     * and then resumed; and the two event flags that carry behaviour, driven directly and measured by what they
-     * did to a run.</p>
-     *
-     * <p>DRIVEN THROUGH THE BLOCK'S OWN TICKER. {@code BlockFactoryController.getTicker} is the wiring that makes
-     * any of this happen on a real server, and calling {@code FactoryTicker.tick} directly here would test the
-     * engine while leaving the wiring unverified -- which is precisely the class of defect this project has paid
-     * for repeatedly. The single-craft engine is then run on the same tile ON PURPOSE, to assert that it refuses
-     * it: the two engines disagree about what "this controller has an active recipe" means, and the wrong one
-     * would eat a bus per tick.</p>
-     *
-     * <p>THE MACHINE AND THE RECIPE ARE READ FROM THE LOADER, and the recipe's amounts are read from the recipe,
-     * so nothing here is a literal that happens to be a valid machine name -- the mistake that cost three
-     * rounds. The one literal is the machine's ID used to LOOK IT UP, and a null lookup fails the check
-     * loudly.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyFactoryMode(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -9730,7 +9730,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         Placement plan = choosePlacement(factoryOrigin, machine, MachineReloadListener.getLoader().getVariables());
         buildStructure(level, factoryOrigin, machine, plan);
         // THE CONTROLLER IS REMOVED FIRST, AND THAT LINE IS THE DIFFERENCE BETWEEN A CHECK AND A COIN FLIP.
-        // run/world persists between runs (PLAN 289), and `setBlock` with the SAME state is a no-op in 1.20.1
+         
         // (block states are interned singletons, so LevelChunk#setBlockState returns early) -- which means the
         // PREVIOUS run's controller, with its THREADS AND RUNS restored from the saved NBT, would still be
         // standing here. The second run of this check failed exactly that way: "threads 1 -> 1" before it had
@@ -9819,7 +9819,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         hellfirepvp.modularmachinery.common.machine.factory.FactoryRecipeThread startedRun = firstActiveRun(factory);
         // THE NAME IS CAPTURED HERE, WHILE THE RUN STILL HAS ONE: reading it when the message is built -- after
         // the run has completed and cleared itself -- prints "null", which is a diagnostic that cannot name its
-        // subject (the same mistake PLAN 651 and 659.5 record, made twice in this very check).
+         
         String startedRecipeName = startedRun == null ? "?" : startedRun.getRecipeName();
         int ticksToStart = singleGuard;
         while (factory.hasActiveRecipe() && singleGuard < singleBudget) {
@@ -9929,7 +9929,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         // --- F7: the run resumes when the power returns, and finishes. ---
         // THE NAME IS CAPTURED HERE, WHILE THE RUN STILL HAS ONE: reading it after the run completes returns null
         // -- the first version of this check printed "run null finished after 199 more tick(s)", which is a
-        // diagnostic that cannot name its subject (the same defect PLAN 651 records).
+         
         String starvedRecipe = afterStarvation == null ? "?" : afterStarvation.getRecipeName();
         int starvedTicks = afterStarvation == null ? -1 : afterStarvation.getRecipeTicks();
         fillEnergy(level, plan.energy());
@@ -9953,7 +9953,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         // --- F8/F9: the two event flags that CARRY BEHAVIOUR, driven directly and measured on a run. ---
         //
         // They are posted here rather than left to a handler that does not exist: an event whose flags do
-        // nothing is the "scaffolding without behaviour" pattern this project removed four times (PLAN 420), and
+         
         // the only way to show they do something is to set one and watch the run.
         wipeInventory(level, plan.input());
         wipeInventory(level, plan.output());
@@ -9991,92 +9991,92 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * THE FACTORY STATUS DISPLAY SHOWS A PERCENTAGE, AND ITS BAR TURNS RED FROM THE ENGINE'S OWN REASON
-     * (PLAN 710).
-     *
-     * <p><b>THE REPORT, VERBATIM.</b> <i>"绛変細锛屾垜濂藉儚璁板緱鍘焟od娌℃湁鏄剧ず杩愯鍒伙紝鏄樉绀虹殑杩愯鐧惧垎姣旓紝濡傛灉绌洪棿涓嶈冻杩涘害鏉′細鍙樼孩鎻愮ず"</i>
-     * 鈥?the original mod showed a running PERCENTAGE rather than running ticks, and the progress bar turns RED
-     * when there is not enough space. Both claims were read against upstream's bodies before anything changed;
-     * both hold, and only the first was not true of this port.</p>
-     *
-     * <h2>(1) The percentage 鈥?the defect, and what the two checks below assert about it</h2>
-     *
-     * <p>{@code GuiFactoryController.drawRecipeStatus} U179-U183 is the ONLY place upstream forms this text:
-     * {@code int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();} then
-     * {@code I18n.format("gui.controller.status.crafting.progress", progress + "%")}. This port's
-     * {@code drawFactoryStatus} passed {@code progress + " / " + duration + " t"} into that same key and its
-     * {@code drawRun} formed its own percentage from a clamped fraction: two expressions, one unit, and the
-     * client's screenshot carried both readers at once ({@code 杩涘害锛?00 / 60 t} beside {@code 杩涘害锛?00%}). Both
-     * now take their argument from {@code MenuFactoryController.progressText}, upstream's integer arithmetic and
-     * upstream's own {@code "%"}.</p>
-     *
-     * <p>THE ASSERTION IS DELIBERATELY NOT "the string contains a percent sign": that passes on a screen that
-     * also prints ticks, which is the state that was reported. So it is made of three parts.</p>
-     *
-     * <ul>
-     *   <li><b>THE VALUE.</b> Every text {@code progressText} can produce, over ten (ticks, duration) pairs
-     *       including the clamped one, must match {@code \d{1,3}%} 鈥?digits and a percent sign and NOTHING ELSE.
-     *       A tick form cannot match it whatever else it carries, because it carries a separator and a unit
-     *       beside the numbers. Upstream's own values are asserted at the points that pin the arithmetic:
-     *       0/60 is {@code 0%}, 30/60 is {@code 50%}, 60/60 is {@code 100%}, and 120/60 is {@code 100%} rather
-     *       than {@code 200%} 鈥?the last one because {@code ActiveMachineRecipe.tick} stops before its own
-     *       {@code tick++} once completed (U83-U85) and this port's clamp is the same bound (PLAN 708).</li>
-     *   <li><b>THE SCREEN'S CALLS.</b> {@code drawFactoryStatus} and {@code drawRun} must both CALL
-     *       {@code progressText}. That is the positive half: the text is upstream's arithmetic and not a local
-     *       expression that happens to look like a percentage.</li>
-     *   <li><b>THE SCREEN'S CONCATENATION 鈥?the half that has teeth, and this round's negative control is what
-     *       proved it.</b> Neither method may perform a string concatenation of its own. The first version of
-     *       this check asserted only the two halves above plus "every {@code String} constant these methods LOAD
-     *       is a language key", on the assumption that a tick form is spelled out of literals a literal scan
-     *       would find. IT IS NOT: {@code progress + " / " + duration + " t"} compiles to ONE
-     *       {@code invokedynamic StringConcatFactory.makeConcatWithConstants} whose fragments live in
-     *       {@code BootstrapMethods}, so the pre-fix line loaded NO suspicious literal at all 鈥?the control run
-     *       failed on the call assertion alone, and a revert that kept the call AND concatenated the ticks
-     *       would have passed the literal scan while printing both. The walk now collects {@code invokedynamic}
-     *       (the opcode is how a {@code +} on strings reaches a class file) and the check asserts the ABSENCE
-     *       of that call, which is the thing the compiler actually emits. The literal scan is kept as a second
-     *       net, for a separator or a unit passed through {@code String.valueOf} or an {@code append}.</li>
-     * </ul>
-     *
-     * <h2>(2) The red 鈥?verified, not built: the predicate already existed and is the engine's reason</h2>
-     *
-     * <p>Upstream's predicate is {@code if (status.isCrafting())} at U126 (green) with an {@code else} at U129
-     * ({@code 1.0F, 0.6F, 0.6F} 鈥?RED), where {@code status} is {@code thread.getStatus()} (U112). Both of its
-     * writers of a NON-crafting status are failures, and both are the output-room question:
-     * {@code ActiveMachineRecipe.tick} U88-U98 returns {@code CraftingStatus.failure(...)} when
-     * {@code context.ioTick} refuses, and {@code RecipeThread.onFinished} U73-U78 returns
-     * {@code CraftingStatus.failure(checkResult.getFirstErrorMessage(""))} when {@code canFinishCrafting()}
-     * refuses 鈥?whose key family is {@code craftcheck.failure.item.output.space}. This screen's equivalent is
-     * {@code thread.isWorking()} ({@code hasActiveRecipe() && blockedReason == null}), and {@code FactoryTicker}
-     * writes that reason at exactly those two points (U526 for the per-tick refusal, U479 and U493 for the two
-     * output-room refusals). NO NEW SIGNAL EXISTS AND NONE WAS CREATED.</p>
-     *
-     * <p>What this check asserts, therefore, is the LINK rather than a new behaviour, and it is asserted at both
-     * ends and at VALUE level, because neither end can be read off a signature:</p>
-     *
-     * <ul>
-     *   <li><b>THE MAPPING.</b> {@code MenuFactoryController.fillTint(true)} must be upstream's U129 red
-     *       {@code {1.0, 0.6, 0.6}} and {@code fillTint(false)} its U127 green {@code {0.6, 1.0, 0.75}} 鈥?
-     *       BOTH directions, which is the assertion a byte-level inventory of float literals could never make:
-     *       inlined constants leave their numbers in the method and say nothing about which branch uses
-     *       which. (That inlining is also why the pair lives on the menu rather than on the screen: a
-     *       {@code private static final float} produces no read for a check to find, and the screen cannot be
-     *       LOADED on the server this suite runs on. The placement is a recorded deviation, argued on the
-     *       method itself.)</li>
-     *   <li><b>THE PREDICATE'S CONTRACT.</b> {@code isWorking()} answers false for a run carrying a reason and
-     *       true for the same run once it is cleared, with the reason taken from
-     *       {@code MachineTicker.outputSpaceKey} on a loaded recipe's own output requirement rather than from a
-     *       literal. Only one of the two directions is asserted anywhere else (PLAN 708's hold check takes the
-     *       reason's presence for granted).</li>
-     *   <li><b>THE SCREEN'S SIDE.</b> {@code drawRun} calls {@code fillTint} and {@code isWorking}, and its
-     *       literals are language keys only. A call survives compilation where a constant read does not, so the
-     *       call is what pins the colour to that predicate.</li>
-     *   <li><b>AND THE ENGINE'S SIDE</b>, on a run the engine really held: the reason reaches the client's own
-     *       copy of the tile 鈥?asserted in {@link #verifyFactoryOutputHold}, which is the other end of this
-     *       same link.</li>
-     * </ul>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyFactoryStatusDisplay() {
         List<Check> checks = new ArrayList<>();
         final String progressKey = "gui.controller.status.crafting.progress";
@@ -10154,7 +10154,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                         screenTrouble.append(methodName).append(" does not call ").append(pinned)
                                 .append(", so the text it prints is not upstream's percentage arithmetic; ");
                     }
-                    // NEGATIVE, AND THIS IS THE HALF THAT HAS TEETH (PLAN 710's own negative control is what
+                     
                     // established that): the method must build NO string of its own. `progress + " / " + duration
                     // + " t"` compiles to ONE invokedynamic (`makeConcatWithConstants`) whose fragments live in
                     // BootstrapMethods -- NOT to `ldc`s -- so a scan of the method's string CONSTANTS cannot see
@@ -10284,7 +10284,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             probe.beginRecipe("probe_recipe", 60, 1);
             // A REASON, FROM A REQUIREMENT'S OWN DERIVATION RATHER THAN A LITERAL: the key is what
             // MachineTicker.outputSpaceKey builds for the item OUTPUT of whichever loaded recipe carries one,
-            // which is the SAME derivation the ticker's hold calls (PLAN 704/708).
+             
             String reason = null;
             var recipeLoader = MachineReloadListener.getRecipeLoader();
             if (recipeLoader != null) {
@@ -10325,80 +10325,80 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * PLAN 711 鈥?THE ONE-PROBE OVERLAY'S PROGRESS LINE AND ITS FAILURE COLOUR.
-     *
-     * <p>The client's factory screenshot carried two progress readouts of the same run: this mod's screen, whose
-     * tick line PLAN 710 fixed, and ABOVE it the probe's header, {@code 杩涘害锛?97 / 60 鍒粆 鈥?a RAW COUNTER
-     * running past its own duration while the same run's percentage read 100%. {@code #708.1} identified the
-     * header as TheOneProbe's, and 710.9(3) recorded that upstream disagrees with it in two ways and that the
-     * fix, if wanted, was one file. This is that file, and these two checks are what make the fix assertable
-     * without a client.</p>
-     *
-     * <h2>(1) The progress text: upstream's percentage, from the same arithmetic the screen uses</h2>
-     *
-     * <p>Upstream's TOP provider ({@code MMInfoProvider}) forms a percentage and nothing else 鈥?
-     * {@code (float) (tick * 100) / totalTick} at U187-U189 (factory) and U272-U274 (single craft), rendered
-     * {@code String.format("%.0f", progress) + "%"} at U200/U291, and passed to the bar as
-     * {@code ((int) progress, 100)} with the string as its {@code prefix} and {@code NumberFormat.NONE}
-     * (U205-U211 / U296-U302). The port's probe printed {@code top.modularmachinery.progress} with a tick pair
-     * AND handed the same pair to {@code info.progress(..., showText(true))}.</p>
-     *
-     * <p>THE ASSERTION IS NOT "the scan found no tick literal", because that is the shape that passes for the
-     * wrong reason: a Java {@code +} on strings compiles to ONE {@code invokedynamic}
-     * {@code StringConcatFactory.makeConcatWithConstants} whose fragments live in {@code BootstrapMethods}, so
-     * the pre-fix line loaded NO suspicious literal at all 鈥?710.3's controls established that on the screen and
-     * this check inherits the reader that came out of it ({@code methodsCalledIn} collects opcode 0xBA,
-     * {@code loadedStringsIn} resolves {@code CONSTANT_String}). So it is made of four parts:</p>
-     *
-     * <ul>
-     *   <li><b>THE VALUE, AND THAT BOTH CONSUMERS SHARE ONE ARITHMETIC.</b> {@code progressPercent} must be an
-     *       integer percentage in {@code [0, 100]} over ten pairs and must equal upstream's arithmetic at the
-     *       four points that pin it rather than merely bound it; and {@code progressText} must be
-     *       {@code progressPercent + "%"} for every one of them, which is what makes "the text and the bar agree
-     *       about the unit" a fact rather than a hope. A helper that returned the tick count fails both halves
-     *       (797 is outside {@code [0,100]}), and so does one that returned a fraction.</li>
-     *   <li><b>THE PROBE'S CALLS 鈥?the positive half.</b> Its one body must CALL {@code progressText},
-     *       {@code progressPercent} and {@code isCrafting}. That is what ties both the line and the colour to
-     *       declarations the suite can execute, rather than to expressions that happen to look right.</li>
-     *   <li><b>THE PROBE'S OWN STRING BUILDING 鈥?the half with teeth.</b> It must perform NO concatenation
-     *       (the absence of {@code makeConcatWithConstants}), so nothing it prints can be a form it assembled
-     *       itself, and it must NOT load the {@code top.modularmachinery.progress} literal, so the tick pair's
-     *       own key has no reader anywhere in the port. Both are asserted, because either alone is escapable:
-     *       the key literal could be reached through a lookup, and a tick form could be built without its
-     *       key.</li>
-     *   <li><b>THE BAR'S OWN TEXT.</b> {@code addProbeInfo} must call {@code progress}, {@code prefix} and
-     *       {@code numberFormat}: upstream's shape, in which the percentage reaches the bar as its prefix with
-     *       the number format suppressed. Together with the two negatives above 鈥?no concatenation, so the
-     *       prefix can only be a helper's return; no tick key 鈥?the only string that can reach the bar is a
-     *       percentage.</li>
-     * </ul>
-     *
-     * <p><b>WHAT THIS CANNOT SEE, STATED ON THE CHECK.</b> The walk has no operand stack, so it cannot prove that
-     * the {@code int} returned by {@code progressPercent} is the value passed to {@code progress(...)}. It proves
-     * the method calls both, that the bar's text comes from a prefix, and that no string is built in the body;
-     * a body that computed a second percentage locally and passed THAT would satisfy all of it and is what the
-     * VALUE half's shared-arithmetic assertion is aimed at from the other side.</p>
-     *
-     * <h2>(2) The failure colour: upstream's {@code isCrafting()}, supplied by the tile</h2>
-     *
-     * <p>Upstream switches its colours on {@code if (status.isCrafting())} 鈥?U174 for a factory run, U246 for a
-     * machine 鈥?and takes all three failure colours in the {@code else}. This port had the constant
-     * {@code COLOR_STALLED} with NO READER while a comment claimed a running/stalled distinction, so every bar
-     * was green however stuck the run was. {@code TileController.isCrafting()} is now that predicate and the
-     * probe is its reader; the assertion is at value level, on real tiles, in BOTH directions:</p>
-     *
-     * <ul>
-     *   <li>A FACTORY whose reported run is idle, then running, then carrying the engine's own reason (derived
-     *       from a loaded recipe's output requirement through {@code MachineTicker.outputSpaceKey}, the same
-     *       derivation 710 used), then cleared 鈥?{@code false}, {@code true}, {@code false}, {@code true}. The
-     *       middle pair is the direction nothing else asserts; the run is put INTO the tile's list (through
-     *       {@code claimThread}) so the question is asked of the tile's own {@code firstActiveThread()} walk
-     *       rather than of a detached thread.</li>
-     *   <li>A MACHINE CONTROLLER: false with no craft, true while one is advancing, false once
-     *       {@code MachineTicker}'s own write point puts a reason on it, true again when it is cleared.</li>
-     * </ul>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyTopProbeOverlay() {
         List<Check> checks = new ArrayList<>();
         final String progressKey = "gui.controller.status.crafting.progress";
@@ -10540,7 +10540,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         StringBuilder colourReport = new StringBuilder();
         boolean colourOk = true;
         // A REASON DERIVED FROM A LOADED RECIPE'S OWN OUTPUT REQUIREMENT, not from a literal -- the same
-        // derivation the ticker's hold calls (PLAN 704/708/710).
+         
         String reason = null;
         var recipeLoader = MachineReloadListener.getRecipeLoader();
         if (recipeLoader != null) {
@@ -10622,7 +10622,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             colourReport.append("; the machine's predicate could not be probed: ").append(cannotProbe);
         }
         colourReport.append("  -- the reason the predicate is false is the engine's own: a machine held for lack"
-                + " of output room (MachineTicker U677) and one stalled for lack of ENERGY (PLAN 712, the same"
+                + " of output room (MachineTicker U677) and one stalled for lack of ENERGY (regression check, the same"
                 + " write on the shortfall path whose upstream counterpart is ActiveMachineRecipe.tick"
                 + " U88-U98 returning CraftingStatus.failure('craftcheck.failure.energy.input')). Upstream's"
                 + " CraftingStatus.isCrafting() is false on BOTH of those holds, so redness follows the engine's"
@@ -10639,32 +10639,32 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * A FACTORY RUN WHOSE OUTPUT IS FULL MUST STOP AT ITS OWN DURATION (PLAN 708, DEFECT B).
-     *
-     * <p><b>THE DEFECT, NAMED AT ITS SITE.</b> {@code FactoryTicker.tickThread} advanced a run's counter and
-     * <i>then</i> asked whether its outputs had room; the hold is a bare {@code return}, so the increment
-     * survived the refusal and the next tick incremented again. The counter is the number a player reads: the
-     * TOP overlay and the GUI's ticks line print it raw ({@code 797 / 60}, {@code 300 / 60 t}), while the row's
-     * percentage and its bar are derived from {@code min(1, ticks/duration)} and therefore read 100% on every
-     * one of those ticks. That discrepancy IS the reported defect: "the tick count runs away while the progress
-     * shows 100%".</p>
-     *
-     * <p><b>THE SAME FIX AS THE SINGLE-CRAFT PATH, ON THE SAME KIND OF FIELD (rule B).</b> PLAN 683 clamped
-     * {@code TileController.advanceRecipe} at the craft's own duration, which is upstream's own shape
-     * ({@code ActiveMachineRecipe.tick} U82-U85 returns before {@code this.tick++} once complete). The factory
-     * keeps its {@code ticks}/{@code duration} on {@code FactoryRecipeThread}, so the clamp belongs there, and
-     * the hold now also writes the run's blocked reason -- the SAME key the machine path writes
-     * ({@code MachineTicker.outputSpaceKey}) -- because a held run is not a working one and had been
-     * advertising itself as working.</p>
-     *
-     * <p><b>WHY THIS CHECK FAILS ON THE PRE-FIX CODE.</b> The tick loop runs {@code duration + 60} times with
-     * the output deliberately full and energy refilled every tick, so the old code produced
-     * {@code ticks == duration + 60} (the negative-control run printed {@code 120/60}) and
-     * {@code getBlockedReason() == null}. The equality assertion on {@code ticks == duration} fails by 60, and
-     * the reason, the working-flag and the language-file assertions fail on their own. "Nothing crashed" would
-     * have passed on the broken behaviour, which is why none of them is worded that way.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyFactoryOutputHold(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         DynamicMachine machine = MachineReloadListener.getLoader().findByName("alloy_furnace");
@@ -10700,7 +10700,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         buildStructure(level, plot, machine, plan);
         // THE CONTROLLER IS REMOVED FIRST: run/world persists between runs and `setBlock` to the SAME state is
         // a no-op, so the previous run's factory controller -- with its threads restored from NBT -- would
-        // still be standing here (PLAN 662's own lesson, applied to this check).
+         
         level.removeBlock(plot, false);
         level.setBlock(plot, hellfirepvp.modularmachinery.common.registry.RegistryBlocks
                 .blockFactoryController.get().defaultBlockState()
@@ -10738,7 +10738,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
         factory.setFormed(true);
 
-        // THE BLOCK'S OWN TICKER, because that is what a server runs (PLAN 662's rule for every factory check).
+         
         var factoryBlock = hellfirepvp.modularmachinery.common.registry.RegistryBlocks.blockFactoryController.get();
         BlockState factoryState = level.getBlockState(plot);
         @SuppressWarnings("unchecked")
@@ -10821,7 +10821,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 expectedKey.equals(reason),
                 "the run carries '" + reason + "', derived from the requirement's own typeId '"
                         + outputRequirement.typeId() + "' and io '" + outputRequirement.getIOType()
-                        + "'; the single-craft path carries the same key from the same derivation (PLAN 683)"
+                        + "'; the single-craft path carries the same key from the same derivation (regression check)"
                         + (expectedKey.equals(reason) ? "" : "  <-- expected '" + expectedKey + "'")));
         checks.add(new Check("and a held factory run stops counting as a working one",
                 !run.isWorking() && factory.getRunningThreadCount() == 0,
@@ -10835,7 +10835,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         checks.add(new Check("the factory hold's reason resolves in both language files", langCarries(expectedKey),
                 "'" + expectedKey + "' present in en_us and zh_cn"));
 
-        // THE LAST LINK IN THE RED BAR'S CHAIN (PLAN 710). The screen chooses upstream's red constant
+         
         // (GuiFactoryController U129, `1.0F, 0.6F, 0.6F`) from `thread.isWorking()` on the CLIENT's copy of
         // this tile, so the reason has to survive the two hooks that carry it there: `getUpdateTag` (which
         // TileEntityBase delegates to saveAdditional -- the same serialisation the world save uses) and `load`
@@ -10856,7 +10856,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                         + " copy of the held run carries '"
                         + (clientRun == null ? "<no run>" : clientRun.getBlockedReason()) + "' and isWorking="
                         + (clientRun == null ? "<no run>" : clientRun.isWorking())
-                        + " -- this is the field the screen's red constant is chosen from (PLAN 710), so a reason"
+                        + " -- this is the field the screen's red constant is chosen from (regression check), so a reason"
                         + " that stopped at the server would leave the bar green over a full output"
                         + (reachedClient ? "" : "  <-- expected '" + expectedKey + "' and isWorking=false")));
 
@@ -10879,7 +10879,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 664: which recipe a factory picks, and why a cap changes the answer
+     
     // ------------------------------------------------------------------
 
     /** The names this check authors. Constants, because the assertions read the names back out of the objects. */
@@ -10887,40 +10887,40 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     private static final String FACTORY_SELECTION_RECIPE_A = "selftest_factory_capped_a";
     private static final String FACTORY_SELECTION_RECIPE_B = "selftest_factory_capped_b";
     private static final String FACTORY_SELECTION_RECIPE_PINNED = "selftest_factory_pinned";
-    /** The thread name the pinned recipe asks for; no thread in this port carries one (PLAN 659.2(b)). */
+     
     private static final String FACTORY_SELECTION_PINNED_THREAD = "core_only";
     /** The cap both authored recipes declare, and the value upstream reserves for "unlimited". */
     private static final int FACTORY_SELECTION_CAP = 1;
     private static final int FACTORY_SELECTION_UNLIMITED = -1;
 
     // ------------------------------------------------------------------
-    // PLAN 713: MANY THREADS, FEW RECIPES -- one recipe may not take them all
+     
     // ------------------------------------------------------------------
     //
     // The same defect reported a second time, from the other end: "the factory still has a problem, all 20
     // threads run the same recipe; each thread should run a different recipe". A cap cures that only if the
     // CONTENT declares one -- with the default -1 = unlimited, the first satisfiable recipe still fills every
-    // thread -- so these checks cover the half PLAN 664 did not: that a factory with FAR more threads than
+     
     // recipes spreads across the recipes instead of stacking on the first one.
 
     /** This check's own plot. Every offset in this file was checked: 320 is between 300 and 400, both taken. */
     private static final BlockPos FACTORY_SPREAD_OFFSET = new BlockPos(320, 0, 0);
     /** The spread machine's name. Its recipe list is read off the LOADER, so its JSON count is the count. */
     private static final String FACTORY_SPREAD_MACHINE = "selftest_factory_spread";
-    /**
-     * The one input item EVERY spread recipe asks for, one each.
-     *
-     * <p>Shared on purpose: six coal make six DIFFERENT recipes satisfiable at once, so the only question the
-     * run answers is whether the search keeps taking the first one. Six recipes with six distinct inputs would
-     * pass on the broken engine too -- each recipe becomes unsatisfiable as soon as its own input runs out --
-     * which is why PLAN 664's check and this one both use a shared input.</p>
-     */
+    
+
+
+
+
+
+
+ 
     private static final net.minecraft.world.item.Item FACTORY_SPREAD_INPUT = Items.COAL;
     /** Enough for one run of each recipe, and not one more. A seventh copy of any recipe has no input. */
     private static final int FACTORY_SPREAD_SEEDS = 6;
     /** Only needs to outlive the starts: the recipes are all started within {@code distinct recipes} ticks. */
     private static final int FACTORY_SPREAD_RECIPE_TICKS = 60;
-    /** The factory ceiling's UPSTREAM default, read from the machine and asserted rather than assumed (PLAN 659). */
+     
     private static final int FACTORY_MAX_UPSTREAM = DynamicMachine.DEFAULT_FACTORY_MAX_THREADS;
     /**
      * The machine whose shipped recipes this suite holds to a declared ceiling: the user's own centrifuge.
@@ -11078,6 +11078,14 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             // flag is readable. So: an IDLE factory tick must leave the chunk clean (nothing to send) and a tick
             // WITH runs must mark it (which is the call the client's progress depends on). Without the second
             // half a drawn run list would freeze at each run's starting value -- the defect this half exists for.
+            level.getChunkAt(plot).setUnsaved(false);
+            ticker.tick(level, plot, factoryState, factory);
+            boolean initialLimitsSynced = level.getChunkAt(plot).isUnsaved()
+                    && factory.getUpdateTag().getInt("factoryMaxThreads") == machine.getMaxThreads();
+            checks.add(new Check("an idle factory synchronizes its initial thread ceiling once",
+                    initialLimitsSynced,
+                    "initial ceiling " + factory.getMaxThreads() + "; definition " + machine.getMaxThreads()
+                            + "; update tag carries the ceiling=" + initialLimitsSynced));
             level.getChunkAt(plot).setUnsaved(false);
             ticker.tick(level, plot, factoryState, factory);
             boolean idleTouchedChunk = level.getChunkAt(plot).isUnsaved();
@@ -11247,55 +11255,55 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return sb.toString();
     }
 
-    /**
-     * Proves that a factory with MANY MORE THREADS THAN RECIPES runs DIFFERENT recipes on them.
-     *
-     * <h2>The report this answers, and why {@link #verifyFactoryRecipeSelection} did not answer it</h2>
-     *
-     * <p>Verbatim: "鐜板湪宸ュ巶杩樻槸鏈変釜闂锛?0绾跨▼閮借繍琛岀殑鍚屼竴涓厤鏂癸紝闇€瑕佹瘡涓嚎绋嬭繍琛屼笉鍚岀殑閰嶆柟锛岃兘鍋氬埌鍚?. PLAN 664 built
-     * the mechanism (upstream's {@code canCheck}, {@code FactoryRecipeSearchTask} U89-U99) and proved it with
-     * TWO recipes that fit on TWO threads. What it did not cover is the part the report is actually about: a
-     * factory with a ceiling of TWENTY and a handful of recipes. The mechanism cannot cure that by itself --
-     * upstream's default is {@code -1} = unlimited, so an undeclared recipe still takes every thread while its
-     * input lasts, and the cure is content that declares a ceiling. So this check measures the shape the user
-     * asked for directly, on a factory built to be lopsided on purpose.</p>
-     *
-     * <h2>The design: ONE shared input, a ceiling far above the recipe count, and the ceiling read off the machine</h2>
-     *
-     * <ul>
-     *   <li><b>Every recipe eats one {@link #FACTORY_SPREAD_INPUT} and each declares {@code maxThreads: 1}.</b>
-     *       {@link #FACTORY_SPREAD_SEEDS} of that item are seeded, so ALL recipes are satisfiable at once and
-     *       exactly one run of each is possible. A seventh run is impossible for two independent reasons, and
-     *       the check measures that the CAP is the one that acted.</li>
-     *   <li><b>ONE SHARED INPUT, not one per recipe.</b> With separate inputs the broken engine would pass:
-     *       each recipe becomes unsatisfiable the moment its own input is gone, so nothing gets duplicated and
-     *       the assertion would hold on the defect. With one shared input the first recipe can be started again
-     *       and again while its input lasts -- which is exactly the report.</li>
-     *   <li><b>The ceiling is the machine definition's own, read from the tile the block's ticker drives</b>
-     *       ({@code getMaxThreads}), and asserted equal to the machine's. Asserting the UPSTREAM default
-     *       ({@link #FACTORY_MAX_UPSTREAM}) keeps the premise honest: if the definition ever declared a ceiling
-     *       of six, "six runs on six threads" would stop being evidence of anything and this check would say
-     *       so instead of passing.</li>
-     * </ul>
-     *
-     * <h2>What fails without the content change, and what does not</h2>
-     *
-     * <p>The FIRST check is the one bound to the shipped content: it holds the six CENTRIFUGE recipe files to a
-     * single declared ceiling of 1, read off the LOADED recipes. Revert that content and it fails -- measured,
-     * and quoted in PLAN 713.5's negative control, where it reported {@code declared ceiling(s) [-1]} while
-     * every other check in this method stayed green. Treat it as a tautology and a future edit to the shipped
-     * cap silently re-creates the defect it was written for.</p>
-     *
-     * <p><b>THE OTHER FOUR CHECKS DO NOT COVER THAT HALF, AND IT IS SAID RATHER THAN IMPLIED.</b> They author
-     * their own machine and their own recipes, whose ceilings are this check's, so they pass on reverted shipped
-     * content -- and that is exactly what makes them the behavioural half: they measure the ENGINE (six runs on
-     * six threads of twenty, none duplicated), which the content check cannot. Neither half substitutes for the
-     * other, and a wrong cap in an authored recipe would be visible in the {@code maxThreads} list check 3
-     * prints.</p>
-     *
-     * @param level  the server level
-     * @param origin the origin the other checks are offset from
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyFactoryRecipeSpread(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         BlockPos plot = origin.offset(FACTORY_SPREAD_OFFSET.getX(), FACTORY_SPREAD_OFFSET.getY(),
@@ -11530,20 +11538,20 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return FACTORY_SPREAD_MACHINE + "_" + index;
     }
 
-    /**
-     * One spread recipe: one {@link #FACTORY_SPREAD_INPUT} in, one output out, and a FIRST-of-six ceiling.
-     *
-     * <p>The distinction that carries the check is {@code rank == 1}: candidate order is the loader's file
-     * order, so the first recipe is the one the search always finds first -- and on the broken engine it is the
-     * one that lands on every thread. The other five are not special; they are what the search must reach
-     * instead.</p>
-     *
-     * <p>The two KEY NAMES are written out rather than read from a constant, for the reason PLAN 664 recorded:
-     * a check that took them from the code under test would agree with itself.</p>
-     *
-     * @param registryName this recipe's name
-     * @param rank         1-based position, used only to pick a distinct output item
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static String factorySpreadRecipeJson(String registryName, int rank) {
         return """
                 {
@@ -11644,7 +11652,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     private static List<Check> verifyBlockstateVariants(ServerLevel level) {
         List<Check> checks = new ArrayList<>();
 
-        // blockstate file -> the enum whose constants must appear verbatim
+         
         java.util.Map<String, String[]> expected = new java.util.LinkedHashMap<>();
         expected.put("blocksmartinterface", names(hellfirepvp.modularmachinery.common.block.prop
                 .SmartInterfaceType.values()));
@@ -11711,7 +11719,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 719: the eight fluid hatch tiers, from the creative-tab entry to a measured tank
+     
     // ------------------------------------------------------------------
 
     /**
@@ -11740,46 +11748,46 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     private static final int FLUID_INPUT_TIER_X = 180;
     private static final int FLUID_OUTPUT_TIER_X = 190;
 
-    /**
-     * Proves the eight fluid hatch tiers reachable, named, and holding their declared capacity IN A TANK THAT
-     * WAS BUILT THE WAY A PLAYER BUILDS ONE.
-     *
-     * <h2>The report this answers</h2>
-     *
-     * <p>"all fluid input and output hatches are 1000 mB" (PLAN 717/719). 1000 <b>is</b> a correct reading --
-     * it is NORMAL's capacity -- which is why the first hypothesis (a dead tier system) had to be falsified
-     * before anything was changed. What 1000 equally means is THE DEFAULT VARIANT, so the question that
-     * decides the defect is not "is the capacity chain right" (it is) but <b>can a player obtain anything
-     * but the default</b>, and does a tier they obtain actually hold what its name says.</p>
-     *
-     * <h2>Why every link, and why not one assertion</h2>
-     *
-     * <p>Four links stand between the creative tab and a working hatch, and each fails silently in a different
-     * way: the sweep that emits one stack per variant, the {@code BlockStateTag} that carries the tier, the
-     * language key the item's name resolves to, and the tank the placed block builds. A check that asserted
-     * only "an item exists" would PASS ON THE BROKEN BEHAVIOUR -- exactly one item exists today -- and a check
-     * that asserted only the recipe result stack would pass with placement broken. So:</p>
-     *
-     * <ol>
-     *   <li><b>REACHABLE:</b> the stacks are read from
-     *       {@link hellfirepvp.modularmachinery.common.registry.RegistryCreativeTabs#variantStacks}, the SAME
-     *       method the creative tab emits from -- not a second copy of the sweep, which could disagree with the
-     *       tab and pass while the tab regressed (PLAN 629's shape);</li>
-     *   <li><b>CARRIES THE TIER:</b> each stack's {@code BlockStateTag} must name the tier and the tag must be
-     *       the only property the block declares;</li>
-     *   <li><b>NAMED:</b> the name the game would DISPLAY for that stack -- {@code getName(stack)}, the method
-     *       the tooltip and JEI both go through -- must be a translation key that every language file defines
-     *       for that tier. A mismatched key renders as {@code block.modularmachinery.鈥 or as the base name,
-     *       which is the class of defect PLAN 629 fixed;</li>
-     *   <li><b>MEASURED:</b> the tier's state is placed in the world and the block entity's OWN tank is asked
-     *       its capacity. That is the number the report was about, and it is read off the tank rather than off
-     *       the enum, so a tile that ignored its state would fail here while the enum stayed correct.</li>
-     * </ol>
-     *
-     * <p>The item-model predicates are asserted with the other client-side checks, because
-     * {@code ClientSetup} is {@code @Dist.CLIENT} and cannot be linked on a dedicated server
-     * ({@code verifyTierModelPredicates}).</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyFluidHatchTiers(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -11972,7 +11980,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 731: the two `type=` families -- reachable, named, and measured
+     
     // ------------------------------------------------------------------
 
     /**
@@ -12013,39 +12021,39 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             {"ultimate", "18"},
     };
 
-    /**
-     * Proves the parallel controller's and the upgrade bus's five tiers reachable, named, and reporting their
-     * declared figure <b>on the tile the block builds</b>.
-     *
-     * <h2>The report this answers</h2>
-     *
-     * <p>"鎴戣寰楀師mod鏈変笉鍚岀瓑绾х殑鍗囩骇鎬荤嚎鍜屽苟琛屾帶鍒跺櫒锛屼綘鎵炬壘锛屾垜浠繖涓猰od娌℃湁" -- I remember the original mod has
-     * different tiers of the upgrade bus and the parallel controller, go look, ours does not. <b>The user was
-     * right, and both language files agreed with them:</b> {@code block.modularmachinery.blockparallelcontroller
-     * .{normal,reinforced,elite,super,ultimate}} and the same five for {@code blockupgradebus} were already
-     * shipped, both blockstates enumerate all five {@code type=} values, and both blocks build five distinct
-     * tiles. What was missing was every path from the player to them: the ITEMS were bare {@code BlockItem}s (so
-     * no stack could NAME a tier) and neither family was handed to the creative tab's variant sweep (so no stack
-     * could CARRY one).</p>
-     *
-     * <h2>Why the tab's own FAMILY LIST is read, and not a list written here</h2>
-     *
-     * <p>{@link #verifyFluidHatchTiers} shares the SWEEP with the tab and names its families at the call site,
-     * which is enough when the tiers are known to be swept. Here the missing sweep IS the defect, so a check that
-     * passed its own two families to {@code variantStacks} would pass with the defect fully present. This reads
-     * {@code RegistryCreativeTabs.tabVariantStacks()}, which takes no argument and sweeps the tab's own
-     * {@code VARIANT_FAMILIES} -- so dropping a family from the tab drops it from this measurement, and the
-     * required count is what turns that into a failure.</p>
-     *
-     * <h2>Why the count is ten and why the figure is read off the TILE</h2>
-     *
-     * <p>"An item exists" is TRUE of the broken behaviour -- one bare item existed for each family -- so the
-     * assertion has to be the exact number of tagged stacks (two families x five constants), the exact number of
-     * names that resolve, and the exact figure each tier's block entity reports. The figures are read off
-     * {@code TileParallelController.getMaxParallelism()} and {@code TileUpgradeBus.getSlots()}, not off the
-     * enums, so a tile built from the default state would answer 4 / 3 for all five tiers while the enums stayed
-     * correct -- the shape PLAN 725 fixed for the hatches.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyControllerAndBusTiers(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -12556,50 +12564,50 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 : String.valueOf(value).toLowerCase(java.util.Locale.ROOT);
     }
 
-    /**
-     * THE TOOLTIP LINE ITSELF, BUILT FOR EVERY TIER OF EVERY FAMILY THAT HAS ONE, ASSERTED AGAINST THE NUMBER
-     * THAT TIER DECLARES (PLAN 732).
-     *
-     * <h2>What this CANNOT do, said first</h2>
-     *
-     * <p><b>Nothing is rendered.</b> A dedicated server has no font, no tooltip renderer and no language
-     * manager, so "the small grey text appears under the name" is not observable here. What IS observable is
-     * every step up to the string the renderer would be handed 鈥?and that is what is measured.</p>
-     *
-     * <h2>Why the assertion is the BUILT LINE, and why a key-existence check would be worthless</h2>
-     *
-     * <p>The defect this answers is exactly this: {@code block.modularmachinery.blockparallelcontroller.tip}
-     * and {@code block.modularmachinery.blockupgradebus.tip} <b>already shipped</b>, in both languages, with
-     * the right wording 鈥?and nothing read them. <b>A check that asserted "the key exists" would therefore PASS
-     * ON THE BROKEN BEHAVIOUR.</b> So the assertion is made in three steps, none of which the old state could
-     * satisfy:</p>
-     *
-     * <ol>
-     *   <li>the tip line the item's own {@code appendHoverText} would add must EXIST for that tier (on the
-     *       broken tree it is {@code null} for every tier of both families 鈥?nothing built it);</li>
-     *   <li>the argument the code passed must EQUAL the number the tier declares, read off the enum
-     *       <b>through {@code TierTipValue.getTipValue()}</b> 鈥?not from a table written here, and not from a
-     *       literal, because a literal that happens to be a valid value is still the wrong value;</li>
-     *   <li>the line, formatted with that argument against the SHIPPED template from each language file, must
-     *       CONTAIN that number 鈥?so a line wired to the wrong key, or to a template that ignores its argument,
-     *       fails too.</li>
-     * </ol>
-     *
-     * <h2>The stack is the tab's own</h2>
-     *
-     * <p>Each tier's stack comes from {@code RegistryCreativeTabs.variantStacks(item)} 鈥?the sweep the creative
-     * tab itself emits from 鈥?so what is measured is the stack a player is actually handed, carrying the tag
-     * that stack actually carries. And the line is obtained by calling {@code appendHoverText} on the item,
-     * i.e. <b>the very method the tooltip renderer calls</b>, rather than by re-deriving what it ought to
-     * return.</p>
-     *
-     * <h2>The one family whose tier picks the wording</h2>
-     *
-     * <p>{@code BlockFluidHatch} deviates because upstream does: its top tier reports a capacity and its bottom
-     * tier reports "Empty" (no placeholder). Both cases still have to name the tier's own number, so the
-     * {@code "Empty"} tier is asserted on the argument only 鈥?see the {@code placeholder} flag below, which is
-     * printed in the detail line rather than left implicit.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyTierTipLines() {
         List<Check> checks = new ArrayList<>();
 
@@ -12818,38 +12826,38 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     // The parallelism READOUT the two controller screens print
     // ------------------------------------------------------------------
 
-    /** This round's own column, clear of the 735 region at x=235..241 (see {@link #CHANNEL_CHECK_X}). */
+     
     private static final int READOUT_CHECK_X = 243;
 
-    /**
-     * The two lines upstream prints under the progress line ({@code GuiMachineController} U145-U154), each
-     * asserted against the ONE thing that can be asserted about it server-side.
-     *
-     * <h2>What this check can and cannot measure, before a line of it is read</h2>
-     *
-     * <p>The LAYOUT is not measurable here, and no assertion below pretends otherwise: a dedicated server has
-     * no renderer, no font and cannot even LOAD a screen class, so "the screen draws two lines" is not a
-     * thing this JVM can observe. What it CAN measure is every part of the line that is not a pixel:</p>
-     *
-     * <ul>
-     *   <li>the two ARGUMENTS -- read back out of the {@code Component} the tile built, and compared with the
-     *       two numbers the tile's own accessors report, which in turn come through the update tag a client
-     *       receives (that is the round trip below, not an assumption about it);</li>
-     *   <li>the two KEYS -- resolved in BOTH shipped language files and formatted, so a key that ships in one
-     *       language only, or a template whose {@code %s} the argument cannot fill, fails here rather than on
-     *       a player's screen;</li>
-     *   <li>and that the two SCREENS reach the readout at all, read out of their compiled bytes -- the same
-     *       technique PLAN 708 introduced for this exact class of fact, and the reason the readout lives on
-     *       the tile rather than inside a screen.</li>
-     * </ul>
-     *
-     * <p><b>A CHECK THAT PASSES FOR THE WRONG REASON IS WORSE THAN ONE THAT FAILS</b>, so each half carries
-     * its own anti-vacuity clause: the component's argument must EQUAL the tile's number, its template must
-     * CONTAIN that number once formatted, the class walk must resolve a literal it is known to load
-     * ({@code ScreenMachineController}'s own title offset) and the constant pool must carry both keys. An
-     * empty component list would satisfy "no wrong argument" on its own, which is why the guard half asserts
-     * lines==0 for an idle tile AND lines==2 for the parallel one.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyParallelismReadout(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -13001,7 +13009,9 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                     reachableCalls.addAll(methodsCalledIn(body.code(), pool));
                     drawnLiterals += loadedStringsIn(body.code(), pool).size();
                 }
-                boolean asksTheTile = reachableCalls.contains("parallelismReadoutLines");
+                String readoutMethod = simpleName.equals("ScreenFactoryController")
+                        ? "factoryParallelismReadoutLines" : "parallelismReadoutLines";
+                boolean asksTheTile = reachableCalls.contains(readoutMethod);
                 boolean draws = reachableCalls.contains("drawString");
                 if (reachable.isEmpty()) {
                     screenTrouble.append(simpleName).append(" has no renderLabels, so the label pass a player"
@@ -13077,7 +13087,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return visited;
     }
 
-    /** The named method of a parsed class, or {@code null} when it has none 鈥?the loops PLAN 708 wrote inline. */
+     
     @Nullable
     private static CompiledMethod findMethod(java.util.List<CompiledMethod> methods, String name) {
         for (CompiledMethod method : methods) {
@@ -13152,27 +13162,27 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return tipLineArgument(line) != declared;
     }
 
-    /**
-     * Every tier of every variant family must have an ITEM MODEL PREDICATE and a matching model override.
-     *
-     * <h2>The defect this was written for, found by writing it</h2>
-     *
-     * <p>{@code ClientSetup}'s {@code SIZES_FLUID} listed seven names -- {@code tiny, small, normal, reinforced,
-     * big, huge, vacuum} -- while {@link hellfirepvp.modularmachinery.common.block.prop.FluidHatchSize} declares
-     * <b>eight</b> constants, and {@code ludicrous} was the one missing. The table is hand-written and nothing
-     * compared it to the enums, so a fluid hatch at LUDICROUS has no {@code modularmachinery:tier_ludicrous}
-     * predicate: the held and inventory stack renders as the base NORMAL model while the placed block renders
-     * correctly, which is character for character the casing defect PLAN 272/276 records
-     * ("寮哄寲鏈哄櫒澶栧３鎵嬩笂妯″瀷鍜屾斁涓嬫潵妯″瀷涓嶄竴鏍?). A hand-written list next to an enum is exactly the shape PLAN
-     * 629 measured twice.</p>
-     *
-     * <h2>Why the class FILE and not the class</h2>
-     *
-     * <p>Loading {@code ClientSetup} on a dedicated server is a hard crash, not a soft failure -- its own
-     * javadoc records why it is {@code @Dist.CLIENT}. The predicate ids are string constants, so they are in the
-     * class file's constant pool and can be read without linking anything, which is the same technique the ME
-     * screen-binding check uses.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     /**
      * The namespaced predicate id the ITEM MODELS match on, e.g. {@code modularmachinery:tier_tiny}.
      *
@@ -13203,7 +13213,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         // The families are listed here rather than discovered, because the point of the check is to hold the
         // hand-written tables to an OUTSIDE expectation -- and the enums are that expectation.
         //
-        // THE CONSTRAINT READS `StringRepresentable[]`, NOT ONE FAMILY'S ENUM (PLAN 731). It was `FluidHatchSize[]`
+         
         // while the fluid hatches were the only family here, which is also why the two `type=` families -- whose
         // tables in ClientSetup did not exist at all -- were not covered by this check. Every tier enum in this
         // mod implements StringRepresentable, and the array is covariant, so the same loop now holds four families
@@ -13260,7 +13270,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 // and the ANCHOR is the prefix. Looking for the joined name would fail on every tier: the first
                 // version of this check did exactly that and reported all sixteen missing.
                 //
-                // AND THE PREFIX ALONE WAS NOT ENOUGH (PLAN 731). `pool.contains("tier_")` is true as soon as ONE
+                 
                 // family's table exists, so a family whose table was never written -- the two `type=` families,
                 // exactly -- passed this half of the check. The two halves are NOT both pool entries, MEASURED
                 // rather than assumed: javac compiles `"tier_" + tier` as an invokedynamic concat whose ONE recipe
@@ -13288,7 +13298,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                         + (missingPredicate.length() == 0 ? ""
                                 : "; ClientSetup's CLASS FILE HOLDS NO PREDICATE FOR: " + missingPredicate.toString().trim()
                                         + "  -- that tier's ITEM renders as the base model while its PLACED block"
-                                        + " renders correctly, which is the casing defect of PLAN 272/276")
+                                        + " renders correctly, which is the casing defect of regression check")
                         + (overridesChecked == 0 ? "  -- NONE CHECKED: the check is vacuous" : "")));
 
         checks.add(new Check("every tier has a model override entry",
@@ -13323,7 +13333,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 663: the smart interface channel, end to end (B2 + B4)
+     
     // ------------------------------------------------------------------
 
     /**
@@ -13604,9 +13614,9 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                             + " (asked for " + outOfRange + "); write aimed at the controller refused="
                             + wrongTargetRefused + ", at an undeclared type refused=" + undeclaredTypeRefused));
 
-            // --- 7b. THE CLIENT'S HALF: WHAT THE WIRE CARRIES, READ THE WAY THE SCREEN READS IT (PLAN 674). ---
+             
             //
-            // WHY THIS IS A CHECK AND NOT AN INFERENCE. PLAN 663 asserted that the value "reaches a client
+             
             // through the block entity's update tag (markForUpdate on every write)" WITHOUT EVER BUILDING THAT
             // TAG, and the screen drew its four lines from a CLIENT-SIDE definition lookup
             // (ScreenSmartInterface.owningMachine) that a client cannot satisfy: the definitions are loaded
@@ -13626,7 +13636,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             var clientIface = new hellfirepvp.modularmachinery.common.tiles.TileSmartInterface(
                     wirePos, level.getBlockState(wirePos));
             if (wireTag != null) {
-                clientIface.load(wireTag);   // the client's onDataPacket, verbatim
+                clientIface.load(wireTag);    
             }
             var clientProvider = clientIface.provideComponent();
             // The screen reads bound entry #0 when it opens (ScreenSmartInterface.showing starts at 0), and
@@ -13834,7 +13844,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
 
     /** @return a context for the machine this check built, for the requirement and the blocker text */
     private static MachineContext machineContext(ServerLevel level, BlockPos plot, DynamicMachine machine) {
-        // THE FORMED PATTERN, ASKED OF THE CONTROLLER (PLAN 搂750), so this helper hands the requirement the same
+         
         // components the engine does. It reads the definition's pattern only when nothing was ever formed, which is
         // the fallback the accessor exists for.
         return new MachineContext(level, plot, Direction.NORTH, machine,
@@ -13870,7 +13880,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 688 -- THE USER'S USE CASE: ONE MACHINE, SEVERAL RECIPES, AND WHICH ONE RUNS IS
+     
     // DECIDED BY THE NUMBER IN THE SMART INTERFACE
     // ------------------------------------------------------------------
 
@@ -14404,34 +14414,34 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 739 -- the ghost blocks (the preview's draw call)
+     
     // ------------------------------------------------------------------
 
-    /**
-     * <b>THE GHOST BLOCK'S SUBJECT, ASSERTED ON THE SIDE THAT CAN BE ASSERTED (PLAN 739.5).</b>
-     *
-     * <p><b>WHAT THIS CANNOT DO, SAID FIRST.</b> 搂739 replaced the preview's wireframe with the real block
-     * models of the parts, and <b>nothing in this repository can render</b> -- the harness is a dedicated
-     * server with no client. No check here claims a pixel, and this one deliberately asserts nothing about
-     * colour, blending or alpha: those need the user's client. What it CAN assert is the input the render
-     * loop's own draw call consumes, and that input is server-side data.</p>
-     *
-     * <p><b>THE LOOP, QUOTED, BECAUSE THE CHECK IS ABOUT EXACTLY IT:</b> {@code for (MachinePattern.Part part :
-     * machine.getPattern().getParts())}, and per part
-     * {@code StructureMatcher.toWorldOffset(anchor, facing, part.x(), part.y(), part.z())}. So the subject is
-     * {@code machine.getPattern().getParts()} -- for the machine the projector would preview -- placed by the
-     * matcher's own rotation rather than by a second implementation of it.</p>
-     *
-     * <p><b>THE MACHINE IS FOUND BY READING THE LOADER, NOT BY A NAME.</b> {@code MachineLoader.all()} is asked
-     * for the machine with the LARGEST pattern: a literal name that happens to be valid is still the wrong
-     * value, and the largest pattern is the draw list with the most cells to get wrong. Its registry name and
-     * its count are printed either way, so the log names the machine the numbers describe.</p>
-     *
-     * <p><b>WHY ALL FOUR FACINGS.</b> The preview is drawn in the controller's own {@code FACING} (搂189), so a
-     * mapping that collapsed two parts onto one cell would leave one cell empty and draw two ghosts in another
-     * -- and only for the orientations this check does not walk. All four are walked, and a collision is
-     * reported by facing.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyPreviewDrawList(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -14607,36 +14617,36 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 741 -- the preview's three cell decisions
+     
     // ------------------------------------------------------------------
 
-    /**
-     * <b>THE THREE THINGS THE USER ASKED FOR, ASSERTED AS DECISIONS RATHER THAN AS PIXELS (PLAN 741).</b>
-     *
-     * <pre>
-     * 鈶?"鎴戣寰楀師mod绂昏繙浜嗕竴瀹氳窛绂伙紙绂绘姇褰卞鎺у埗鍣?0鏍艰繙锛夊氨浼氳骞界伒鏂瑰潡鑷姩娑堝け锛堝嵆鍙栨秷鎶曞奖锛夛紝鎴戜滑鏈夎繖涓姛鑳藉悧锛?
-     * 鈶?"鍚屾椂宸叉斁缃殑鏍煎瓙涔熷簲褰撹烦杩囩敾ghost"
-     * 鈶?"鏀鹃敊鐨勫湴鏂瑰簲浜孩鑹瞘host鎻愮ず锛堝師mod鍔熻兘锛?
-     * </pre>
-     *
-     * <p><b>WHY THE SUBJECT IS NOT THE RENDERER.</b> {@code StructurePreviewRenderer} is a {@code Dist.CLIENT}
-     * class in a client package, and this harness is a dedicated server: 搂737.4's boundary list ends at LOCAL
-     * VARIABLE and 搂739.5 recorded the consequence. The three rules are therefore functions of a world state, a
-     * position and the machine's pattern -- server-side data -- and they live in
-     * {@link PreviewCellDecision}, which the renderer obeys. <b>What is asserted here is what the renderer is
-     * told to do</b>, per cell and per distance, not a colour and not a pixel; whether the red is visible is a
-     * question only the user's client can answer and is recorded as such.</p>
-     *
-     * <p><b>AND EACH CHECK IS BUILT SO THAT THE BUG IT IS ABOUT WOULD FAIL IT.</b> 鈶?walks the boundary from
-     * both sides, because a check that is always false (no cut-off, the old behaviour) fails the far half and a
-     * check that is always true (the preview dies the moment it starts) fails the near half -- one of the two
-     * is what a wrong literal or an inverted comparison produces. 鈶?compares the decision against
-     * {@code StructureMatcher.matchesAny} OVER THE SAME ACCEPTED STATES, so a decision that is not the
-     * matcher's would be caught by the one comparison in this mod that the controller itself uses. 鈶?uses a
-     * block the pattern demonstrably does not accept, and asserts the SAME cell is NOT highlighted once the
-     * pattern's own block stands there -- so an implementation that highlights everything fails it, and one
-     * that highlights nothing fails it too.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyPreviewCellDecisions(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -14967,7 +14977,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 743 -- ONE POSITION, SEVERAL INTERCHANGEABLE PARTS
+     
     // ------------------------------------------------------------------
 
     /** The four direction-specific groups the shipped definitions now reference, by their declared names. */
@@ -14998,41 +15008,41 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     private record GroupPosition(String machine, String group, BlockPos offset, int source) {
     }
 
-    /**
-     * <b>ONE POSITION, SEVERAL INTERCHANGEABLE PARTS: the shipped definitions name the directional groups, and
-     * every member of a group satisfies the position while nothing outside it does.</b>
-     *
-     * <h2>The user's request, verbatim</h2>
-     *
-     * <pre>
-     * 鍚勪釜绛夌骇鐨勭墿鍝佽緭鍏ヨ埍瀹ゅ拰me鐗╁搧杈撳叆鎬荤嚎浠ュ強me鏍锋澘渚涘簲鍣ㄥ彲浠ュ湪鍚屼竴涓綅缃€氱敤銆?
-     * 鍚勪釜绛夌骇鐨勬祦浣撹緭鍏ヨ埍瀹ゅ拰me娴佷綋杈撳叆鎬荤嚎浠ュ強me鏍锋澘渚涘簲鍣ㄨ兘鍦ㄥ悓涓€涓綅缃€氱敤銆?
-     * 鍚勪釜绛夌骇鐨勫崌绾ф€荤嚎鍙互閫氱敤锛屽悇涓瓑绾х殑骞惰鎺у埗鍣ㄥ彲浠ラ€氱敤銆?
-     * 鐩稿悓鐨勶紝鐗╁搧杈撳嚭鑸卞鍜宮e鐗╁搧杈撳嚭鎬荤嚎閫氱敤锛屾祦浣撹緭鍑鸿埍瀹ゅ拰娴佷綋杈撳叆鎬荤嚎閫氱敤銆?
-     * </pre>
-     *
-     * <h2>The mechanism, which already existed and was unused</h2>
-     *
-     * <p>{@code MachineLoader.readElements} accepts a part's {@code elements} as a single name or as an array it
-     * flattens to a comma-separated string; {@link MachineVariables#resolve} splits that back into alternatives
-     * and {@link StructureMatcher#acceptedStates} treats the result as a set. A <b>variable</b> is that same
-     * "any of these" mechanism with the list living in {@code machinery/variables/casings.var.json}. The file
-     * shipped five groups and the shipped machines referenced two of them; the rest of the content wrote bare
-     * block names, so no position accepted an ME block at all.</p>
-     *
-     * <h2>Why the assertions are shaped this way</h2>
-     *
-     * <p><b>A CHECK THAT ONLY ASSERTED "IT STILL FORMS" WOULD PASS ON A POSITION THAT ACCEPTS EVERYTHING</b>,
-     * and "accepts everything" is exactly what a careless widening of these positions produces. So every sweep
-     * below asserts BOTH halves: every member of the group (and every state of it, which is how the tiers are
-     * covered) must match, and a list of blocks that are NOT members must not. The negative list includes the
-     * ME block of the OTHER direction, the plain casing, the energy hatches and a vanilla block, so a
-     * {@code casings_all}-style widening fails on the second half even though the first half would pass.</p>
-     *
-     * <p><b>AND THE NEGATIVE HALF IS NOT VACUOUS:</b> every outsider is resolved through the loader's own
-     * {@link BlockStateResolver}, so a name that does not resolve is skipped rather than counted as refused, and
-     * the check fails when too few outsiders could be placed at all.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyInterchangeableParts(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         MachineLoader loader = MachineReloadListener.getLoader();
@@ -15208,7 +15218,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         // every loaded definition with a fresh instance, and this check runs BEFORE the main case sets
         // `setInternalParallelism(2)` on the instance IT holds -- so the tick would consult a definition whose
         // parallelism is the default and the parallel craft below would run at 1. MEASURED: a reload here cost
-        // four pre-existing checks (see PLAN 743).
+         
         BlockPos plot = origin.offset(INTERCHANGE_PLOT_X, 0, 0);
         java.io.File machineryDir = hellfirepvp.modularmachinery.common.data.ModDataHolder.INSTANCE
                 .getMachineryDirectory();
@@ -15424,16 +15434,16 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                                 + " vacuous; ")));
     }
 
-    /**
-     * <b>EVERY TIER OF ONE FAMILY AT THE POSITION THE SHIPPED DEFINITION DECLARES, AND NOTHING ELSE THERE.</b>
-     *
-     * <p>The families are single block ids carrying a {@code type} property (PLAN 731.5), so the assertion is
-     * "every state of this block is in the accepted set of that part" -- which is the same statement as "every
-     * tier is interchangeable there" and is measured rather than deduced from the resolver's rule.</p>
-     *
-     * <p>The tier NAMES are printed from the enum the block's property is built from, so a reordering or a
-     * rename is visible in the log rather than hidden inside a state list.</p>
-     */
+    
+
+
+
+
+
+
+
+
+ 
     private static Check interchangeTierFamily(DynamicMachine machine, String blockId,
                                                BlockPos offset, Enum<?>[] tiers, List<String> outsiders,
                                                MachineVariables vars, BlockStateResolver resolver) {
@@ -15625,44 +15635,44 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 683 -- the two client-reported defects of one theme
+     
     // ------------------------------------------------------------------
 
-    /**
-     * <b>DEFECT A, USER-VERBATIM:</b> "鏈哄櫒涓€鏃﹁繍琛屽氨绠楃牬鍧忎换鎰忔柟鍧楅兘涓嶄細褰卞搷鏈哄櫒杩愯锛屾垜璁板緱鍘焟od鏄細绔嬪嵆鍋滄鐒跺悗鎻愮ず缁撴瀯涓嶅叏".
-     *
-     * <p>FORM A MACHINE, START A CRAFT, BREAK A PART, AND ASSERT THE MACHINE IS UNFORMED <b>AND</b> THE CRAFT
-     * STOPPED <b>AND</b> THE STATE A PLAYER READS SAYS SO.</p>
-     *
-     * <p><b>WHY THIS CHECK WOULD FAIL ON THE OLD CODE, precisely.</b> The unform is produced by
-     * {@code MachineTicker.tick} 鈥?the gate and the re-check and the {@code setFormed(false)} all live on the
-     * tick path 鈥?and nothing in this check calls the re-check directly. Delete the ticker's
-     * {@code if (structureCheckDue(level)) { structureStillHolds(...) }}, or delete the
-     * {@code controller.setFormed(false)} inside it, and this check fails on THREE assertions rather than one:
-     * {@code formed} stays true, the menu's {@code DATA_FORMED} stays 1 鈥?the number
-     * {@code ScreenMachineController} turns into "缁撴瀯涓嶅畬鏁? 鈥?and the craft keeps running. An assertion of
-     * "nothing crashed" would pass on the broken behaviour, which is why all three are asserted.
-     * <b>THIS WAS MEASURED, NOT ARGUED:</b> the first version of this check called
-     * {@code MachineTicker.structureStillHolds} directly, and a negative-control run with the ticker's call
-     * disabled PASSED it 鈥?because a check that enters below the wiring cannot see the wiring is gone.</p>
-     *
-     * <p><b>HOW THE GATE IS MADE DUE, WHICH IS THE PART THAT MAKES THIS POSSIBLE.</b> The tick's gate is
-     * {@code level.getGameTime() % 50 == 0}, and a self-test runs inside {@code ServerStartedEvent} where the
-     * clock never moves 鈥?so the gate would be a coin flip that is decided once per save. The check therefore
-     * sets the level's own game time to the next due value through VANILLA'S OWN SETTER,
-     * {@code ServerLevelData#setGameTime} (verified on the mapped jar: {@code public abstract void
-     * setGameTime(long)}, and {@code ServerLevel#tick} is what calls it in normal operation). The clock is only
-     * ever moved FORWARD, by at most one interval, and the due value is reported. <b>Without this the check
-     * could only have covered the decision; with it, it covers the decision, the gate and the tick.</b></p>
-     *
-     * <p><b>WHAT IS NOT ASSERTED, STATED RATHER THAN IMPLIED.</b> The port ABANDONS a craft on an unformed
-     * machine (MachineTicker's unformed branch), where upstream PAUSES it: upstream's {@code resetMachine}
-     * leaves {@code activeRecipe} alone and {@code onStructureFormed} only calls {@code resetRecipe()} when the
-     * MACHINE CHANGED (upstream U624-U628), so a restored structure resumes the same craft. That difference
-     * PRE-DATES this change and is not what the user reported, so it is pinned here as the port's existing
-     * behaviour rather than silently altered. What IS asserted is the user's own complaint: the machine does not
-     * keep running.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyStructureRecheck(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         DynamicMachine machine = MachineReloadListener.getLoader().findByName("alloy_furnace");
@@ -15697,7 +15707,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         buildStructure(level, plot, machine, plan);
         // THE CONTROLLER IS REMOVED BEFORE IT IS PLACED, and that line is not tidiness: run/world persists
         // between runs and `setBlock` to the SAME state is a no-op, so a controller restored from the save with
-        // its crafting state would drive this check (PLAN 664, and 搂659.5's warning). `cleared` counts what the
+         
         // teardown actually had to remove, which is the diagnostic that the world was not already clean.
         level.removeBlock(plot, false);
         level.setBlock(plot, hellfirepvp.modularmachinery.common.registry.RegistryBlocks
@@ -15758,7 +15768,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         int ticksBeforeBreak = controller.getRecipeTicks();
 
         // BREAK A PART. It is chosen by READING THE DEFINITION -- the first declared part that is not one of the
-        // three functional positions the plan assigned -- so the broken block is a structural part of THIS
+         
         // machine rather than a literal offset that happens to sit somewhere.
         BlockPos broken = null;
         for (MachinePattern.Part part : machine.getPattern().getParts()) {
@@ -15828,36 +15838,36 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * <b>DEFECT B, USER-VERBATIM:</b> "濡傛灉杈撳嚭鎺ュ彛婊′簡涓嶆嬁鍑哄氨浼氬鍥?涓€鏍蜂竴鐩村鍔犲埢锛屽簲褰撴彁绀虹墿鍝?娴佷綋杈撳嚭绌洪棿涓嶈冻".
-     *
-     * <p>FILL THE OUTPUT, RUN WELL PAST THE DURATION, AND ASSERT THE PROGRESS <b>DOES NOT EXCEED THE DURATION</b>
-     * AND THAT THE REASON NAMES THE OUTPUT.</p>
-     *
-     * <p><b>WHICH OF (a)/(b)/(c) IT WAS, AS A FACT FROM THE BODIES.</b> (a), and only (a): the craft never
-     * completes because the output cannot be emitted, and the counter is not clamped. The three pieces of
-     * evidence, all read before anything was changed:</p>
-     * <ul>
-     *   <li>{@code MachineTicker.advance} called {@code controller.advanceRecipe()} UNCONDITIONALLY, and the
-     *       hold for a full output is a bare {@code return} in the middle of the same block 鈥?so the increment
-     *       survived the refusal and the next tick incremented again.</li>
-     *   <li>The completion test is {@code getRecipeTicks() >= getRecipeDuration()}, a {@code >=} on a counter
-     *       nothing re-clamped, so once past the duration the craft is permanently "at the end" and permanently
-     *       refused: {@code 2478 / 60} is exactly this shape.</li>
-     *   <li>(b) is ruled out because the recipe is NOT re-started and nothing accumulates per craft 鈥?the craft
-     *       is still the same one and the counter is a persisted field. (c) is ruled out because the output's
-     *       room rule IS consulted on the "can I finish" path: the loop asks only OUTPUT requirements'
-     *       {@code canFinish}, and {@code RequirementItem.canFinish} for an output is
-     *       {@code countSpareRoom(context) >= amount}. The rule existed and worked; what was missing was the
-     *       CLAMP.</li>
-     * </ul>
-     *
-     * <p><b>WHY THIS CHECK WOULD FAIL ON THE OLD CODE.</b> The tick loop runs {@code duration + 60} times with
-     * the output deliberately full and energy refilled every tick, so the old code produced
-     * {@code recipeTicks == duration + 60} and {@code getStatusMessage() == null}. The exact-equality assertion
-     * on {@code recipeTicks == recipeDuration} therefore fails by 60, and the message assertion fails on its own;
-     * an assertion of "nothing crashed" would have passed on the broken behaviour.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyOutputFullHold(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         DynamicMachine machine = MachineReloadListener.getLoader().findByName("alloy_furnace");
@@ -15984,37 +15994,37 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * A PARALLEL CRAFT WHOSE OUTPUT HAS ROOM FOR ONE CRAFT MUST LOSE NOTHING (PLAN 683.2 fact 8).
-     *
-     * <p><b>THE DEFECT, NAMED AT ITS SITE.</b> The finish gate asked {@code requirement.canFinish(context)},
-     * which for an output requirement is "is there room for {@code amount}", while {@code emitOutputs}
-     * places {@code amount * grantedParallelism} (MachineTicker K1228/K1260-U1268). A craft granted four with
-     * room for two completed, the surplus was refused by the handler and DROPPED, and the log said
-     * {@code "machine at output has no room for 1 x minecraft:nether_wart; 1 item(s) lost"} -- blaming
-     * "the machine's contents changed mid-craft". The arithmetic above is not about contents changing: the
-     * check and the write were asking different questions with different multipliers.</p>
-     *
-     * <p><b>WHAT THIS CHECK ASSERTS, AND THE ONE THAT MATTERS MOST.</b> That NOTHING IS LOST -- the bus
-     * holds exactly the diamonds this check put there. That single assertion is true for BOTH of the
-     * honest outcomes: a craft capped to what fits, and a craft that refuses to place and holds. Which one
-     * happens is then reported from {@code getParallelism()} and {@code getRecipeTicks()} rather than
-     * assumed, because either is a pass and neither is a failure.</p>
-     *
-     * <p><b>WHY IT CANNOT PASS FOR THE WRONG REASON.</b> Two checks pin the SETUP first, and both are
-     * numbers rather than flags: the granted parallelism had to be more than one (else there is no
-     * multiplier to get wrong), and the room that survived the mid-craft fill had to be LESS than
-     * {@code amount * parallelism} (else the emission fits and the check would pass on any implementation,
-     * broken or not). The "<-- " branches name the old behaviour -- {@code 6 item(s) lost} -- so a failure
-     * reads as the defect rather than as a harness problem.</p>
-     *
-     * <p><b>THE ROOM IS TAKEN AWAY MID-CRAFT, AND THAT IS THE POINT RATHER THAN CONVENIENCE.</b> The start
-     * path already reduces the parallelism to the room it can see ({@code RequirementItem.getMaxParallelism}
-     * against {@code countSpareRoom}), so a bus that is short BEFORE the craft starts is a different defect's
-     * territory and would pass on the old code. The gap is precisely the window in which the room changes
-     * after the craft was committed -- a player dropping items in, another machine's output, a hopper -- and
-     * the port's own log message names that window as its hypothesis.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyParallelOutputRoom(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
         DynamicMachine machine = MachineReloadListener.getLoader().findByName("alloy_furnace");
@@ -16206,32 +16216,32 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return checks;
     }
 
-    /**
-     * A MULTI-OUTPUT RECIPE MUST PUT IN WHAT IT MADE, OR PUT IN NOTHING (PLAN 704, RULE A0).
-     *
-     * <p><b>THE DEFECT, NAMED AT ITS SITE.</b> Every output requirement asked the room question ON ITS OWN,
-     * against the SAME free space, and the emission then wrote them one after another -- so the first output
-     * ate the room the others were each promised individually and the tail was refused by the handler and
-     * DROPPED. That is where every {@code "no room for 1 x minecraft:nether_wart; 1 item(s) lost"} line in the
-     * project logs came from: {@code centrifuge_centrifuge_grass} has nine item outputs, and a craft whose six
-     * remaining slots each hold a different item has room for exactly ONE of them while each requirement,
-     * separately, is answered "yes".</p>
-     *
-     * <p><b>WHAT THIS ASSERTION CANNOT PASS FOR THE WRONG REASON.</b> It is not "no exception was thrown" and
-     * it is not a flag: it is the ARITHMETIC IDENTITY that a craft which finishes must move the bus by exactly
-     * the items it emitted, and the items it emitted are its OWN declared output amounts read off the loaded
-     * requirements rather than typed here. The broken behaviour moves the bus by ONE and reports nothing, so it
-     * fails this check; a machine that silently refused everything it could hold also fails the same identity
-     * in the second case below, which is why there are two room shapes and not one.</p>
-     *
-     * <p><b>THE SETUP IS DERIVED FROM THE CONTENT.</b> The recipe is authored by this check (nine shipped item
-     * outputs would need six distinct filler items and the craft's own chance rolls to line up -- the first
-     * draft of this case did exactly that and could not separate the two questions), and every number below
-     * comes out of the loaded objects: the output count from the requirement list, the demand from the amounts
-     * times the granted parallelism, the bus size from the handler, and the room from
-     * {@code RequirementItem.countSpareRoom} -- the rule under test. Nothing is a literal that merely happens
-     * to be valid.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyMultiOutputAllocation(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -16701,87 +16711,87 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return true;
     }
 
-    /**
-     * THE FLUID HALF OF THE OUTPUT-ROOM WORK, WITNESSED WITH NUMBERS (PLAN 699.7 / 704.9:1, closed).
-     *
-     * <p><b>THE GAP THIS EXISTS TO CLOSE, NAMED BY THE STAGES THAT CREATED IT.</b> 搂699 wired
-     * {@code Requirement.canEmit} and 搂704 wrote {@code MachineTicker.outputAllocationFailure}'s multi-output
-     * allocation, <b>and both of those changes carry a fluid half that no machine in this suite has ever
-     * executed</b>: the end-to-end evidence was the ITEM path only, because no shipped machine pairs a fluid
-     * output hatch with a recipe that emits more than one fluid or crafts in parallel. A branch that never runs
-     * cannot fail, so its correctness was an assertion rather than a fact -- and this project has been bitten by
-     * exactly that shape before (搂669 found an assertion behind a gate that never opened which would have
-     * FAILED had it ever run).</p>
-     *
-     * <p><b>WHAT IS BUILT HERE.</b> Two temporary files authored by this check and deleted in its
-     * {@code finally} (the shape 搂704 used -- no machine is shipped to players): a 3x3 shell with a fluid input
-     * hatch, an energy input hatch and <b>TWO fluid output hatches, each placed at the block's own first tier,
-     * {@code size=tiny} = 100 mB</b>, and a recipe whose single fluid output needs <b>80 mB per craft</b> against
-     * those two tanks. The machine's own parallelism is set to {@code 3} through the production field, and the
-     * reduction then grants <b>2</b> because the question the tanks answer is what they take TOGETHER
-     * (2 x 100 mB / 80 mB = 2) -- a grant above one, which is what makes the multiplier observable at all.</p>
-     *
-     * <p><b>THE ELEMENTS ARE REGISTRY IDS AND THE PARTS ARE FOUND BY OFFSET.</b> This check's first version
-     * appended a marker to each element ({@code blockfluidinputhatch_inch}) so that it could find the position it
-     * meant, and its own javadoc asserted "the marker never reaches a registry lookup". <b>THAT ASSUMPTION WAS
-     * FALSE AND IT IS WHY THIS FAMILY WAS RED ON ITS FIFTH LINE:</b> {@code MachineLoader.readElements} hands the
-     * string straight to the loader, {@code BlockStateResolver.resolveAccepted} finds no such block,
-     * {@code StructureMatcher} records the position as an unresolvable element and the machine can never form --
-     * so the fluid path below was never reached at all. The elements now come from the registry itself
-     * ({@link #blockId}) and the definition's own {@code x}/{@code y}/{@code z} identify a part:
-     * {@link #fluidPartPosition} turns a declared offset into a world position through
-     * {@code StructureMatcher.toWorldOffset} -- the SAME rotation the matcher, the preview and the controller use,
-     * not a second one -- and {@link #partDeclares} reads the loaded pattern back at that offset, so the two
-     * cannot drift silently.</p>
-     *
-     * <p><b>THE INPUT CANNOT DECIDE THE GRANT, AND THAT IS ASSERTED RATHER THAN HOPED.</b> The reduction takes
-     * the minimum over every parallelizable requirement, and a fluid INPUT is one of them: at 1000 mB per craft
-     * against the input hatch's own 1000 mB it answers ONE COPY by itself, and the output half would then never be
-     * asked anything. The authored recipe therefore declares <b>100 mB of water in</b>, and a setup check reads
-     * both numbers off the loaded objects and asserts {@code capacity >= amount x asked}.</p>
-     *
-     * <p><b>THE ASSERTION IS AN IDENTITY, NOT A FLAG.</b> The granted batch is
-     * {@code amount * granted = 160 mB} and it FITS ACROSS the two tanks: 100 mB in the first and 60 mB in the
-     * second, because {@link RequirementFluid#produce} fills tank by tank and stops when the batch is placed. A
-     * craft that finishes must therefore leave the two tanks holding exactly 160 mB -- the whole batch or nothing
-     * at all, which is the same all-or-nothing rule 搂704 gave the items. The measured number is the fluid the
-     * tanks GAINED, read out of their own tanks.</p>
-     *
-     * <p><b>WHY IT CANNOT PASS FOR THE WRONG REASON, AND WHAT IT CAUGHT.</b> Four setup checks pin the state
-     * first, all of them read off the loaded objects rather than typed: the four functional positions are the ones
-     * this check places blocks at (else the check and the definition disagree about where the hatches are), the
-     * two output tanks really are two separate tanks of the capacity the tier declares (else the batch would have
-     * to fit in one and the case would not exist), the input hatch holds enough for the asked copies (else the
-     * INPUT decides the grant and the output half is never asked anything), and the grant really equals the
-     * start-time room divided by the amount (else a literal happens to be valid and the derivation is untested).
-     * <b>ON THE SHIPPED CODE THIS CHECK FAILED, AND IT FOUND TWO DEFECTS, NOT ONE:</b></p>
-     * <ol>
-     *   <li><b>An output hatch accepted fluid from nobody.</b> {@code TileFluidTank.produceInternal} -- the door
-     *       {@link RequirementFluid#produce} writes through -- opens {@code accessingInternally} and calls
-     *       {@code tank.fill}, and that override read {@code ioType != IOType.INPUT} alone: the flag was written
-     *       by {@code produceInternal} and read by {@code drain} and by nothing else, so every
-     *       {@code produceInternal} on an OUTPUT hatch returned 0. The pre-start room question therefore answered
-     *       0, the craft never started, and the whole fluid-output path was dead.</li>
-     *   <li><b>Then the room question asked ONE tank for the whole batch.</b> {@code canStart} / {@code canFinish}
-     *       / {@code canEmit} / {@code getMaxParallelism} and 搂704's allocation gate each required a single tank to
-     *       accept the entire batch, while the writer fills tank by tank and upstream sums across handlers
-     *       ({@code HybridFluidUtils.doSimulateDrainOrFill} U31-U47 asks each handler for the REMAINDER). A
-     *       160 mB batch over 100 + 100 mB tanks is placeable and was refused.</li>
-     * </ol>
-     * <p>Both are recorded in PLAN 搂714, and each one has its own run of this check with the fix absent -- the
-     * failure text is what identifies which half is missing.</p>
-     *
-     * <p><b>AND THE MULTI-OUTPUT RESERVATION IS NOW MEASURED RATHER THAN ARGUED (搂714.9:2, THIS ROUND).</b> The
-     * case above drives <b>one</b> fluid output, and with one output <code>RequirementFluid.outputRoomFor</code>'s
-     * <code>reserved</code> map is written once and read never -- its per-tank accumulation has no witness. So the
-     * same machine and the same two tanks are then driven by a SECOND recipe with <b>two distinct fluid outputs
-     * (80 mB of water and 80 mB of lava per craft)</b>: water is asked first, its 240 mB batch at the asked three
-     * copies is larger than anything the two 100 mB tanks hold so it reserves nothing (a partial fit is never
-     * charged), the reduction therefore grants <b>two</b> copies, and the placement is a per-tank identity -- water
-     * 100 + 60, lava 40 + 40, the tanks holding DIFFERENT fluids and nothing lost. A walk that ignored the
-     * reservation is printed by this check and recorded in PLAN 搂715.6. Removing the accumulation is what makes it
-     * fail; that is the negative control, not a reread of the code.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyFluidOutputAllocation(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -16795,7 +16805,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 .getRecipeDirectory();
         java.io.File machineFile = new java.io.File(machineryDir, FLUID_OUTPUT_MACHINE + ".json");
         java.io.File recipeFile = new java.io.File(recipeDir, FLUID_OUTPUT_RECIPE + ".json");
-        // THE SECOND RECIPE IS THE MULTI-FLUID CASE (PLAN 714.9:2) and it is a file of its own rather than a
+         
         // second recipe inside the first one: machineParallelism, the definition's own parallelism field, is
         // read fresh on every tick, so the reduction for the FIRST fluid output of an over-asked run would
         // otherwise have to be shared by two recipes claiming the same machine, and `tryStart` runs the first
@@ -17034,7 +17044,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             // craft placed and nothing else, and a partial placement (which is the loss the gate exists to
             // prevent) cannot hide in one tank's number.
             //
-            // AND THE SPLIT IS ASSERTED IN BOTH ORDERS, WHICH IS THE CORRECTION THIS ROUND MADE: the first
+             
             // version demanded `A == need - capA && B == capA`, i.e. it assumed tank B is filled first. The
             // writer walks `context.internalFluidTanks()`, so WHICH output hatch comes first is the machine's
             // component order and not this check's choice -- an assertion that depends on it would fail on a
@@ -17060,12 +17070,12 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                             + " placed the way the writer places it")));
 
             // ==================================================================
-            // 7-11. THE SAME MACHINE AND THE SAME TWO TANKS, WITH TWO DISTINCT FLUID OUTPUTS (PLAN 714.9:2)
+             
             // ==================================================================
             //
             // WHAT WAS UNWITNESSED AND WHY THIS IS THE CASE THAT WITNESSES IT. `RequirementFluid.outputRoomFor`
             // carries a `reserved` map: while several fluid outputs of ONE emission are asked about the same
-            // tanks, each output is charged what the earlier ones already claimed per TANK (PLAN 704). With ONE
+             
             // output there is one thing to reserve, one tank to accumulate it in, and the walk breaks after
             // taking from it -- so the map is written once and never READ, which is the shape of assertion this
             // project has been bitten by before (搂669: a branch behind a gate that never opened, wrong for as
@@ -17101,7 +17111,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             // and the two tanks hold DIFFERENT fluids (which one holds which is the component order, so the
             // assertion is order-agnostic). WITHOUT the reservation both outputs take the SAME room, and one of
             // the two fluids ends up in a tank the other one already filled -- which is the negative control
-            // recorded in PLAN 搂715.6, printed by this very check: `the craft is granted 3 copies` and the
+             
             // `batch-all-or-nothing` line turning into `THE TANKS MOVED BY 400 mB`.
             //
             // WHY THE MACHINE IS REBUILT RATHER THAN REUSED. The tanks must be empty and the controller must
@@ -17228,7 +17238,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             //        two fluids TOGETHER need 160 + 160 = 320 mB of a 200 mB tank space. TWO IS NOT AN ANSWER ANY
             //        TANK CAN HOLD, and the emission gate (which does per-tank reserve) then held the craft
             //        forever: `granted=2, the tanks moved by 0 mB`. THIS CHECK FAILED ON THE SHIPPED CODE, the
-            //        grant arithmetic was corrected in RequirementFluid.getMaxParallelism (PLAN 搂715.4), and the
+             
             //        number below is now computed through the SAME reservation walk the grant uses rather than by
             //        dividing one fluid's room. ---
             liveMachine.setInternalParallelism(asked);
@@ -17522,30 +17532,30 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return takenInFirst + Math.min(Math.max(0, secondCapacity - firstFluidInSecond), batch - takenInFirst);
     }
 
-    /**
-     * How many copies two fluid outputs of {@code perCraft} mB each can be granted over two tanks of the given
-     * capacities, <b>MIRRORING THE ENGINE'S OWN FORMULA RATHER THAN A NICER ONE</b> -- and the number the
-     * two-fluid checks assert.
-     *
-     * <p><b>WHY IT IS NOT {@code room / perCraft}.</b> That division answers for ONE fluid, and the first run of
-     * the two-fluid check measured what it costs to use it for two: each fluid was told it had the whole tank
-     * space, the grant came out at two copies (160 mB of each = 320 mB into 200 mB of tank) and the emission gate
-     * then held the craft forever. {@code RequirementFluid.getMaxParallelism} was corrected (PLAN 搂715.4) and
-     * <b>this is that same arithmetic, or the check would be asserting a second opinion</b>:</p>
-     *
-     * <ol>
-     *   <li>each fluid output of the emission is asked, in declaration order, for {@code amount x k} -- and the
-     *       ask is answered by the reservation walk, so a demand the tanks cannot hold reports only what it can
-     *       place (240 mB of water over 200 mB of tank answers <b>200</b>);</li>
-     *   <li>that answer is divided by {@code amount} and floored, so 200/80 is <b>two</b> -- which is why a
-     *       three-copy ask is reduced to two and not to one;</li>
-     *   <li>the grant is the SMALLEST of those, and it is capped at the ask, which is the reduction's contract.</li>
-     * </ol>
-     *
-     * <p>An upper bound, and honestly so: a fluid whose copies are not a multiple of the tank size leaves residue
-     * the next fluid cannot use (80 mB per craft into 100 mB tanks leaves 20 mB per copy), and the emission gate
-     * -- which reserves per tank, per 搂704 -- is what refuses that residue.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static int grantForCopies(int firstCapacity, int secondCapacity, int perCraft, int ceiling) {
         int grant = 0;
         for (int copies = 1; copies <= ceiling; copies++) {
@@ -17579,16 +17589,16 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     /** The recipe's registry name, declared here so the file and the lookup cannot disagree. */
     private static final String FLUID_OUTPUT_RECIPE = "selftest_fluid_output_parallel";
 
-    /**
-     * The SECOND recipe on the SAME machine: two DISTINCT fluid outputs, which is the multi-output reservation
-     * case (PLAN 714.9:2).
-     *
-     * <p>A file of its own rather than a second entry in the first recipe's file, and the check deletes the first
-     * one before authoring this one: {@code MachineTicker.machineParallelism} reads the DEFINITION's parallelism
-     * field on every tick, so two recipes on one machine would both be asked the same ceiling and `tryStart` would
-     * run whichever the loader listed first. One recipe file at a time is what makes "the grant below belongs to
-     * this recipe" a fact rather than a hope.</p>
-     */
+    
+
+
+
+
+
+
+
+
+ 
     private static final String FLUID_OUTPUT_TWO_RECIPE = "selftest_fluid_output_two_fluids";
 
     /** The tier the two output hatches are placed at -- read from the block's own variant property below. */
@@ -17734,24 +17744,24 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 """.formatted(FLUID_OUTPUT_MACHINE, FLUID_OUTPUT_RECIPE);
     }
 
-    /**
-     * The second recipe on the same machine: <b>two DISTINCT fluid outputs, 80 mB of water and 80 mB of lava per
-     * craft</b>, at the same 100 mB of water in and 20 energy per tick.
-     *
-     * <p><b>WHY TWO DIFFERENT FLUIDS ARE THE POINT.</b> The thing that had never run is the PER-TANK reservation
-     * {@code RequirementFluid.outputRoomFor} keeps for the outputs of one emission (PLAN 704): each output, while
-     * it is asked, is charged what the outputs before it already claimed IN THE SAME TANK. With one output the
-     * map is written once and read never, so no number can distinguish "reserved per tank" from "summed the
-     * tanks" -- and with two outputs of the SAME fluid the two batches are interchangeable and each tank's share
-     * could be attributed either way. Water and lava make the split visible in the tanks themselves: after a
-     * whole batch the two tanks must hold DIFFERENT fluids, which is exactly the statement that the second
-     * output was asked about the state the first one would leave rather than about an empty machine.</p>
-     *
-     * <p>Lava is named by its own registry id ({@code minecraft:lava}) and WATER IS NOT REUSED for the second
-     * output; which specific fluid it is does not matter to the arithmetic, only that the two resolved fluids
-     * differ -- and the check asserts the difference off {@code RequirementFluid.asStack}, i.e. the fluids the
-     * requirements actually resolved, not the two strings here.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static String fluidOutputTwoRecipeJson() {
         return """
                 {
@@ -17887,21 +17897,21 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
     }
 
-    /**
-     * Puts fluid into a tank <b>through the machine's own channel</b>, which is the only way in: an output
-     * hatch's public {@code FluidTank.fill} returns 0 for every external caller on purpose (TileFluidTank
-     * F74-F85, "an output hatch accepts no external fill; the machine pushes into it directly"), and
-     * {@code produceInternal} is the door the machine itself uses. A harness that filled through the capability
-     * would get 0 and quietly measure an empty tank.
-     *
-     * <p><b>AND THAT SECOND SENTENCE WAS ONLY TRUE OF AN INPUT HATCH UNTIL PLAN 搂714.</b> {@code produceInternal}
-     * opens {@code accessingInternally} and the fill override read {@code ioType != INPUT} alone, so on an OUTPUT
-     * hatch the door returned 0 for the machine as well and every fluid-output path in the port was dead. This
-     * helper is called on the input hatch here and works either way; the fix and its evidence are on
-     * {@code TileFluidTank.createTank}.</p>
-     *
-     * @return the mB actually accepted
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static int fillFluid(ServerLevel level, BlockPos pos, FluidStack stack) {
         return pos != null && level.getBlockEntity(pos)
                 instanceof hellfirepvp.modularmachinery.common.tiles.base.TileFluidTank tank
@@ -17966,7 +17976,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
         return sb.toString();
     }
-    /** Checks source tier names/transfer defaults and the user-requested Continuum capacity ladder. */
+    /** Checks source tier names and the user-requested Continuum capacity/transfer ladder. */
     private static Check verifyEnergyHatchTierNames() {
         String[] fromJar = {"tiny", "small", "normal", "reinforced", "big", "huge", "ludicrous", "ultimate"};
         var values = hellfirepvp.modularmachinery.common.block.prop.EnergyHatchData.values();
@@ -17983,11 +17993,11 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         // Assert defaults here: configured server overrides are tested separately.
         long[] capacityDefaults = {1_000, 10_000, 100_000, 1_000_000, 10_000_000,
                 100_000_000, 1_000_000_000, Integer.MAX_VALUE};
-        long[] transferFromJar = {128, 512, 512, 2_048, 8_192, 32_768, 131_072, 131_072};
+        long[] transferDefaults = {100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 214_748_364};
         StringBuilder valReport = new StringBuilder();
         for (int i = 0; i < values.length && i < capacityDefaults.length; i++) {
             boolean eOk = values[i].getDefaultMaxEnergy() == capacityDefaults[i];
-            boolean tOk = values[i].getDefaultMaxTransfer() == transferFromJar[i];
+            boolean tOk = values[i].getDefaultMaxTransfer() == transferDefaults[i];
             if (!eOk || !tOk) {
                 ok = false;
             }
@@ -17995,7 +18005,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                     .append(values[i].getMaxEnergy()).append('/').append(values[i].getMaxTransfer())
                     .append(eOk && tOk ? "" : " WRONG").append(' ');
         }
-        return new Check("energy hatch tiers preserve source names/transfers and Continuum capacity defaults", ok,
+        return new Check("energy hatch tiers preserve source names and Continuum capacity/transfer defaults", ok,
                 "names: " + actual.toString().trim() + " | energy/transfer: " + valReport.toString().trim());
     }
     /**
@@ -18071,15 +18081,15 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         expected.put("factory_controller", new int[]{280, 213});
         expected.put("smart_interface", new int[]{176, 166});
         expected.put("group_input_config", new int[]{176, 166});
-        // PLAN B3 -- upstream's GuiMEFluidInputBus sets ySize = 231 in its constructor (U29) and
+         
         // ContainerMEFluidInputBus.getHeight() returns the same number (C36). 231 is asserted because it is
         // the kind of value 搂91 found could be wrong while nine numerical checks passed: the panel size.
         expected.put("me_fluid_input_bus", new int[]{176, 231});
-        // PLAN 搂686 -- upstream's GuiMEItemInputBus sets ySize = 204 (U49) and its container binds the player's
+         
         // rows from 195 - 72 = 123 (C17), i.e. 204 - 82. Both numbers were then confirmed against the shipped
         // meiteminputbus.png, which draws its panel to 176x204.
         expected.put("me_item_input_bus", new int[]{176, 204});
-        // PLAN 712 -- upstream's GuiMEPatternProvider sets xSize = 256 and ySize = 196 in its constructor
+         
         // (G49-G50), and the shipped mepatternprovider.png draws exactly that panel: 256 opaque pixels wide at its
         // widest row, and its own columns opaque from row 0 to row 195. This screen was in NO list here, which is
         // how a panel size can be wrong while every check passes (搂91's defect with a different number).
@@ -18134,7 +18144,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                     .MenuMEItemInputBus.PANEL_WIDTH, hellfirepvp.modularmachinery.common.menu
                     .MenuMEItemInputBus.PANEL_HEIGHT});
         }
-        // The same shape one screen later (PLAN 712). The pattern provider's panel is 256x196 -- the only screen in
+         
         // this mod wider than 256 -- and its two constants are read here as the other entries are: PUBLIC constants
         // are inlined at this reference site, so this reads them without loading MenuMEPatternProvider.
         actual.put("me_pattern_provider", new int[]{hellfirepvp.modularmachinery.common.menu
@@ -18248,20 +18258,20 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 "command.modularmachinery.get_blueprint.success",
                 "command.modularmachinery.get_blueprint.not_found",
 
-                // PLAN 655 鈥?the two states a TWO-CORNER selection can be in and a per-block one could
+                 
                 // not: half-marked, and larger than the tool will walk. Added here in the same edit as the
                 // code that uses them, which is 搂147's rule rather than a rediscovery of it.
                 "message.structurebuild.incomplete",
                 "message.structurebuild.toobig",
 
-                // PLAN 662 鈥?the factory HUD's two lines. The pre-existing `top.factory.thread.running` and
+                 
                 // `top.factory.thread.max` are LABELS with no placeholder, so the formatted lines could not
                 // reuse them without swallowing a number. Added in the same edit as the code that asks for
                 // them, again 搂147's rule.
                 "top.factory.threads",
                 "top.factory.controllers",
 
-                // PLAN B3 鈥?the ME fluid input bus screen's four keys, added in the same edit as the screen
+                 
                 // that asks for them (搂147's rule). `gui.mefluidinputbus.title` was already shipped for the
                 // interface side; the other three are new, and the two LABELS deliberately do NOT reuse AE2's
                 // `gui.ae2.Config` / `gui.ae2.StoredFluids` that upstream's drawFG uses (U68-U69): this mod's
@@ -18277,15 +18287,15 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 "gui.mefluidoutputbus.inventory",
                 "gui.mefluidoutputbus.fluid.tooltip",
 
-                // PLAN 664 鈥?the factory screen's run-count line. The screen draws with it and the check above
+                 
                 // covers it in the same edit (搂147's rule). `gui.factory.threads` next to it in the lang file
                 // was NOT reused: it prints the machine's ceiling, which the client's copy of the tile does not
                 // carry, so using it would have printed a zero.
                 "gui.factory.runs",
 
-                // PLAN 674 鈥?the smart interface screen's five keys, added to this guard in the same edit that
+                 
                 // moved the value line's key out of the screen and into TileSmartInterface.Data (搂147's rule).
-                // PLAN 663 declined to add them because they already existed in both lang files -- but
+                 
                 // EXISTENCE is not what this guard is for: it covers the keys a feature depends on, and every
                 // one of these five is drawn by code (the title, the empty state, the readout, and the two
                 // index buttons). The keys themselves were READ OUT OF THE LANG FILES, not retyped.
@@ -18295,7 +18305,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 "gui.smartinterface.prev",
                 "gui.smartinterface.next",
 
-                // PLAN 683 -- THE THREE "NO ROOM FOR THE OUTPUT" KEYS. They were already in both language files
+                 
                 // (upstream RequirementItem U291, RequirementFluid U175 and the energy variant); what is new is
                 // that CODE now produces them, so they belong in this guard in the same edit (搂147's rule).
                 //
@@ -18306,7 +18316,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 "craftcheck.failure.item.output.space",
                 "craftcheck.failure.fluid.output.space",
                 "craftcheck.failure.energy.output.space",
-                // PLAN 712 -- THE INPUT-SHORTFALL SIBLING, added to this guard in the same edit that gave it a
+                 
                 // writer (搂147's rule). It was already shipped in both files (upstream RequirementEnergy U140,
                 // "Not enough energy!" / "缂哄皯鑳介噺杈撳叆锛?) and CODE did not produce it: the energy stall wrote no
                 // reason at all. The difference from the three above is the SUFFIX -- upstream's shortfall key is
@@ -18314,7 +18324,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 // input side -- which is why MachineTicker#failureKey decides the suffix from the direction.
                 "craftcheck.failure.energy.input",
 
-                // PLAN 686 -- the ME item input bus screen's keys, added in the same edit as the screen that asks
+                 
                 // for them (搂147's rule). `gui.meiteminputbus.title`, `...items_marked`, `gui.meitembus.item_cached`
                 // and `gui.meiteminputbus.inv_action*` were ALREADY shipped with the converted asset, and the
                 // screen draws the first three of those. The screen also asks for the plain inventory label, which
@@ -18327,7 +18337,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 "gui.meitembus.item_cached",
                 "gui.modularmachinery.item_bus",
 
-                // PLAN 712 -- the ME pattern provider screen's labels, added to this guard in the same edit that
+                 
                 // made the screen ask for them (搂147's rule). All five were ALREADY in both language files with
                 // upstream's own text ("ME 鏈烘鏍锋澘渚涘簲鍣? / "ME Machinery Pattern Provider", "宸茬紦瀛? / "Cached",
                 // "鐙珛瀛樺偍" / "Single Inv" and the tip's explanation) -- and that is exactly why the screen did not
@@ -18339,7 +18349,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 "gui.mepatternprovider.single_inv",
                 "gui.mepatternprovider.single_inv.desc",
 
-                // PLAN 737 -- THE TWO BUTTONS 搂729 DID NOT DRAW, added to this guard in the same edit that gave them
+                 
                 // their click handlers (搂147's rule). All eight were ALREADY in both language files with upstream's own
                 // text -- the five mode descriptions, the "currently enabled" marker, and the two lines of the
                 // return-items button's tooltip -- and the keys are READ OUT OF THE LANG FILES here, not retyped.
@@ -18484,7 +18494,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                 continue;
             }
 
-            // At a position the plan assigned a functional component, place THAT component rather than
+             
             // the pattern's first acceptable state. For a `casings_all` machine the pattern would
             // otherwise resolve to a plain casing and the machine would form with no way to insert or
             // extract anything 鈥?the layout is the test's choice precisely because the variable allows it.
@@ -18496,7 +18506,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             } else if (pos.equals(plan.energy())) {
                 override = "modularmachinery:blockenergyinputhatch";
             } else if (plan.smart() != null && pos.equals(plan.smart())) {
-                // THE PUBLISHER'S POSITION (PLAN 692). Placing the block IS the whole setup: the machine's own
+                 
                 // formation walk finds the block entity standing at this pattern position and publishes the
                 // declared type at the definition's `default-value` (MachineFormation.bindComponents ->
                 // checkAndAddSmartInterface), so nothing here types a number into anything. The number a
@@ -18558,22 +18568,22 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return placed;
     }
 
-    /**
-     * Where a test machine's functional components were placed.
-     *
-     * <p>A resolved plan rather than fixed offsets, because not every machine declares its components at
-     * known positions. {@code alloy_furnace} names {@code modularmachinery:blockinputbus} explicitly, but
-     * {@code iron_centrifuge} declares its shell as the variable {@code casings_all}, which accepts
-     * <b>any of seven</b> component types:
-     *
-     * <pre>[ blockcasing, blockinputbus, blockenergyinputhatch, blockfluidinputhatch,
-     *   blockoutputbus, blockenergyoutputhatch, blockfluidoutputhatch ]</pre>
-     *
-     * <p>So for those machines the test must <b>choose</b> which positions become the input, output and
-     * energy components, and the variable will accept that choice. That is a genuine feature of the mod 鈥?
-     * pack authors pick the layout 鈥?and it is why a single hard-coded offset table cannot cover more
-     * than the machine it was written for.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private record Placement(BlockPos input, BlockPos output, BlockPos energy, BlockPos smart, String how) {
     }
 
@@ -18589,12 +18599,12 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                                              MachineVariables variables) {
         List<MachinePattern.Part> parts = machine.getPattern().getParts();
 
-        // THE SMART INTERFACE POSITION IS CLAIMED FIRST (PLAN 692), AND THE ORDER IS LOAD-BEARING RATHER THAN
+         
         // TIDY. A position that accepts the interface is the RAREST position in a pattern -- in the shipped
         // iron_centrifuge exactly ONE of the nine `casings_all` positions lists it -- so if the input, output
         // and energy claims ran first, one of them could take it and the interface would have nowhere left to
-        // go. A machine that declares no type claims nothing here and the plan it gets is byte for byte the
-        // plan it got before this line existed.
+         
+         
         //
         // EXACTLY HERE, and NOT through `claim`: `claim`'s second pass accepts ANY position whose element
         // resolves to more than one name, which for this machine is all nine floor positions -- it would
@@ -18675,12 +18685,12 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return null;
     }
 
-    /**
-     * Positions already assigned to a component during placement resolution.
-     *
-     * <p>Static because {@link #claim} is called from a static context and the plan is built once per
-     * self-test run; it is cleared at the start of each run.
-     */
+    
+
+
+
+
+ 
     private static final List<BlockPos> claimed = new ArrayList<>();
 
     private static BlockState firstResolvedState(MachineVariables variables, MachinePattern.Part part) {
@@ -18733,10 +18743,10 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         if (be == null) {
             return 0;
         }
-        // NOT VIA THE CAPABILITY, AND THAT IS THE WHOLE POINT (PLAN 538). The hatch own externalView REFUSES
+         
         // EXTRACTION ON AN INPUT -- TileEnergyHatch E173 says so in words -- so a drain through getCapability
         // returns 0 BY DESIGN and the assertion precondition could never be met. THIS IS THE SAME INTERNAL/EXTERNAL
-        // SPLIT AS PLAN 468, where a water requirement went unmet because the capability refused the machine that
+         
         // OWNED the hatch. The internal channel is the one the MACHINE uses; fillEnergy may use the capability only
         // because receiving is the direction the external view permits.
         if (!(be instanceof hellfirepvp.modularmachinery.common.tiles.base.TileEnergyHatch hatch)) {
@@ -18971,18 +18981,18 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // The tool's own control scheme (PLAN 655.2)
+     
     // ------------------------------------------------------------------
 
-    /**
-     * A right-click on {@code pos} with the tool in the main hand, built the way the client builds one.
-     *
-     * <p>These checks drive {@link ItemConstructTool}'s own arms rather than calling
-     * {@code PlayerStructureSelectionHelper} directly, and that is the whole point of them: the change
-     * this round made is <b>which click marks which corner</b>, and a check that marked the corners
-     * through the helper would pass with the modifier wired backwards, with the air arm missing, and with
-     * the item never reading its own selection.
-     */
+    
+
+
+
+
+
+
+
+ 
     private static UseOnContext clickAt(Player player, BlockPos pos) {
         return new UseOnContext(player, InteractionHand.MAIN_HAND,
                 new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
@@ -19050,19 +19060,19 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
     }
 
-    /**
-     * The two-corner arms: a plain right-click marks the FIRST corner, sneak + right-click marks the SECOND,
-     * and the box between them is derived from the pair.
-     *
-     * <p><b>Why this is a check and not a comment.</b> The selection became two corners this round
-     * (PLAN 653/655), and the arms are two nearly identical lines 鈥?the kind of thing that gets swapped,
-     * or that a later edit collapses into one arm, without anything failing. The round-trip check would
-     * not notice: it would still write a machine, from the wrong box.
-     *
-     * <p><b>The size is asserted from the corners, not from a literal.</b> 3x4x3 is what
-     * (2,3,2)-apart corners enclose, and the check prints both the corners and the count it derived, so a
-     * wrong count names the number it got rather than a bare mismatch.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static Check authoringCornerArms(ServerLevel level, BlockPos origin) {
         String name = "the tool's plain click marks the first corner and its sneak click the second";
         // A clear plot: +168 is inside the same chunk column the round trip's +160 plot uses, below it.
@@ -19357,48 +19367,48 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         }
     }
 
-    /**
-     * Writes a structure out through the authoring tool's own writer and reads it back through the
-     * loader, then asks whether a controller standing in it would form.
-     *
-     * <h2>The assertions, and what each one would catch</h2>
-     * <ol>
-     *   <li><b>two clicks through the tool's own arms marked the two corners</b> 鈥?the item's plain arm
-     *       sets the first and its sneak arm sets the second, so a modifier wired the wrong way round
-     *       fails here rather than producing a machine nobody drew;</li>
-     *   <li><b>the box between those corners is what gets exported</b> 鈥?the volume is derived through
-     *       the same method the writer calls, and it is counted against the blocks this check built;</li>
-     *   <li>a controller click produced a file 鈥?read by <b>diffing the machinery directory</b> rather
-     *       than by predicting the tool's timestamped name;</li>
-     *   <li>the loader parsed that exact file and the machine's name is the name the file carries, read
-     *       from the machine rather than placed here as a literal;</li>
-     *   <li>the controller is <b>absent</b> from the written pattern 鈥?the deliberate difference from
-     *       upstream, whose output carries its own controller at the origin and would make a 1.20.1
-     *       definition ask for a controller at its own position. With a box selection this is no longer a
-     *       corner case: the controller stands inside the box it is finalising;</li>
-     *   <li>every part resolves, through the loader's own resolver, to the block that is really standing
-     *       at that place in the world this test selected from;</li>
-     *   <li>a full {@link StructureMatcher} pass over the loaded definition, against the same world,
-     *       reports the machine formed and counts every part 鈥?the only one of them that follows the
-     *       path a player's controller follows.</li>
-     * </ol>
-     *
-     * <p><b>Re-pointed at the two-corner API in PLAN 655.2, not weakened.</b> The previous revision drove
-     * {@code PlayerStructureSelectionHelper.toggleInSelection} once per cell and passed the resulting list
-     * straight to {@code selectionAt}; that method no longer exists, because the selection is no longer an
-     * accumulated set of positions. The path is now the one a player takes 鈥?<i>click a corner, sneak-click
-     * the opposite corner, right-click the controller</i> 鈥?so this check exercises strictly more of the
-     * feature than it did before, and the writer's naming and rotation are no longer reached around.
-     *
-     * <p>Non-vacuous by construction: the structure is built by this method, so the world half cannot be
-     * missing, and the file half is the artifact the tool produced rather than one this test wrote.
-     *
-     * <h2>Cleanup is part of the check</h2>
-     *
-     * <p>The file is deleted and the definitions reloaded afterwards, so the suite's later checks see the
-     * same definition set they saw before 鈥?and so the run does not leave an authored machine behind in
-     * {@code config/modularmachinery/machinery/} that the next run would then count.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static Check authoringRoundTrip(ServerLevel level, BlockPos origin) {
         String tool = "the authoring tool's file round-trips into a forming machine";
 
@@ -19456,7 +19466,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             }
 
             // STEP 1: THE TWO CLICKS, through the item's own arms -- plain marks the first corner, sneak
-            // the second. This is the part that moved from the helper to the tool in PLAN 655.2.
+             
             Item item = constructTool();
             PlayerStructureSelectionHelper.purgeSelection(player);
             player.setShiftKeyDown(false);
@@ -19646,7 +19656,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // PLAN 723.3 -- THE MODIFIER'S SCALED REQUIREMENT MUST REACH THE WORK PATH
+     
     // ------------------------------------------------------------------
 
     /** This check's own machine. Authored into the config directory and deleted in a {@code finally}. */
@@ -19662,14 +19672,14 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
      */
     private static final String VENT_ELEMENT = "modularmachinery:blockcasing@1";
 
-    /**
-     * What the AUTHORED PATTERN declares at that same position -- metadata 2, {@code casing=firebox}.
-     *
-     * <p><b>THE PATTERN DEMANDS A FIREBOX SO THE VENT IS THE PLAYER'S CHOICE.</b> {@code StructureMatcher.match}
-     * accepts a modifier replacement's block AT ITS POSITION as an ALTERNATIVE (PLAN 239), so the machine forms
-     * with either casing and only the vent activates the bonus -- which is upstream's own shape and the difference
-     * between testing the CONDITION and testing the structure.</p>
-     */
+    
+
+
+
+
+
+
+ 
     private static final String VENT_DECLARED_ELEMENT = "modularmachinery:blockcasing@2";
 
     /**
@@ -19682,41 +19692,41 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     private static final net.minecraft.world.item.Item VENT_INPUT = Items.COAL;
     private static final net.minecraft.world.item.Item VENT_OUTPUT = Items.DIAMOND;
 
-    /**
-     * <b>A VENT IN THE STRUCTURE, AND WHAT LANDED IN THE OUTPUT BUS -- FOR A SINGLE CRAFT AND FOR A FACTORY.</b>
-     *
-     * <h2>Why this check exists, and what no other check could see</h2>
-     *
-     * <p>PLAN 723.3 recorded the defect with counted searches and NO measurement: {@code replacement.matches(...)}
-     * had exactly one call site ({@code MachineTicker.activeModifiers}), and <b>no check had ever placed a
-     * vent</b>, so the scaling branch of {@code RecipeCraftingContext.apply} had never run in any run of this
-     * suite. The four modifier checks that did exist are shape-only (it parses / it names a known type / its
-     * condition resolves / its position is one the pattern visits), and every one of them passes on the broken
-     * behaviour.</p>
-     *
-     * <h2>The assertion is the BUS, not the question that asks for the room</h2>
-     *
-     * <p><b>A CHECK THAT ONLY ASSERTED "canStart ASKED FOR TWO" WOULD PASS ON THE DEFECT</b>, because
-     * {@code satisfies} already resolved the modifiers and already demanded room for two. The end that was
-     * wrong is the WRITE end: {@code emitOutputs} and the factory's four call sites walked
-     * {@code recipe.requirements()}, so the machine asked for two and made one. So the number asserted here is
-     * what APPEARED IN THE OUTPUT BUS after a completed craft, and it is compared against what the run's own
-     * resolved requirement asks for -- read through the ONE producer, not re-derived here.</p>
-     *
-     * <h2>The vent is placed the way a player places it</h2>
-     *
-     * <p>The creative tab's own stack -- the one carrying a {@code BlockStateTag} -- placed through
-     * {@code BlockItem.place} against the top face of the block below it, which is the path PLAN 725 fixed (the
-     * variant reaching the block entity) and the path a check built with {@code setBlock} would not exercise.
-     * The resulting BLOCKSTATE is asserted too, so "the vent is there" and "the vent is ACTIVE" are two facts
-     * rather than one assumption.</p>
-     *
-     * <h2>Nothing shipped is edited</h2>
-     *
-     * <p>The machine and recipe files are this check's own, written into the config directories and deleted in a
-     * {@code finally}; the plots and every block in them are cleared there too. {@code alloy_furnace.json}'s
-     * modifier declaration is the REFERENCE for the authored one, and it is only read.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyVentModifier(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -20091,37 +20101,37 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     /** An item that resolves, for the same reason and for the rule-B parity comparison. */
     private static final String ITEM_UNDER_TEST = "minecraft:iron_ingot";
 
-    /**
-     * <b>THE SPLIT, ASSERTED ON BOTH SIDES OF ITS MIRROR IMAGE</b> (AUDIT_CORE rows 3 and 4; PLAN section 318 fixed
-     * only the PARSING of the flag, never its application).
-     *
-     * <h2>What was wrong, and why ONE assertion could not have found it</h2>
-     *
-     * <p>{@code RequirementFluid.scaled} scaled the amount UNCONDITIONALLY and returned through the three-argument
-     * constructor, which defaults {@code chance} to 1.0. So:</p>
-     *
-     * <ul>
-     *   <li><b>row 3 (A):</b> an ordinary amount modifier 鈥?{@code affectChance} absent, i.e. false 鈥?DELETED the
-     *       requirement's declared probability. A pack declaring {@code "chance": 0.4} and a machine modifier
-     *       doubling its water got {@code chance == 1.0}: the output stopped being probabilistic.</li>
-     *   <li><b>row 4 (B):</b> {@code "affectChance": true} 鈥?the flag whose whole purpose is "scale the
-     *       PROBABILITY" 鈥?changed the AMOUNT instead, because the flag was never read.</li>
-     * </ul>
-     *
-     * <p><b>THE TWO ARE MIRROR IMAGES AND THAT IS THE REASON FOR THE SHAPE OF THESE ASSERTIONS.</b> A check that
-     * read only {@code getAmount()} would pass with B fully present (the amount IS scaled, just by the wrong flag).
-     * A check that read only {@code getChance()} would pass with A fully present when the flag is false, because
-     * the pre-fix code returned the SAME wrong number (always the scaled amount, never the chance) for both flags.
-     * So each check asserts the number it is about <b>and</b> that the OTHER number did not move.</p>
-     *
-     * <h2>The item requirement is measured alongside, and that is rule B rather than decoration</h2>
-     *
-     * <p>The fluid half was fixed by mirroring {@code RequirementItem.scaled} (F485-F494), the port's own existing
-     * correct split 鈥?so the check asserts that the item and the fluid produce the SAME pair of pairs for the same
-     * two modifiers. If a later round "fixes" one of them into a second convention, this comparison fails.</p>
-     *
-     * @return two checks: A (the chance survives an amount modifier) and B (the flag selects the probability)
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyFluidChanceModifiers() {
         List<Check> checks = new ArrayList<>();
 
@@ -20188,7 +20198,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ------------------------------------------------------------------
-    // AUDIT_RECIPES row 13 / PLAN section 353.3: the duration target
+     
     // ------------------------------------------------------------------
 
     /** This check's own machine, authored into the config directory and deleted in a {@code finally}. */
@@ -20203,44 +20213,44 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     /** What the authored modifier adds, in ticks: the shipped adapter file's own shape and number. */
     private static final int DURATION_ADD_TICKS = 40;
 
-    /**
-     * <b>THE TARGET THAT MATCHED NOTHING AND SAID NOTHING</b> (AUDIT_RECIPES row 13; the gap PLAN section 353.3
-     * recorded and never closed).
-     *
-     * <h2>What {@code modularmachinery:duration} is, read off upstream rather than assumed</h2>
-     *
-     * <p>It is <b>NOT</b> a requirement a recipe can declare, and this was the fact that decided the fix. Upstream
-     * registers it (RegistryRequirementTypes:74) and its own source says what it is three times:
-     * {@code RequirementTypesMM:41} "Helper type as target for duration-type recipe modifiers",
-     * {@code RequirementDuration:22} "This is actually only a helper type for recipe modifiers", and
-     * {@code RequirementDuration:27} {@code throw new UnsupportedOperationException("Cannot instantiate
-     * requirement for duration!")}. The value it scales is the RECIPE'S TICK TIME:
-     * {@code MachineRecipe:250} (the per-machine copy) and {@code ActiveMachineRecipe:80/133/148} (the running
-     * craft), all four through {@code applyModifiers(..., REQUIREMENT_DURATION, null, time, false)} 鈥?io {@code
-     * null}, so the io filter is skipped and the adapter file's {@code "io": "input"} applies.</p>
-     *
-     * <h2>Why it is not adapter-gated, and what that means for the shipped file</h2>
-     *
-     * <p>{@code MachineRecipe:250} is the general path 鈥?every machine's copy of every recipe 鈥?so the target is
-     * reachable from any machine JSON's {@code modifiers} array, adapters or not. The mod's own shipped content
-     * happens to use it inside an {@code .adapter.json} template, and THAT file still cannot run for the separate,
-     * pre-existing reason that the port does not expand adapters (RecipeLoader:246-297 loads such a file with no
-     * requirements and a duration of 0, and {@code MachineTicker.isRunnable} refuses a zero duration). This check
-     * therefore measures the GENERAL path, which is the half that is this round's; adapter expansion is untouched
-     * and stays as it was.</p>
-     *
-     * <h2>What is asserted, and both ends of it</h2>
-     *
-     * <p>(1) The matching site is no longer silent: the target is a KNOWN target, a modifier naming it does not
-     * apply to any requirement (as upstream's cannot 鈥?no requirement instance can carry that type), a modifier
-     * naming an unknown type IS reported by {@code RecipeModifier.unmatchedTarget}, and the arithmetic reproduces
-     * upstream's {@code applyModifiers} composition {@code (value + add) * mul}. (2) It MATCHES AND SCALES THE
-     * DURATION end to end: a machine authored with {@code {"target": "modularmachinery:duration", "io": "input",
-     * "operation": 0, "multiplier": 40}} runs its 20-tick recipe for 60 ticks, measured off the controller's own
-     * {@code getRecipeDuration()} after a real start through {@code MachineTicker.tryStart}. Before the fix that
-     * number was 20 鈥?the definition's raw {@code recipeTime} 鈥?with the modifier parsed, held, and applied to
-     * nothing.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyDurationTargetModifier(ServerLevel level, BlockPos origin) {
         List<Check> checks = new ArrayList<>();
 
@@ -21139,7 +21149,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         // WHAT WAS WRONG. It used to write into the LIVE, FILE-BACKED config -- `Config.SPEC`'s child config, the
         // one Forge parsed from `run/config/modularmachinery-common.toml` -- and read the tier straight back. It
         // PASSED on some runs and FAILED on others, and the failing runs' own diagnostic said which half broke,
-        // verbatim from `run/logs/latest.log`:
+         
         //
         //     capacity 8192 -> 777 -> 8192 -> restored 8192; transfer 512 -> 321 -> 321 -> restored 512;
         //     while 777/321 were written the SPEC itself read 8192/321  <-- the write never reached the entry
@@ -21238,8 +21248,10 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
                             + capacityEntry + ", transfer=" + transferEntry));
             return checks;
         }
-        int capacityDefault = energyTier.getDefaultMaxEnergy();
-        int transferDefault = energyTier.getDefaultMaxTransfer();
+        long savedCapacity = capacityEntry.get();
+        long savedTransfer = transferEntry.get();
+        int capacityDefault = energyTier.getMaxEnergy();
+        int transferDefault = energyTier.getMaxTransfer();
         int capacityAsked = 777;
         int transferAsked = 321;
         int capacityAfterSet;
@@ -21259,8 +21271,8 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
             capacityAfterSet = energyTier.getMaxEnergy();
             transferAfterSet = energyTier.getMaxTransfer();
         } finally {
-            capacityEntry.set((long) capacityDefault);
-            transferEntry.set((long) transferDefault);
+            capacityEntry.set(savedCapacity);
+            transferEntry.set(savedTransfer);
             capacityAfterRestore = energyTier.getMaxEnergy();
             transferAfterRestore = energyTier.getMaxTransfer();
         }
@@ -21735,7 +21747,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     }
 
     // ================================================================================================
-    // THE RECIPE REGISTRY AND ADAPTER CHECKS (PLAN 750, the recipe-loader cluster)
+     
     //
     // Three defects, one surface, so one method. Every assertion below is written so that the PRE-FIX code
     // FAILS it, and each names which half it measured -- a check that only asserted "the key parsed" would
@@ -21766,47 +21778,47 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
     private static final String ARRAY_MACHINE_FIRST = "test_multiblock";
     private static final String ARRAY_MACHINE_SECOND = "alloy_furnace";
 
-    /**
-     * @return the four checks that decide this round's three defects
-     *
-     * <h2>1. A DUPLICATE `registryName` KEEPS THE FIRST FILE AND REPORTS THE COLLISION</h2>
-     *
-     * <p>Upstream {@code RecipeRegistry.loadAndValidateRecipes} U136-U144 warns
-     * "MachineRecipe with registryName &lt;name&gt; already exists!" plus "Offending files: ..." and
-     * <b>continues</b>, i.e. the later file is discarded. The port kept both silently, so
-     * {@code MachineTicker.findByName} returned whichever copy came first in the machine's candidate list and
-     * which recipe a machine ran depended on file order with nothing anywhere saying so.</p>
-     *
-     * <p><b>The assertion names WHICH copy survived, not merely that one did.</b> The two files produce
-     * different outputs on purpose ({@code minecraft:redstone} vs {@code minecraft:glowstone_dust}), because
-     * "one recipe loaded" is also true of a build that discards the FIRST file -- and that build would have
-     * the opposite behaviour from upstream while passing a count-only check.</p>
-     *
-     * <h2>2. A `machine` ARRAY LOADS, AND THE FILE IS NOT DROPPED</h2>
-     *
-     * <p>The audit's words: writing an array made {@code getAsString()} throw, and the throw was caught by
-     * {@code load}'s per-file catch, so <b>the entire file became one {@code problem} and every recipe in it
-     * was ABSENT</b>. A dropped file is not a warning. So this check asserts three separate things: that both
-     * suffixed variants exist ON THEIR OWN MACHINES, that the un-suffixed name does NOT, and that
-     * <b>this file contributed ZERO problem lines</b> -- the last is what a "the array parsed" check would
-     * miss.</p>
-     *
-     * <h2>3. THE `adapter` KEY NOW PRODUCES RUNNABLE RECIPES</h2>
-     *
-     * <p>Before this round the key was parsed, stored, exposed as {@code isAdapter()} and judged
-     * "unexpanded adapter recipe" by the ticker, <b>and nothing anywhere expanded one</b> -- a field that
-     * looked supported. This asserts the expansion end to end on the SHIPPED template: the generated recipes
-     * exist for {@code alloy_furnace}, every one of them satisfies {@code MachineTicker.isRunnable}, the
-     * template itself is no longer among them, and the template's OWN duration modifier reached the
-     * generated recipes (120 + 40 = 160 ticks) -- which is the {@code modularmachinery:duration} target
-     * working rather than being silently ignored.</p>
-     *
-     * <h2>4. AND NOTHING MAY BE SILENT</h2>
-     *
-     * <p>The contract's other half: every template that named an adapter either expanded or is NAMED in
-     * {@code getNotExpandedAdapters()}. An empty list is the positive statement; a non-empty one is what a
-     * pack author needs in order to find the template that produces nothing.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static List<Check> verifyRecipeRegistryAndAdapters() {
         List<Check> checks = new ArrayList<>();
         java.io.File recipeDir = hellfirepvp.modularmachinery.common.data.ModDataHolder.INSTANCE
@@ -21818,7 +21830,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         java.io.File dynamicFile = new java.io.File(recipeDir, DYNAMIC_ADAPTER_FILE + ".json");
 
         try {
-            // The three files are removed first: run/world and run/config PERSIST between runs (PLAN 289), and
+             
             // a leftover from a crashed run would make this check's own file list the thing under test.
             deleteQuietly(List.of(fileA, fileB, arrayFile, dynamicFile));
             java.nio.file.Files.writeString(fileA.toPath(), duplicateRecipeJson("minecraft:redstone"));
@@ -22013,21 +22025,21 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         return sb.length() == 0 ? "<no item requirement>" : sb.toString();
     }
 
-    /**
-     * Confirms the {@code chance} field survives JSON parsing.
-     *
-     * <p><b>THIS BODY IS A VERBATIM RESTORE, NOT NEW WORK, AND THE PROVENANCE IS WRITTEN DOWN BECAUSE IT MATTERS.</b>
-     * The method's CALL SITE at {@code F468} survived a round of concurrent rewrites while its definition and its
-     * javadoc body did not, leaving {@code compileJava} with exactly one error -- this symbol -- and blocking every
-     * workstream in the tree. The body below was read out of this same file earlier in the session, at
-     * {@code F3149}-{@code F3170}, before the rewrite; it is pasted back unchanged rather than rewritten, so that
-     * whatever the originating stage intended is still what runs. If that stage restores its own copy, the clash will
-     * be a loud duplicate-method error and not a silent divergence, which is the reason this is safe to do at all.</p>
-     *
-     * <p>Deliberately checks a recipe this test never runs: the point is to prove the <b>loader</b> reads
-     * the field, and a machine whose only recipe omits it cannot demonstrate that. Before the fix the
-     * field was not read at all and every probabilistic output was silently guaranteed.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static Check verifyChanceParsed() {
         MachineRecipe wash = findRecipe("iron_centrifuge", "iron_centrifuge_wash_redstone");
         if (wash == null) {

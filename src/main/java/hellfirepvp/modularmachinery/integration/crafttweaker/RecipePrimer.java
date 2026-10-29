@@ -274,6 +274,29 @@ public final class RecipePrimer {
     private RecipePrimer energy(long value, boolean input) {
         JsonObject entry = append("energy", input); entry.addProperty("energyPerTick", amount(value)); return this;
     }
+    private RecipePrimer compressedAir(float pressure, int air, boolean input, boolean tick) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("pneumaticcraft")) throw new IllegalStateException("Compressed air recipes require PneumaticCraft");
+        JsonObject fields = new JsonObject(); fields.addProperty("pressure", pressure); fields.addProperty("air", air); fields.addProperty("perTick", tick);
+        new hellfirepvp.modularmachinery.integration.pneumatic.RequirementCompressedAir.Type(tick)
+                .createRequirement(input ? hellfirepvp.modularmachinery.common.machine.IOType.INPUT : hellfirepvp.modularmachinery.common.machine.IOType.OUTPUT, fields);
+        JsonObject entry = append("compressed_air", input); fields.entrySet().forEach(e -> entry.add(e.getKey(), e.getValue())); return this;
+    }
+    @ZenCodeType.Method public RecipePrimer addCompressedAirInput(float pressure, int air) { return compressedAir(pressure, air, true, false); }
+    @ZenCodeType.Method public RecipePrimer addTemperatureInput(int minKelvin, int maxKelvin) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("pneumaticcraft")) throw new IllegalStateException("Temperature recipes require PneumaticCraft");
+        var json = new JsonObject(); json.addProperty("min", minKelvin); json.addProperty("max", maxKelvin);
+        new hellfirepvp.modularmachinery.integration.pneumatic.RequirementTemperature.Type().createRequirement(hellfirepvp.modularmachinery.common.machine.IOType.INPUT, json);
+        var req = append("temperature", true); req.addProperty("min", minKelvin); req.addProperty("max", maxKelvin);
+        return this;
+    }
+    @ZenCodeType.Method public RecipePrimer addEmberInput(double ember) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("embers")) throw new IllegalStateException("Ember recipes require Embers Rekindled");
+        if (!Double.isFinite(ember) || ember < 0) throw new IllegalArgumentException("ember must be finite and non-negative");
+        JsonObject entry = append("ember", true); entry.addProperty("ember", ember); return this;
+    }
+    @ZenCodeType.Method public RecipePrimer addCompressedAirOutput(int air) { return compressedAir(0, air, false, false); }
+    @ZenCodeType.Method public RecipePrimer addCompressedAirPerTickInput(float pressure, int air) { return compressedAir(pressure, air, true, true); }
+    @ZenCodeType.Method public RecipePrimer addCompressedAirPerTickOutput(int air) { return compressedAir(0, air, false, true); }
     @ZenCodeType.Method public RecipePrimer addEnergyPerTickInput(long value) { return energy(value, true); }
     @ZenCodeType.Method public RecipePrimer addEnergyPerTickOutput(long value) { return energy(value, false); }
     @ZenCodeType.Method public RecipePrimer addFuelItemInput(int ticks) {
@@ -285,6 +308,37 @@ public final class RecipePrimer {
         entry.addProperty("min", min); entry.addProperty("max", max); return this;
     }
     @ZenCodeType.Method public RecipePrimer addSmartInterfaceDataInput(String type, float value) { return addSmartInterfaceDataInput(type, value, value); }
+    private RecipePrimer environment(JsonObject fields) {
+        new hellfirepvp.modularmachinery.common.crafting.requirement.RequirementEnvironment.Type()
+                .createRequirement(hellfirepvp.modularmachinery.common.machine.IOType.INPUT, fields);
+        JsonObject entry = append("environment", true);
+        fields.entrySet().forEach(field -> entry.add(field.getKey(), field.getValue()));
+        return this;
+    }
+    private RecipePrimer environmentRange(String condition, int min, int max) {
+        var fields = new JsonObject(); fields.addProperty("condition", condition);
+        fields.addProperty("min", min); fields.addProperty("max", max); return environment(fields);
+    }
+    private RecipePrimer environmentIds(String condition, String[] ids) {
+        if (ids == null) throw new IllegalArgumentException("Environment ID list cannot be null");
+        var fields = new JsonObject(); fields.addProperty("condition", condition);
+        var values = new com.google.gson.JsonArray(); for (String id : ids) values.add(id);
+        fields.add("values", values); return environment(fields);
+    }
+    @ZenCodeType.Method public RecipePrimer addEnvironmentAltitude(int min, int max) { return environmentRange("altitude", min, max); }
+    @ZenCodeType.Method public RecipePrimer addEnvironmentTime(int min, int max) { return environmentRange("time", min, max); }
+    @ZenCodeType.Method public RecipePrimer addEnvironmentDimensions(String... ids) { return environmentIds("dimensions", ids); }
+    @ZenCodeType.Method public RecipePrimer addEnvironmentBiomes(String... ids) { return environmentIds("biomes", ids); }
+    @ZenCodeType.Method public RecipePrimer addEnvironmentMoonPhases(int... phases) {
+        if (phases == null) throw new IllegalArgumentException("Moon phases cannot be null");
+        var fields = new JsonObject(); fields.addProperty("condition", "moonphase");
+        var values = new com.google.gson.JsonArray(); for (int phase : phases) values.add(phase);
+        fields.add("values", values); return environment(fields);
+    }
+    @ZenCodeType.Method public RecipePrimer addEnvironmentWeather(String weather) {
+        var fields = new JsonObject(); fields.addProperty("condition", "weather");
+        fields.addProperty("weather", weather); return environment(fields);
+    }
     @ZenCodeType.Method public RecipePrimer setChance(float chance) {
         if (!last().has("chance")) throw new IllegalArgumentException("Last requirement does not support chance");
         if (!Float.isFinite(chance) || chance < 0 || chance > 1) throw new IllegalArgumentException("Chance must be 0..1");

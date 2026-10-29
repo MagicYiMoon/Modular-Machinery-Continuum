@@ -85,7 +85,7 @@ public final class RegistryBlockEntities {
     // references no AE2 type at all.
     //
     // So a tile that IS an AE2 machine cannot be reached from an unconditional register. The three ways forward are recorded in
-    // PLAN section 404; the first is a separate DeferredRegister subscribed only when AE2 is present.
+     
 
     public static final RegistryObject<BlockEntityType<TileFluidInputHatch>> FLUID_INPUT_HATCH =
             BLOCK_ENTITIES.register("blockfluidinputhatch", () -> BlockEntityType.Builder
@@ -107,6 +107,10 @@ public final class RegistryBlockEntities {
                     .of(TileEnergyOutputHatch::new, RegistryBlocks.energyOutputHatch.get())
                     .build(null));
 
+    public static final RegistryObject<BlockEntityType<hellfirepvp.modularmachinery.common.tiles.TileEnergyOutputPort>> ENERGY_OUTPUT_PORT =
+            BLOCK_ENTITIES.register("blockenergyoutputport", () -> BlockEntityType.Builder
+                    .of(hellfirepvp.modularmachinery.common.tiles.TileEnergyOutputPort::new, RegistryBlocks.energyOutputPort.get()).build(null));
+
     public static final RegistryObject<BlockEntityType<TileFactoryController>> FACTORY_CONTROLLER =
             BLOCK_ENTITIES.register("blockfactorycontroller", () -> BlockEntityType.Builder
                     .of(TileFactoryController::new, DedicatedControllers.validBlocks(true, RegistryBlocks.blockFactoryController.get()))
@@ -126,6 +130,10 @@ public final class RegistryBlockEntities {
             BLOCK_ENTITIES.register("blockupgradebus", () -> BlockEntityType.Builder
                     .of(TileUpgradeBus::new, RegistryBlocks.upgradeBus.get())
                     .build(null));
+
+    public static final RegistryObject<BlockEntityType<hellfirepvp.modularmachinery.common.tiles.TileEnvironmentDetector>> ENVIRONMENT_DETECTOR =
+            BLOCK_ENTITIES.register("blockenvironmentdetector", () -> BlockEntityType.Builder
+                    .of(hellfirepvp.modularmachinery.common.tiles.TileEnvironmentDetector::new, RegistryBlocks.environmentDetector.get()).build(null));
 
     private RegistryBlockEntities() {
     }

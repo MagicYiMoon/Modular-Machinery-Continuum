@@ -32,86 +32,86 @@ import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * The pattern provider own screen, AE2 container half (PLAN sections 460, 473-478, and 712).
- *
- * <h2>What upstream's container is, read at the body (rule A)</h2>
- *
- * <pre>
- *   ContainerMEPatternProvider extends AEBaseContainer                      (upstream C29)
- *     C44      bindPlayerInventory(getInventoryPlayer(), 0, 114)            -&gt; the player's rows at y = 114
- *                                                                              and the hotbar at y = 172
- *     C46-C51  for row 0..3, for col 0..8:
- *                  addSlotToContainer(new SlotRestrictedInput(ENCODED_PATTERN, patterns,
- *                      (row * 9) + col, 8 + (col * 18), 28 + (row * 18), getInventoryPlayer()))
- *                                                                          -&gt; 36 pattern slots, 9 COLUMNS x 4 ROWS
- *     C53-C56  for i in 0..1: addSlotToContainer(new SlotNormal(subItemHandler, i, 181 + (i * 18), 172))
- *                                                                          -&gt; the two "single inv" slots
- * </pre>
- *
- * <p><b>So upstream's grid is 36 = 9 x 4 at (8 + 18c, 28 + 18r), and the number is not taken from a screenshot: it is
- * the two loop bounds at C47-C48.</b> The art agrees -- 36 wells, whose top borders measure 18/19 dark pixels at rows
- * 28/46/64/82 for all nine columns at {@code 8 + 18c} -- and the suite's own check re-measures that from
- * {@code mepatternprovider.png} rather than trusting this comment.</p>
- *
- * <h2>RULE A0 EVIDENCE FOR DEPARTING FROM UPSTREAM, in the three parts A0 requires</h2>
- *
- * <p><b>(1) UPSTREAM METHOD:</b> as above — {@code AEBaseContainer} with {@code SlotRestrictedInput} for the pattern
- * slots and {@code SlotNormal} for the sub-handler, placed by EXPLICIT coordinates (C46-C56).</p>
- *
- * <p><b>(2) WHY IT CANNOT BE FOLLOWED:</b> {@code AEBaseContainer}, {@code SlotNormal},
- * {@code SlotRestrictedInput} and {@code AppEngInternalInventory} (the {@code appeng.container} package),
- * {@code IFluidSyncContainer}, {@code SlotPlayerHotBar} and {@code PacketInventoryAction} are all ABSENT from AE2
- * 15.4.11 — verified by listing the jar.</p>
- *
- * <p><b>(3) THE ALTERNATIVE, and the two MEASURED facts that decided it.</b> Upstream's coordinates are kept
- * verbatim; WHAT CHANGED IS WHERE A POSITION CAN COME FROM, and that took two measurements rather than a
- * preference:</p>
- *
- * <pre>
- *   AE2 15.x POSITIONS NOTHING IN THE MENU. AppEngSlot's constructor is Slot(EMPTY_INVENTORY, index, 0, 0);
- *     AEBaseMenu.createPlayerInventorySlots builds Slot(inventory, i, 0, 0); and AEBaseMenu's bytecode contains NO
- *     `putfield net/minecraft/world/inventory/Slot.x` at all. The assignment lives in AEBaseScreen.repositionSlots,
- *     which reads the SCREEN's ScreenStyle JSON -- and this port's screen is a vanilla AbstractContainerScreen with
- *     no style, so before this change every slot of this menu sat at (0, 0).
- *   SLOT.x AND SLOT.y ARE FINAL on 1.20.1. The SRG-to-official mapping (build/createMcpToSrg/output.tsrg) names
- *     `x f_40220_` and `y f_40221_`, and both are `public final int` in the joined jar -- so a slot can only be
- *     given a position by its CONSTRUCTOR, and moving it afterwards needs reflection (upstream's own
- *     GuiMEPatternProvider U196-U197 reaches into AE2's private final x/y that way, for an AE2-EL-only branch).
- * </pre>
- *
- * <p><b>So the slots are built at their coordinates, which is this port's own convention for every menu that places
- * anything</b> ({@code MenuMEItemInputBus.addPlayerInventory}, {@code MenuMEFluidInputBus}):</p>
- *
- * <pre>
- *   AEBaseContainer            -&gt; AEBaseMenu
- *   SlotRestrictedInput        -&gt; a SlotItemHandler over AE2's PUBLIC bridge InternalInventory.toItemHandler(),
- *                                 with mayPlace = PatternDetailsHelper.isEncodedPattern -- AE2's own public
- *                                 predicate, which is the rule the ENCODED_PATTERN slot type enforces
- *   SlotNormal                 -&gt; NOT PORTED, see below
- *   explicit coordinates       -&gt; kept verbatim, passed to the slot CONSTRUCTORS
- *   bindPlayerInventory        -&gt; vanilla Slots over the player's Inventory, added with AE2's own semantics so that
- *                                 AEBaseMenu's semantic bookkeeping (and isPlayerSideSlot, which compares the slot's
- *                                 container with the player's inventory) sees the same thing it saw before
- * </pre>
- *
- * <p><b>AND THE 36 SLOTS THEMSELVES:</b> AE2 15.4.11's {@code PatternProviderLogic(node, host)} passes <b>9</b> to
- * its three-argument form, which hands that int straight to {@code new AppEngInternalInventory(host, size)}. So this
- * menu used to add <b>nine</b> pattern slots where upstream's container adds thirty-six, and
- * {@code TileMEPatternProvider.PATTERNS} (36) was a constant nothing read. It is now the size the logic is built
- * with, which is what makes the four rows of wells below reachable.</p>
- *
- * <h2>What is deliberately NOT here, each with the line that makes it unreachable</h2>
- *
- * <p><b>The two "single inv" slots (upstream C53-C56) are NOT added.</b> Upstream backs them with
- * {@code subItemHandler} (U93, 2 slots) which is INSIDE the machine-visible container — its own {@code handler} is
- * {@code new InfItemFluidHandler(subItemHandler, subFluidHandler)} (U107), so the machine draws from the single inv
- * as well as from the cache. This port's {@link hellfirepvp.modularmachinery.common.util.InfItemFluidHandler}
- * records the opposite property of itself (its own javadoc: the sub-handler is "not consulted by the methods
- * below"), so two slots here would hold items <b>nothing reads</b> — the defect class this project calls a value
- * with no producer/consumer. Recorded rather than faked; the label and the "?" button that DESCRIBE them are drawn
- * by the screen, with their keys resolving in both language files.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class MenuMEPatternProvider extends AEBaseMenu {
 
     /**
@@ -158,37 +158,37 @@ public class MenuMEPatternProvider extends AEBaseMenu {
     /** Columns in one player row; vanilla's own, and the art's. */
     public static final int PLAYER_COLUMNS = 9;
 
-    /**
-     * The independent storage's two wells, from upstream C53-C56 verbatim:
-     * {@code new SlotNormal(subItemHandler, i, 181 + (i * 18), 172)}.
-     *
-     * <p><b>These are the slots §729 refused, and the refusal was correct at the time.</b> Its own sentence is the
-     * record: "upstream backs them with {@code subItemHandler}, which is INSIDE the machine-visible container ... this
-     * port's {@code InfItemFluidHandler} says of itself that the sub-handler is 'not consulted by the methods below',
-     * so two slots there would hold items NOTHING reads". The measurement has not changed; what changed is that the
-     * container can now present the sub-handler AS PART OF ONE COMPOSITE ({@code machineVisibleItems}), and the tile
-     * exposes that composite through {@code ITEM_HANDLER} -- so the same two slots that would have written to a dead
-     * inventory now write to the storage the machine counts and draws from.</p>
-     *
-     * <p><b>AND IT IS THE STORAGE THE USER NAMED.</b> {@code gui.mepatternprovider.single_inv} is "独立存储" /
-     * "Single Inv", the label §729 already drew at (180, 158) above exactly these two cells, and the user's own
-     * sentence for it -- "下方独立存储应为所有配方共同识别的槽位" -- is what {@code machineVisibleItems}' one shared
-     * object delivers.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static final int SUB_ITEM_X = 181;
     public static final int SUB_ITEM_Y = 172;
 
-    /**
-     * The fluid barrel beside them, at upstream's own coordinate:
-     * {@code new GuiFullCapFluidTank(owner.getSubFluidHandler(), 0, 0, 232, 172, 16, 16)}
-     * ({@code GuiMEPatternProvider} G187-G189).
-     *
-     * <p><b>NOT A MENU SLOT, AND NOT DRAWN BY THIS FILE.</b> Upstream's widget is an AE2 {@code GuiFluidTank}, and
-     * {@code appeng/fluids/} has ZERO entries in AE2 15.4.11 (re-measured this round: 5156 jar entries, no match) --
-     * so there is no AE2 widget to instantiate and no {@code IGuiFluidStackHandler} to hand it. The 16 x 16 cell is
-     * still the right cell and the value here is the anchor {@code ScreenMEPatternProvider} draws its own barrel
-     * frame in, which also keeps the coordinate in ONE place instead of two.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+ 
     public static final int SUB_FLUID_X = 232;
     public static final int SUB_FLUID_Y = 172;
     public static final int SUB_FLUID_SIZE = 16;
@@ -273,7 +273,7 @@ public class MenuMEPatternProvider extends AEBaseMenu {
         // question. THE RULE THIS ADDS TO THIS PORT'S LIST OF CLASS-LOAD BOUNDARIES: it is not enough for a type to be
         // named only in a guarded METHOD -- a ternary, a `?:` in an argument list, or any other place where two types
         // are merged by the verifier can pull an AE2 type into the frame of a class the standalone server loads.
-        // (PLAN 737 records the full trace; the guard around this round's checks was moved to the CALL SITE for the
+         
         // same family of reason.)
         if (tile == null) {
             this.data = new SimpleContainerData(DATA_SIZE);

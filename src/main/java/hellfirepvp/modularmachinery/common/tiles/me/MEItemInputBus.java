@@ -26,40 +26,40 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * {@code modularmachinery:blockmeiteminputbus} -- keeps a CONFIGURED set of items available to the machine.
- *
- * <h2>This is a sustaining buffer, not a one-way pull</h2>
- *
- * <p>PLAN section 399 read upstream's five rules, and they are worth restating because the class name invites the wrong design.
- * Per slot, the CONFIG inventory (what the bus is asked to keep) is compared with the buffer (what the machine reads):</p>
- *
- * <ol>
- *   <li><b>config empty, buffer non-empty</b> -- push the buffer's contents INTO the network. It gives back what it was not asked
- *       to hold.</li>
- *   <li><b>config set, buffer does not match</b> -- and only if the buffer is empty OR its contents fit ENTIRELY into the network,
- *       extract the configured item and fill the slot.</li>
- *   <li><b>config matches, counts equal</b> -- nothing.</li>
- *   <li><b>config count &gt; buffer count</b> -- top the slot up from the network, and reset {@code failureCounter[slot]}.</li>
- *   <li><b>config count &lt; buffer count</b> -- push the excess back.</li>
- * </ol>
- *
- * <p><b>Rules 1 and 5 both INSERT.</b> A class named "input" that never calls insert is the one-way-pull mistake: items the machine
- * did not ask for would accumulate forever, and nothing would top a consumed stack back up.</p>
- *
- * <h2>And rule 2's condition prevents silent item loss</h2>
- *
- * <p>It fills the slot only when the old contents fit entirely into the network. <b>A port that skipped that test would overwrite
- * the buffer whenever the configured item changed, and the previous stack would go nowhere.</b> That is why the check is written as
- * an explicit precondition rather than folded into the branch.</p>
- *
- * <h2>What the port does not need that upstream does</h2>
- *
- * <p>Upstream converts between {@code ItemStack} and {@code IAEItemStack} in two directions and caches the results in a static
- * {@code WeakHashMap}. <b>This port never converts BACK from an AE key</b>: everything it extracts is named by the config
- * inventory, so the {@code ItemStack} is already in hand, and everything it inserts goes through
- * {@link AEItemKey#of(ItemStack)}. That removes the whole cache and one direction of conversion.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class MEItemInputBus extends MEItemBus implements SettingsTransfer {
 
     @Override

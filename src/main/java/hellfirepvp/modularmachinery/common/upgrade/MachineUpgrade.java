@@ -86,6 +86,7 @@ public abstract class MachineUpgrade {
     protected int stackSize = 1;
     /** Per-upgrade data; upstream stores this on the upgrade bus rather than on the item stack. */
     protected CompoundTag customData = new CompoundTag();
+    protected RuntimeUpgradeAccess runtimeAccess;
 
     /**
      * Live handlers declared by CraftTweaker for this upgrade prototype.  They are deliberately kept as runtime
@@ -176,13 +177,29 @@ public abstract class MachineUpgrade {
     }
 
     public CompoundTag writeNBT() {
-        return customData.copy();
+        return getCustomData();
     }
 
     /** A defensive copy for menus and diagnostics. Mutations should use {@link #setCustomData}. */
-    public CompoundTag getCustomData() { return customData.copy(); }
+    public CompoundTag getCustomData() { return (runtimeAccess == null ? customData : runtimeAccess.source.customData).copy(); }
+
+    /** Source-style nested data edits; runtime views persist to their original bus/type. */
+    protected com.blamejared.crafttweaker.api.data.IData scriptCustomData() {
+        if (runtimeAccess == null) return com.blamejared.crafttweaker.api.data.converter.tag.TagToDataConverter.convert(customData);
+        var access = runtimeAccess;
+        CompoundTag root = access.source.customData;
+        return hellfirepvp.modularmachinery.integration.crafttweaker.ControllerCustomDataView.guarded(root,
+                () -> access.canWrite() && access.source.customData == root, access::persistCustomData);
+    }
 
     public void setCustomData(CompoundTag data) {
+        if (runtimeAccess != null) {
+            if (runtimeAccess.canWrite() && !runtimeAccess.source.customData.equals(data == null ? new CompoundTag() : data)) {
+                runtimeAccess.source.setCustomData(data);
+                runtimeAccess.persistCustomData();
+            }
+            return;
+        }
         customData = data == null ? new CompoundTag() : data.copy();
     }
 

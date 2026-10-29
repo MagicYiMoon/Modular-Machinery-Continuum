@@ -14,6 +14,13 @@ public final class ManaRegistration {
             (pos, state) -> new TileManaProvider(ManaRegistration.INPUT.get(), pos, state), RegistryModularMagicBlocks.blockManaProviderInput.get()).build(null));
     public static final RegistryObject<BlockEntityType<TileManaProvider.Output>> OUTPUT = TYPES.register("blockmanaprovideroutput", () -> BlockEntityType.Builder.of(
             (pos, state) -> new TileManaProvider.Output(ManaRegistration.OUTPUT.get(), pos, state), RegistryModularMagicBlocks.blockManaProviderOutput.get()).build(null));
+    public static final RegistryObject<BlockEntityType<TileSparkManaProvider>> SPARK_INPUT = TYPES.register("sparkmanainput", () -> BlockEntityType.Builder.of(
+            (pos, state) -> new TileSparkManaProvider(ManaRegistration.SPARK_INPUT.get(), pos, state), hellfirepvp.modularmachinery.common.registry.RegistryBlocks.sparkManaInput.get()).build(null));
+    public static final RegistryObject<BlockEntityType<TileSparkManaProvider.Output>> SPARK_OUTPUT = TYPES.register("sparkmanaoutput", () -> BlockEntityType.Builder.of(
+            (pos, state) -> new TileSparkManaProvider.Output(ManaRegistration.SPARK_OUTPUT.get(), pos, state), hellfirepvp.modularmachinery.common.registry.RegistryBlocks.sparkManaOutput.get()).build(null));
+    public static BlockEntity createSpark(BlockPos pos, BlockState state, boolean input) {
+        return input ? SPARK_INPUT.get().create(pos, state) : SPARK_OUTPUT.get().create(pos, state);
+    }
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) { TYPES.register(bus); }
     public static BlockEntity create(BlockPos pos, BlockState state, boolean input) {
         return input ? INPUT.get().create(pos, state) : OUTPUT.get().create(pos, state);

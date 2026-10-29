@@ -30,20 +30,20 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * The machine controller — the block a player right-clicks to form and run a multiblock.
- *
- * <p>State layout is taken verbatim from the shipped {@code blockcontroller.json}, which already
- * keys its variants on {@code facing} (four horizontal values) and {@code formed} (boolean). On
- * 1.12.2 the same two properties existed but the block was rotated with
- * {@code BlockHorizontal#withRotation}/{@code withMirror}; on 1.20.1 those live on the block itself
- * as {@link #rotate} / {@link #mirror} overrides.
- *
- * <p>{@code @SuppressWarnings("deprecation")} is on this class because overriding
- * {@code rotate(BlockState, Rotation)} / {@code mirror(BlockState, Mirror)} — deprecated in 1.20.1
- * ahead of the octahedral-group migration — is nevertheless the only way to make a directional block
- * rotate, and is exactly what vanilla's own {@code HorizontalDirectionalBlock} does.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 @SuppressWarnings("deprecation")
 public class BlockController extends BlockMachineComponent {
 
@@ -184,8 +184,8 @@ public class BlockController extends BlockMachineComponent {
      * block-entity type, and the work is <b>server-thread only</b>: see {@code MachineTicker} for why
      * the async model did not survive the port, and what shape a future optimisation must take.
      *
-     * <p>The ticker is returned only for the server side. Returning it for the client would have the
-     * client attempt to advance recipes against a world it does not own.
+     * <p>The client ticker only counts the local lifetime, as source TileEntityRestrictedTick did;
+     * recipe processing remains on the server.
      */
     @Nullable
     @Override
@@ -194,7 +194,10 @@ public class BlockController extends BlockMachineComponent {
             net.minecraft.world.level.Level level, BlockState state,
             net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
         if (level.isClientSide()) {
-            return null;
+            return (lvl, pos, st, be) -> {
+                if (be instanceof hellfirepvp.modularmachinery.common.tiles.TileController controller)
+                    controller.countControllerTick();
+            };
         }
         return (lvl, pos, st, be) -> {
             if (be instanceof hellfirepvp.modularmachinery.common.tiles.TileController controller) {
@@ -215,39 +218,7 @@ public class BlockController extends BlockMachineComponent {
                                                      net.minecraft.world.entity.player.Player player,
                                                      net.minecraft.world.InteractionHand hand,
                                                      net.minecraft.world.phys.BlockHitResult hit) {
-        // Shift-right-click is left to the formation handler (ControllerInteraction), so the two do not
-        // both act on one click and form the machine while also opening a window over it.
-        if (player.isShiftKeyDown()) {
-            return net.minecraft.world.InteractionResult.PASS;
-        }
-
-        // AND THE SAME FOR THE CONSTRUCT TOOL (PLAN section 262).
-        //
-        // Vanilla tries the BLOCK first and the ITEM only if the block passes -- unless the player is
-        // sneaking, which skips the block. So with the forming tool in hand and no sneak, this method ran,
-        // opened the menu, and the tool's useOn was never reached. The client reported exactly that:
-        // "右键是打开gui，shift右键才会报出缺东西" -- plain click opened the GUI, shift-click reported the
-        // missing blocks, and nothing formed automatically.
-        //
-        // Returning PASS hands the click to the item, which is what "holding the tool" should mean.
-        if (player.getMainHandItem().getItem()
-                instanceof hellfirepvp.modularmachinery.common.item.ItemConstructTool) {
-            return net.minecraft.world.InteractionResult.PASS;
-        }
-
-        // AND FOR THE PROJECTOR, which is the same rule one item later (PLAN section 294).
-        //
-        // Section 262 added this for the construct tool and did not generalise it, so the projector hit the
-        // identical wall: vanilla tries the BLOCK first, this method opened the menu, and
-        // ItemMachineProjector.useOn -- the only caller of renderMachinePreview -- was never reached. The
-        // client reported it exactly: "拿投影仪右键是打开机器控制器界面".
-        //
-        // The lesson is not "add another instanceof" but "this method must decline for every item whose
-        // right-click means something on a controller". There are two such items and both are named here.
-        if (player.getMainHandItem().getItem()
-                instanceof hellfirepvp.modularmachinery.common.item.ItemMachineProjector) {
-            return net.minecraft.world.InteractionResult.PASS;
-        }
+        if (passesControllerInteraction(player, hand)) return net.minecraft.world.InteractionResult.PASS;
 
         // The menu is opened on the SERVER only. Opening it on both sides is the classic 1.20.1 mistake:
         // the client would build its own menu from locally-guessed data, and the two would immediately
@@ -271,6 +242,15 @@ public class BlockController extends BlockMachineComponent {
         // swing the arm, and the server must not reject it. Returning PASS here would make the click fall
         // through to item use and the GUI would never open.
         return net.minecraft.world.InteractionResult.SUCCESS;
+    }
+
+    /** Shared by generic/dedicated machine and factory controllers; use the actual interaction hand. */
+    protected static boolean passesControllerInteraction(net.minecraft.world.entity.player.Player player,
+                                                          net.minecraft.world.InteractionHand hand) {
+        var item = player.getItemInHand(hand).getItem();
+        return player.isShiftKeyDown()
+                || item instanceof hellfirepvp.modularmachinery.common.item.ItemConstructTool
+                || item instanceof hellfirepvp.modularmachinery.common.item.ItemMachineProjector;
     }
 
     public static Property<?>[] stateProperties() {

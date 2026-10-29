@@ -137,10 +137,19 @@ public final class RandomOutputEditorRegressionChecks {
                 var entry = advanced.getAsJsonArray("requirements").get(0).getAsJsonObject().getAsJsonArray("items").get(0).getAsJsonObject();
                 if (field.equals("tag-output")) entry.addProperty("item", "tag:minecraft:planks");
                 else entry.add(field, JsonParser.parseString("{\"quality\":\"3\"}"));
-                require(!IngredientGroupEditor.canEdit(advanced.getAsJsonArray("requirements").get(0).getAsJsonObject()), "advanced output not flattened");
+                var advancedGroup = advanced.getAsJsonArray("requirements").get(0).getAsJsonObject();
+                require(IngredientGroupEditor.canEdit(advancedGroup) != field.equals("tag-output"), "NBT is editable; tag outputs remain protected");
                 Files.writeString(file, advanced.toString()); MachineReloadListener.reloadNow(); menu.setSnapshot(PktMachineEditorRequest.snapshot());
-                save(player, edit(id, valid), false);
-                require(read(file).equals(advanced), "advanced source is protected on server: " + field);
+                if (field.equals("tag-output")) {
+                    save(player, edit(id, valid), false);
+                    require(read(file).equals(advanced), "advanced source is protected on server: " + field);
+                } else {
+                    var nbtDraft = IngredientGroupEditor.draft(snapshotGroup(menu.snapshot(), id));
+                    var expected = advanced.deepCopy();
+                    expected.getAsJsonArray("requirements").set(0, IngredientGroupEditor.merge(advancedGroup, nbtDraft));
+                    save(player, edit(id, nbtDraft), true);
+                    require(read(file).equals(expected), "random-output NBT survives ordinary group editing: " + field);
+                }
             }
             Files.writeString(file, before); MachineReloadListener.reloadNow(); menu.setSnapshot(PktMachineEditorRequest.snapshot());
             var disabled = IngredientGroupEditor.draft(snapshotGroup(menu.snapshot(), id));

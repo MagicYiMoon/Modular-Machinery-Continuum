@@ -28,37 +28,70 @@ import java.util.ArrayList;
 import hellfirepvp.modularmachinery.common.crafting.requirement.RequirementCatalyst;
 import hellfirepvp.modularmachinery.common.modifier.RecipeModifier;
 
-/**
- * The requirements of ONE recipe run, as they are being evaluated.
- *
- * <h2>Why this exists, and how it differs from {@link MachineContext}</h2>
- *
- * <p>{@code MachineContext} is a <b>capability resolver</b>: it looks up the machine's components once so a
- * requirement inspecting several busses does not re-resolve per lookup. It is about WHERE the machine is.
- *
- * <p>This class is about WHAT the machine is currently trying to do. It holds the recipe being run and the
- * requirement list <b>as modified for this run</b> -- and that last part is the whole reason it is a separate
- * object rather than a loop in the ticker.
- *
- * <h2>The rework this belongs to (PLAN section 228-229)</h2>
- *
- * <p>Upstream's {@code RecipeCraftingContext} is owned by a {@code RecipeThread}, so a machine can run N recipes
- * at once, each with its own modified requirement list. This port collapsed that into a single implicit recipe
- * evaluated inline by {@code MachineTicker}, which is correct for one recipe and cannot express N.
- *
- * <p><b>This is stage 2 of restoring it.</b> Stage 1 gave {@link Requirement} a type identity
- * ({@link Requirement#typeId()}) and a scaler ({@link Requirement#scaled}); this class is what will hold the
- * result of applying a modifier, and stage 3 gives it an owner that can exist more than once.
- *
- * <h2>What is NOT here yet</h2>
- *
- * <p>Upstream's class also carries three maps keyed by requirement type, grouped requirements, output
- * restrictors, a controller command sender and an IO tick index. <b>None of those are copied, because none of
- * them are needed by the port's evaluation path yet</b> -- copying them would be inventing structure rather
- * than porting behaviour. The requirement list and the modifier application are the parts a factory thread
- * actually requires, and they are here.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+@com.blamejared.crafttweaker.api.annotation.ZenRegister
+@org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.RecipeCraftingContext")
 public final class RecipeCraftingContext {
+
+    /** Event-local last observation survives completion so the closing END event still identifies its craft. */
+    private hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe observedRecipe;
+    private hellfirepvp.modularmachinery.common.machine.RecipeThread runtimeThread;
+
+    public void bindRuntimeThread(hellfirepvp.modularmachinery.common.machine.RecipeThread thread) { runtimeThread = thread; }
+    public hellfirepvp.modularmachinery.common.machine.RecipeThread runtimeThread() { return runtimeThread; }
+
+    public void observeRecipe(hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe recipe) { observedRecipe = recipe; }
+    public hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe observedRecipe() { return observedRecipe; }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("recipeName")
+    public String getRecipeName() { return recipe.registryName(); }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("effectiveDuration")
+    public int getEffectiveDuration() { return effectiveDuration(); }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("requirementDescriptions")
+    public String[] getRequirementDescriptions() {
+        return requirements.stream().map(Requirement::describe).toArray(String[]::new);
+    }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("inputDescriptions")
+    public String[] getInputDescriptions() {
+        return requirementsOf(IOType.INPUT).stream().map(Requirement::describe).toArray(String[]::new);
+    }
+
+    @org.openzen.zencode.java.ZenCodeType.Getter("outputDescriptions")
+    public String[] getOutputDescriptions() {
+        return requirementsOf(IOType.OUTPUT).stream().map(Requirement::describe).toArray(String[]::new);
+    }
 
     private final MachineRecipe recipe;
 
@@ -83,6 +116,8 @@ public final class RecipeCraftingContext {
     private final float triggerTimeScale;
     private final java.util.Set<Integer> activeCatalysts;
     private final List<RecipeModifier> activeModifiers;
+    /** Legacy declarative upgrade speed is applied after duration modifiers, without changing trigger scale. */
+    private final float upgradeDurationFactor;
 
     public RecipeCraftingContext(MachineRecipe recipe) {
         this(recipe, recipe.requirements());
@@ -115,6 +150,11 @@ public final class RecipeCraftingContext {
     public static RecipeCraftingContext withModifiers(MachineRecipe recipe,
             java.util.List<hellfirepvp.modularmachinery.common.modifier.RecipeModifier> baseModifiers,
             MachineContext context, java.util.Set<Integer> forcedCatalysts) {
+        return withModifiers(recipe, baseModifiers, context, forcedCatalysts, 1F);
+    }
+
+    public static RecipeCraftingContext withModifiers(MachineRecipe recipe, List<RecipeModifier> baseModifiers,
+            MachineContext context, java.util.Set<Integer> forcedCatalysts, float upgradeDurationFactor) {
         List<RecipeModifier> all = new ArrayList<>();
         if (baseModifiers != null) all.addAll(baseModifiers);
         List<Requirement> first = apply(recipe.requirements(), all);
@@ -137,7 +177,7 @@ public final class RecipeCraftingContext {
             }
         }
         float scale = Math.round(RecipeModifier.applyDurationModifiers(all, 1F));
-        return new RecipeCraftingContext(recipe, resolved, scale, all);
+        return new RecipeCraftingContext(recipe, resolved, scale, all, upgradeDurationFactor);
     }
 
     /** @return the requirements with every active modifier applied, in order */
@@ -167,10 +207,16 @@ public final class RecipeCraftingContext {
 
     private RecipeCraftingContext(MachineRecipe recipe, List<Requirement> requirements, float triggerTimeScale,
                                  List<RecipeModifier> activeModifiers) {
+        this(recipe, requirements, triggerTimeScale, activeModifiers, 1F);
+    }
+
+    private RecipeCraftingContext(MachineRecipe recipe, List<Requirement> requirements, float triggerTimeScale,
+                                 List<RecipeModifier> activeModifiers, float upgradeDurationFactor) {
         this.recipe = recipe;
         this.requirements = List.copyOf(requirements);
         this.triggerTimeScale = triggerTimeScale;
         this.activeModifiers = activeModifiers == null ? List.of() : List.copyOf(activeModifiers);
+        this.upgradeDurationFactor = upgradeDurationFactor;
         java.util.LinkedHashSet<Integer> catalysts = new java.util.LinkedHashSet<>();
         int index = 0;
         for (Requirement requirement : this.requirements) {
@@ -186,7 +232,8 @@ public final class RecipeCraftingContext {
 
     /** Effective recipe duration after duration-target modifiers active for this run. */
     public int effectiveDuration() {
-        return RecipeModifier.effectiveDuration(activeModifiers, recipe.recipeTime());
+        int base = RecipeModifier.effectiveDuration(activeModifiers, recipe.recipeTime());
+        return upgradeDurationFactor == 1F ? base : Math.max(1, Math.round(base * upgradeDurationFactor));
     }
 
     public java.util.Set<Integer> activeCatalystIndices() { return activeCatalysts; }
@@ -288,17 +335,17 @@ public final class RecipeCraftingContext {
         return true;
     }
 
-    /**
-     * The requirements that blocked the last check, for diagnostics.
-     *
-     * <p>Used by the port's tick tracing, which names WHY a recipe is not satisfied -- upstream reports this
-     * through {@code CraftingStatus}, which the port does not have yet.</p>
-     *
-     * <p><b>EACH BLOCKER IS ASKED FOR ITS OWN REASON FIRST (PLAN 663).</b> {@code Requirement#describeFailure}
-     * is the port's channel for the message upstream's {@code CraftCheck} carried, and it is consulted before
-     * {@code describe()} -- which is a NAME, not a reason, and cannot say which value was wrong. A requirement
-     * that returns null keeps the text it always had, so this is additive for the three existing kinds.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+ 
     public String describeBlockers(MachineContext context) {
         if (selectedIsolationGroupKey != null) context.selectIsolationGroup(selectedIsolationGroupKey);
         StringBuilder blocked = new StringBuilder();

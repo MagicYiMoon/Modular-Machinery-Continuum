@@ -36,9 +36,11 @@ import hellfirepvp.modularmachinery.common.machine.MachineContext;
  */
 public final class RequirementEnergy extends hellfirepvp.modularmachinery.common.crafting.SelectorRequirement implements Requirement.Parallelizable {
 
+    @Override public int getSortingWeight() { return PRIORITY_WEIGHT_ENERGY; }
+
     private final IOType ioType;
     private final int energyPerTick;
-    // PARALLELISM (PLAN 591-609). The pair is upstream ComponentRequirement own, and the exemption resets the value
+     
     // to one because an exempt requirement must not carry a multiplier it refuses to apply.
     private int parallelism = 1;
     private boolean parallelizeUnaffected = false;
@@ -80,8 +82,8 @@ public final class RequirementEnergy extends hellfirepvp.modularmachinery.common
      * MULTIPLIED -- only a requirement that cannot do even one blocks it, by returning zero. A port that returned 1
      * there would silently cap every machine that has such a requirement.</p>
      *
-     * <p>THE PROBE IS canStart, WHICH IS THE PORT OWN SINGLE-COPY TEST, and the count is derived from the same two
-     * primitives canStart uses -- totalStored and totalCapacity -- rather than from a second set of energy APIs.</p>
+     * <p>THE PROBE IS canStart, WHICH IS THE PORT OWN SINGLE-COPY TEST, and the count is derived from the same simulated
+     * recipe-side IO canStart uses, including buffers whose displayed FE values saturate at int max.</p>
      */
     @Override
     public int getMaxParallelism(MachineContext context, int maxParallelism,
@@ -94,10 +96,7 @@ public final class RequirementEnergy extends hellfirepvp.modularmachinery.common
             // A zero-cost requirement cannot constrain anything, and dividing by it would not be a number.
             return maxParallelism;
         }
-        long stored = totalStored(context, ioType);
-        long available = ioType == IOType.OUTPUT
-                ? totalCapacity(context, IOType.OUTPUT) - stored
-                : stored;
+        long available = totalAvailable(context, ioType);
         if (available <= 0) {
             return 0;
         }
@@ -141,37 +140,16 @@ public final class RequirementEnergy extends hellfirepvp.modularmachinery.common
     @Override
     public boolean canStart(MachineContext context) {
         if (ioType == IOType.OUTPUT && isIgnoreOutputCheck()) return true;
-        long stored = totalStored(context, ioType);
-        // An output hatch must also be able to accept the surplus, not merely hold it.
-        if (ioType == IOType.OUTPUT) {
-            long capacity = totalCapacity(context, IOType.OUTPUT);
-            return capacity - stored >= energyPerTick;
-        }
-        return stored >= energyPerTick;
+        return totalAvailable(context, ioType) >= energyPerTick;
     }
 
-    /** Sums stored FE across the machine's energy hatches of the given direction. */
-    private long totalStored(MachineContext context, IOType direction) {
+    /** Simulation is authoritative: saturated long-EU views can show stored == capacity while room remains. */
+    private long totalAvailable(MachineContext context, IOType direction) {
         long total = 0;
-        for (var storage : context.forSelector(getSelectorTag()).capabilities(
-                net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY,
-                direction == IOType.INPUT
-                        ? MachineContext.ComponentKind.INPUT
-                        : MachineContext.ComponentKind.OUTPUT)) {
-            total += storage.getEnergyStored();
-        }
-        return total;
-    }
-
-    /** Sums capacity across the machine's energy hatches of the given direction. */
-    private long totalCapacity(MachineContext context, IOType direction) {
-        long total = 0;
-        for (var storage : context.forSelector(getSelectorTag()).capabilities(
-                net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY,
-                direction == IOType.INPUT
-                        ? MachineContext.ComponentKind.INPUT
-                        : MachineContext.ComponentKind.OUTPUT)) {
-            total += storage.getMaxEnergyStored();
+        for (var storage : context.forSelector(getSelectorTag()).internalEnergyStorages(
+                direction == IOType.INPUT ? MachineContext.ComponentKind.INPUT : MachineContext.ComponentKind.OUTPUT)) {
+            total += Math.max(0, direction == IOType.INPUT ? storage.extractEnergy(Integer.MAX_VALUE, true)
+                    : storage.receiveEnergy(Integer.MAX_VALUE, true));
         }
         return total;
     }

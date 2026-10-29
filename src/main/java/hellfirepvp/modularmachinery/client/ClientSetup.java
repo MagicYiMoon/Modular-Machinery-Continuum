@@ -64,6 +64,7 @@ public final class ClientSetup {
     /** Registers the shared GeckoLib renderer for both controller block-entity types. */
     @SubscribeEvent
     public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(RegistryBlockEntities.ENERGY_OUTPUT_PORT.get(), context -> new hellfirepvp.modularmachinery.client.world.EnergyPortRenderer());
         event.registerBlockEntityRenderer(RegistryBlockEntities.CONTROLLER.get(), context -> new ControllerGeoRenderer());
         event.registerBlockEntityRenderer(RegistryBlockEntities.FACTORY_CONTROLLER.get(), context -> new ControllerGeoRenderer());
     }
@@ -104,6 +105,10 @@ public final class ClientSetup {
         // Enqueued rather than called directly: FMLClientSetupEvent runs on the mod-loading worker, and
         // MenuScreens.register touches a client-side map that must be populated on the render thread.
         event.enqueueWork(() -> {
+            if (net.minecraftforge.fml.ModList.get().isLoaded("pneumaticcraft"))
+                hellfirepvp.modularmachinery.integration.pneumatic.ScreenPressureHatch.register();
+            if (net.minecraftforge.fml.ModList.get().isLoaded("botania"))
+                hellfirepvp.modularmachinery.integration.botania.SparkManaClient.register();
             if (net.minecraftforge.fml.ModList.get().isLoaded("bloodmagic"))
                 hellfirepvp.modularmachinery.integration.bloodmagic.ScreenLifeEssence.register();
             // Each name is recorded as its screen is registered, so the log line CANNOT disagree with the
@@ -148,12 +153,12 @@ public final class ClientSetup {
 
             // The ME screens. GUARDED, and the guard must call OUT to ClientSetupME rather than name the
             // screen here: a method body is verified when its class LINKS, so an inline reference would
-            // pull AE2 in regardless of whether the branch runs (PLAN sections 452, 481).
+             
             if (net.minecraftforge.fml.ModList.get().isLoaded("ae2")) {
                 ClientSetupME.register(bound);
             }
 
-            // ONE MODEL PREDICATE PER TIER (PLAN section 272).
+             
             //
             // models/item/<block>.json has always pointed at the NORMAL tier, and every tier is the same
             // item, so all seven stacks rendered identically -- reported as "创造标签里面一模一样的".
@@ -170,6 +175,9 @@ public final class ClientSetup {
             registerTierPredicates(hellfirepvp.modularmachinery.common.registry.RegistryItems.fluidOutputHatch.get(), SIZES_FLUID);
             registerTierPredicates(hellfirepvp.modularmachinery.common.registry.RegistryItems.energyInputHatch.get(), SIZES_ENERGY);
             registerTierPredicates(hellfirepvp.modularmachinery.common.registry.RegistryItems.energyOutputHatch.get(), SIZES_ENERGY);
+            registerTierPredicates(hellfirepvp.modularmachinery.common.registry.RegistryItems.emberInput.get(),
+                    java.util.Arrays.stream(hellfirepvp.modularmachinery.common.block.prop.EmberHatchSize.values())
+                            .map(hellfirepvp.modularmachinery.common.block.prop.EmberHatchSize::getSerializedName).toArray(String[]::new));
             // The casing is NOT in the bus table: its values are plain/vent/firebox/gearbox/reinforced/
             // circuitry, and registering it with the bus sizes created predicates nothing could match.
             registerTierPredicates(hellfirepvp.modularmachinery.common.registry.RegistryItems.blockCasing.get(),
@@ -234,34 +242,34 @@ public final class ClientSetup {
             "tiny", "small", "normal", "reinforced", "big", "huge", "ludicrous", "ultimate"
     };
 
-    /**
-     * Fluid hatches have a {@code vacuum} tier the other families do not -- and they also have
-     * {@code ludicrous}, which this table used to omit.
-     *
-     * <p><b>The omission was a real defect, and nothing could see it (PLAN 719).</b> With seven names against
-     * eight enum constants, LUDICROUS had no {@code modularmachinery:tier_ludicrous} predicate, and the item
-     * model -- which has no override for it either -- fell through to the base NORMAL parent. So a held or
-     * inventory ludicrous hatch rendered as a NORMAL one while the PLACED block rendered correctly from the
-     * blockstate. That is character for character the casing defect recorded at PLAN 272/276, and the reason
-     * this list is now asserted against the enum instead of being hand-maintained on trust.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+ 
     private static final String[] SIZES_FLUID = {
             "tiny", "small", "normal", "reinforced", "big", "huge", "ludicrous", "vacuum"
     };
 
-    /**
-     * The parallel controller's five tiers -- {@code type=} over {@code ParallelControllerData}.
-     *
-     * <p><b>This table did not exist before PLAN 731</b>, so no {@code modularmachinery:tier_*} predicate was
-     * registered for the block at all: every parallel controller stack rendered as the base NORMAL model in the
-     * hand and in the inventory while the placed block rendered its own tier. That is the casing defect of PLAN
-     * 272/276 once more, and the reason the tiers were reported as missing.</p>
-     *
-     * <p><b>The controller and the upgrade bus are two tables, not one, even though the five NAMES coincide.</b>
-     * They are two different enums and their NUMBERS do not: parallelism runs 4/16/64/256/512 against the upgrade
-     * bus's 3/6/9/12/18, and a shared table is exactly how this port once gave both components the wrong ladder.
-     * The names are the blockstate's serialised values.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+ 
     private static final String[] TYPES_PARALLEL_CONTROLLER = {
             "normal", "reinforced", "elite", "super", "ultimate"
     };
@@ -293,7 +301,7 @@ public final class ClientSetup {
                             return 0.0F;
                         }
                         // THE PROPERTY NAMES COME FROM BlockMachineComponent's ONE LIST, not from a copy here
-                        // (PLAN 731). The blockstate property names, not the enum names: the JSON writes
+                         
                         // `size=big`, `casing=reinforced` and `type=elite`, and those are the strings the tag
                         // holds.
                         //

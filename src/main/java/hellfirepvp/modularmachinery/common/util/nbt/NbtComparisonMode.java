@@ -14,39 +14,39 @@ package hellfirepvp.modularmachinery.common.util.nbt;
 
 import org.jetbrains.annotations.Nullable;
 
-/**
- * The comparison grammar behind a numeric NBT pattern, e.g. {@code ">=100"}.
- *
- * <h2>What the pattern language is</h2>
- *
- * <p>A numeric leaf in a pattern is written as an optional operator followed by a number. The operator is read from the
- * LEADING CHARACTERS, which is why {@code "<="} has to be tested before {@code "<"}: a parser that checked {@code "<"}
- * first would read {@code "<=100"} as <i>less than</i> the number {@code "=100"}, which is not a number at all.
- *
- * <table>
- *   <caption>Operators</caption>
- *   <tr><td>{@code <}</td><td>less than</td></tr>
- *   <tr><td>{@code <=}</td><td>less than or equal</td></tr>
- *   <tr><td>{@code =}</td><td>equal (also the default when no operator is present)</td></tr>
- *   <tr><td>{@code >=}</td><td>greater than or equal</td></tr>
- *   <tr><td>{@code >}</td><td>greater than</td></tr>
- * </table>
- *
- * <h2>Why this is one enum with one comparison, and upstream is not</h2>
- *
- * <p>Upstream's {@code NBTComparableNumber} carries this same five-case switch <b>six times</b> -- once in each of
- * {@code NBTComparableByte}, {@code Short}, {@code Integer}, {@code Long}, {@code Float} and {@code Double} -- with all five
- * cases textually identical in every copy.
- *
- * <p>That is the shape PLAN section 367 found in the item buses' neighbour walk: the same rules duplicated across classes,
- * where nothing keeps the copies in step and a later reader can change one and not the others. <b>The port compares through
- * ONE method over {@code double}, and the six leaf classes differ only in which vanilla tag they extend</b> -- which is the
- * only thing that genuinely differs between them.
- *
- * <p>{@code double} is wide enough for every numeric tag the format supports. It is not exact for a {@code long} above
- * 2^53, and that limit is accepted rather than hidden: a pattern comparing a {@code long} at that magnitude would compare
- * the same way a JSON reader already parses it, since the deserializer reads the pattern's number as a {@code double} too.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public enum NbtComparisonMode {
 
     LESS("<"),

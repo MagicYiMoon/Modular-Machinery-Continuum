@@ -53,6 +53,8 @@ import java.util.List;
  */
 public final class RequirementFluid extends hellfirepvp.modularmachinery.common.crafting.SelectorRequirement implements Requirement.Parallelizable {
 
+    @Override public int getSortingWeight() { return PRIORITY_WEIGHT_FLUID; }
+
     private hellfirepvp.modularmachinery.common.util.nbt.RecipeNbt nbt =
             hellfirepvp.modularmachinery.common.util.nbt.RecipeNbt.EMPTY;
 
@@ -88,23 +90,23 @@ public final class RequirementFluid extends hellfirepvp.modularmachinery.common.
     private final IOType ioType;
     private final String rawId;
 
-    /**
-     * Probability this requirement is satisfied, in [0,1]. 1 means always (PLAN section 315).
-     *
-     * <p>Upstream has this field (RequirementFluid:42, public float chance = 1F), parses it from the JSON
-     * (RequirementTypeFluid:52-59), exposes setChance (:106) and CONSUMES it in startCrafting (:128 via
-     * ResultChance.canWork). The port had none of the four, so a fluid output declaring a probability was
-     * produced every time.
-     *
-     * <p>This class carried a comment saying a fluid requirement has no probability. That was the port
-     * speaking about itself, not about the mod.
-     */
+    
+
+
+
+
+
+
+
+
+
+ 
     private final float chance;
 
     /** Same switch MachineTicker.TRACE reads, re-read here to keep the dependency pointing one way. */
     private static final boolean TRACE_SELFTEST = Boolean.getBoolean("modularmachinery.selfTest");
     private final int amount;
-    // PARALLELISM (PLAN 591-609), the same pair RequirementEnergy carries for the same upstream reasons.
+     
     private int parallelism = 1;
     private boolean parallelizeUnaffected = false;
 
@@ -329,7 +331,7 @@ public final class RequirementFluid extends hellfirepvp.modularmachinery.common.
                     .plan(context, java.util.List.of(this), 1).valid();
         }
         // AN OUTPUT IS ASKED WHAT THE TANKS WOULD TAKE TOGETHER, through the one arithmetic the writer and the
-        // emission gate also use (PLAN §714): this loop used to require ONE tank to accept the whole amount, so a
+         
         // product the hatch space can hold across two tanks read as "nowhere to put it".
         return (ioType == IOType.OUTPUT && isIgnoreOutputCheck())
                 || outputRoomFor(context.forSelector(getSelectorTag()), asStack(amount), amount, null) >= amount;
@@ -341,42 +343,42 @@ public final class RequirementFluid extends hellfirepvp.modularmachinery.common.
         return tank.getIOType() == IOType.INPUT;
     }
 
-    /**
-     * How much of a demand the machine's OUTPUT tanks would take <b>together</b>, walking them in the order the
-     * writer walks them -- and, when {@code reserved} is given, counting what it found as reserved.
-     *
-     * <p><b>THIS IS UPSTREAM'S ARITHMETIC AND IT IS ALSO THE WRITER'S, WHICH IS WHY IT IS ONE METHOD HERE.</b>
-     * Upstream asks every handler for the REMAINDER of the demand and sums what they accept:
-     * {@code HybridFluidUtils.doSimulateDrainOrFill} (U31-U47) sets {@code stack.amount = maxDrainOrFill -
-     * totalIO} before each {@code handler.fill(stack, false)} and sums, and {@code doDrainOrFill} (U56-U74) writes
-     * with the same walking remainder. {@link #produce} already fills that way -- {@code wanted - placed} into each
-     * tank in turn, break when the batch is in. So a room question asked per tank ("can ONE of you take the whole
-     * batch") refuses batches the writer places: 160 mB over two 100 mB tanks is placeable and no single tank can
-     * hold it. THAT WAS THE DEFECT THIS METHOD EXISTS TO REMOVE, and it only became reachable once an output hatch
-     * could be written to at all (PLAN §714, the two fill gates on TileFluidTank).</p>
-     *
-     * <p><b>RULE A0 -- A RESTORATION, NOT A DEVIATION.</b> Upstream's file:line is quoted above. The port's
-     * per-tank shape was the deviation and it is removed rather than documented. The one addition is
-     * {@code reserved}, which §704 introduced for MULTI-OUTPUT allocation: several fluid outputs, each asked
-     * against a state nothing has been written to yet, would each be told "yes" and the tail would be destroyed by
-     * the sequential writer. The reservation is therefore kept per TANK ({@link java.util.IdentityHashMap},
-     * because two tank tiles are never equal) and charged against the room this walk finds -- §704's "every prefix
-     * of the emission must fit" rule, expressed in the writer's own walking order.</p>
-     *
-     * <p><b>AND IT ASKS THE TANKS, NOT A NUMBER.</b> The primitive is {@code produceInternal} SIMULATE -- the same
-     * one {@link #produce} writes through -- so this cannot disagree with the writer about which tanks are
-     * eligible, what a tank's capacity is, or which fluid it already holds. Input tanks are skipped for the same
-     * reason {@code produce} skips them, and the request is unbounded so the answer IS the tank's room rather than
-     * its room capped by the batch.</p>
-     *
-     * @param context  the machine as it stands right now
-     * @param fluid    the fluid the demand is made of; only its identity is read
-     * @param demand   the batch, in millibuckets
-     * @param reserved when non-null, what earlier outputs of the SAME emission already claimed per tank: this walk
-     *                 reads it, and adds what it counted to it only when the whole demand fits (a partial fit is
-     *                 never charged, which is §704's rule for a probabilistic output)
-     * @return the amount of {@code demand} the tanks would accept, never more than {@code demand}
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     public static int outputRoomFor(MachineContext context, FluidStack fluid, int demand,
                                     java.util.IdentityHashMap<IFluidHandler, java.util.Map<Integer, FluidStack>> reserved) {
         int remaining = Math.max(0, demand);
@@ -425,31 +427,31 @@ public final class RequirementFluid extends hellfirepvp.modularmachinery.common.
         }
         // An output must have room for the whole amount, otherwise the craft would complete with
         // nowhere to put its product after the inputs were already spent. ASKED OF THE TANKS TOGETHER, through
-        // the one arithmetic the writer and the emission gate also use (PLAN §714): this used to require ONE
+         
         // tank to accept the whole amount, so a machine whose hatch would take the product across two tanks
         // refused a craft the writer places.
         return outputRoomFor(context.forSelector(getSelectorTag()), asStack(amount), amount, null) >= amount;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p><b>THE FLUID HALF OF THE SAME GAP (PLAN 683.2 fact 8 / 683.9:4).</b> The finish gate called
-     * {@link #canFinish}, which asks for room for ONE craft, while {@link #produce} writes
-     * {@code amount * parallelism} (F385) -- so a parallel craft with room for one copy completed, the
-     * surplus was refused by the tank and {@code emitOutputs} reported "the remainder is lost". Upstream
-     * covers fluids with the same arithmetic as items: {@code RequirementFluid.doFluidIO} (U166-U167)
-     * simulates {@code parallelism} copies and returns {@code craftcheck.failure.fluid.output.space} when
-     * fewer fit (U167-U177).</p>
-     *
-     * <p><b>AND THE ROOM IS ASKED OF THE TANKS TOGETHER, NOT OF ONE OF THEM (PLAN §714).</b> Upstream simulates
-     * {@code parallelism} copies with {@code HybridFluidUtils.doSimulateDrainOrFill}, which walks the handlers
-     * asking each for the remainder (U31-U47) -- the same walk {@link #produce} writes with -- so a batch spread
-     * over two hatches is placeable. The sentence that stood here claimed the per-tank question was "how both
-     * {@link #canStart} and {@link #produce} ask it"; reading {@code produce}'s body disproves it (it fills
-     * {@code wanted - placed} into each tank in turn), and that is why every output-room site in this class now
-     * calls {@link #outputRoomFor} instead of running its own loop.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public boolean canEmit(MachineContext context, int parallelism) {
         if (ioType == IOType.OUTPUT && isIgnoreOutputCheck()) return true;
@@ -501,14 +503,14 @@ public final class RequirementFluid extends hellfirepvp.modularmachinery.common.
             return 0;
         }
         int placed = 0;
-        // THE MULTIPLIER (PLAN 597.2/609, upstream RequirementFluid own doFluidIO path): this craft
+         
 
         // produces its declared amount multiplied by how many parallels it was granted. THE VALUE COMES FROM THE
 
         // FIELD THE MIN REDUCTION PUSHED IN (497), not from a second lookup, which is why the requirements carry it.
 
         int wanted = amount * parallelism;
-        // THE PROBABILITY ROLL, WHICH THIS METHOD DID NOT DO (PLAN 578). Upstream consumes a fluid requirement own
+         
         // chance in startCrafting via ResultChance.canWork, and THIS PORT OWN JAVADOC AT F59-F68 CLAIMED THAT WAS
         // FIXED -- IT WAS NOT: the chance field existed, was parsed, was clamped and had isGuaranteed(), and NOTHING
         // EVER CONSULTED IT. A fluid output declaring "chance": 0.4 was produced every single time.
@@ -542,36 +544,36 @@ public final class RequirementFluid extends hellfirepvp.modularmachinery.common.
         return "modularmachinery:fluid";
     }
 
-    /**
-     * Applies a machine modifier. <b>THE {@code chance} FLAG SELECTS WHICH NUMBER IS SCALED, AND THAT IS THE
-     * WHOLE CONTRACT:</b>
-     *
-     * <ul>
-     *   <li>{@code chance == true} → the PROBABILITY ({@link #getChance()}) is scaled; the AMOUNT is carried
-     *       over unchanged.</li>
-     *   <li>{@code chance == false} → the AMOUNT is scaled; the PROBABILITY is carried over unchanged.</li>
-     * </ul>
-     *
-     * <p>The producer of that flag is the modifier's {@code affectChance} key, read at
-     * {@link hellfirepvp.modularmachinery.common.modifier.RecipeModifier#deserialize} (F149-F156) and passed
-     * through {@code RecipeModifier.apply}. Upstream compares exactly this pair at
-     * {@code RecipeModifier.applyModifiers} U150 ({@code mod.affectsChance() != isChance} skips the modifier).
-     *
-     * <p><b>RULE B -- THE SPLIT IS MIRRORED FROM {@link RequirementItem#scaled} (F485-F494), NOT INVENTED, AND
-     * UPSTREAM'S FLUID HALF IS THE SAME SPLIT:</b> {@code RequirementFluid.deepCopyModified} (upstream U66-U74)
-     * scales {@code copied.amount} through {@code applyModifiers(..., false)} at U68, scales {@code this.chance}
-     * through {@code applyModifiers(..., true)} at U70, and carries both into the copy. The two-call form and this
-     * either/or form agree because this port applies a modifier LIST ONE MODIFIER AT A TIME
-     * ({@code RecipeCraftingContext.apply}, F90-F104): a chance modifier and an amount modifier are two entries
-     * and therefore two passes, which is upstream's two calls.
-     *
-     * <p><b>WHAT THIS METHOD WAS, AND WHY IT WAS TWO DEFECTS RATHER THAN ONE (PLAN section 318 fixed only the
-     * PARSING half):</b> it scaled the amount UNCONDITIONALLY — so {@code "affectChance": true} changed the amount
-     * instead of the probability — and it returned through the THREE-ARG constructor (F85-F87), which delegates to
-     * {@code this(..., 1.0F)} and therefore <b>reset the requirement's declared probability to 1.0</b>. That second
-     * half applied to EVERY modifier on this target, including one that never mentions chance at all, so a pack's
-     * declared probability was silently deleted by any amount scaling.
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public Requirement scaled(float value, int operation, IOType io, boolean chance) {
         if (io != null && io != ioType) {

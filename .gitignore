@@ -1,33 +1,13 @@
-# Gradle and generated build outputs
-.gradle/
-build/
-out/
-bin/
-*.class
-
-# IDE and machine-local settings
-.idea/
-*.iml
-.classpath
-.project
-.settings/
-.vscode/
-local.properties
-.env
-.env.*
-
-# Minecraft development instances, worlds, logs and crash reports
+/.gradle/
+/build/
 /run*/
-/takeover-test*/
 /logs/
-/crash-reports/
-/eula.txt
 *.log
-
-# External optional dependency binaries (see libs/optional/README.md)
+*.class
 /libs/optional/*.jar
-
-# Operating system metadata
-.DS_Store
+/tools/__pycache__/
+/.idea/
+/.vscode/
+*.iml
 Thumbs.db
-Desktop.ini
+.DS_Store

@@ -3,8 +3,8 @@
 	"texture_size": [32, 32],
 	"textures": {
 		"1": "modularmagic:block/lifeessenceprovider",
-		"2": "bloodmagic:blocks/blankrune",
-		"particle": "bloodmagic:blocks/blankrune"
+		"2": "minecraft:block/polished_andesite",
+		"particle": "minecraft:block/polished_andesite"
 	},
 	"elements": [
 		{

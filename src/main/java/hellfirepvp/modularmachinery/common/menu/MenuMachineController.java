@@ -104,6 +104,7 @@ public class MenuMachineController extends AbstractContainerMenu {
 
     private final BlockPos controllerPos;
     private final ContainerData data;
+    private final ContainerData performanceData;
 
     /**
      * The blueprint slot's inventory. On the server this is the controller's own handler; on the client it
@@ -124,11 +125,19 @@ public class MenuMachineController extends AbstractContainerMenu {
 
     public MenuMachineController(int windowId, Inventory playerInventory, BlockPos controllerPos,
                                  ContainerData data, net.minecraftforge.items.IItemHandler blueprintInventory) {
+        this(windowId, playerInventory, controllerPos, data, blueprintInventory, ControllerPerformanceData.empty());
+    }
+
+    private MenuMachineController(int windowId, Inventory playerInventory, BlockPos controllerPos,
+                                  ContainerData data, net.minecraftforge.items.IItemHandler blueprintInventory,
+                                  ContainerData performanceData) {
         super(RegistryMenus.MACHINE_CONTROLLER.get(), windowId);
         this.controllerPos = controllerPos;
         this.data = data;
         this.blueprintInventory = blueprintInventory;
+        this.performanceData = performanceData;
         addDataSlots(data);
+        addDataSlots(new IntContainerData(performanceData));
         // A one-slot handler either way, so BOTH sides build the same slot list -- AbstractContainerMenu
         // matches slots by index during synchronisation, so a length mismatch on the client corrupts every
         // stack after it. On the client the contents arrive from the server; only the shape has to agree.
@@ -169,8 +178,17 @@ public class MenuMachineController extends AbstractContainerMenu {
     public static MenuMachineController forController(int windowId, Inventory playerInventory,
                                                       TileController controller) {
         return new MenuMachineController(windowId, playerInventory, controller.getBlockPos(),
-                dataFor(controller), controller.getBlueprintInventory());
+                dataFor(controller), controller.getBlueprintInventory(), ControllerPerformanceData.forController(controller));
     }
+
+    public long getAveragePerformanceMicros() { return ControllerPerformanceData.tickMicros(performanceData); }
+    public long getAverageRecipeSearchMicros() { return ControllerPerformanceData.searchMicros(performanceData); }
+    public int getPerformanceSamples() { return performanceData.get(4); }
+    public int getRecipeSearchSamples() { return performanceData.get(5); }
+    public String performanceTickText() { return ControllerPerformanceData.tickText(performanceData); }
+    public String performanceSearchText() { return ControllerPerformanceData.searchText(performanceData); }
+    /** The port executes controller work on the server thread. */
+    public String workModeTranslationKey() { return "gui.factory.work_mode.sync"; }
 
     /**
      * Builds the synced data source for a controller.

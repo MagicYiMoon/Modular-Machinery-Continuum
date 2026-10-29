@@ -58,16 +58,16 @@ public final class ColorHandlers {
 
     /** White, i.e. the texture as authored. */
     /** The machine casing's own colour, measured from {@code blockcasing_plain.png}: (215,215,215). */
-    /**
-     * The machine colour, now READ FROM CONFIG (PLAN section 291).
-     *
-     * <p>It was a constant through sections 288-290, documented then as "becomes the config default and nothing
-     * else changes". That is what happened: the value moved into {@code Config} with the same measured default, and
-     * this method now asks for it.
-     *
-     * <p>Called per tint query rather than cached, deliberately: Forge reloads a config file on change, and a
-     * cached int here would keep the old colour until the client restarted.
-     */
+    
+
+
+
+
+
+
+
+
+ 
     private static int machineColor() {
         return hellfirepvp.modularmachinery.common.data.Config.machineColor();
     }
@@ -124,7 +124,7 @@ public final class ColorHandlers {
             String ns = key.getNamespace();
             if (ns.equals(Modularmachinery.MODID) || ns.equals("modularmagic")) {
                 // itemmodularium IS SKIPPED HERE, because a second registration for one item is REJECTED
-                // (PLAN section 290).
+                 
                 //
                 // Vanilla's ItemColors.register warns and ignores a duplicate, so registering it here and
                 // again below registers only the FIRST one -- the NO_TINT one -- and the coloured one is the
@@ -147,7 +147,7 @@ public final class ColorHandlers {
                 }, entry.getValue());
             }
 
-        // THE MACHINE COLOUR, for the one greyscale texture in this mod (PLAN section 288).
+         
         //
         // `itemmodularium` is authored in PURE GREYSCALE -- measured: mean saturation 0.000 across its 34
         // opaque pixels -- which is a texture with exactly one purpose: to be tinted. Leaving it at NO_TINT

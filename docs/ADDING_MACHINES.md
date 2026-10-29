@@ -8,7 +8,7 @@
 
 ## 0. 放哪两个目录
 
-**从 §636/§641 起，加载器读的是**配置目录**，不再是 jar。jar 里的那两个 `default_*` 目录只是**首次启动时被解压出来的模板**。**
+**当前加载器读的是**配置目录**，不再是 jar。jar 里的那两个 `default_*` 目录只是**首次启动时被解压出来的模板**。**
 
 | 内容 | 你放文件的地方（**运行时真正被读的**） |
 |---|---|
@@ -68,7 +68,7 @@
 
 这会展开为四个位置（两个 X × 两个 Y × 一个 Z），不是把数组按下标配对，也不是区间。数组内重复坐标只算一次；不同 part 声明同一位置时，后声明的部件覆盖前者。`dynamic-patterns` 的 `parts` / `parts-end` 和单方块 `modifiers` 也支持此写法；修饰替代条件不作用于控制器原点。动态段的起始/步进偏移仍要求标量。
 
-坐标必须是 32 位整数，空数组、字符串、布尔值、小数或越界值会使机器定义被拒绝并写入加载诊断。单次展开及每个静态/动态模板最多 65,536 个不同位置。坐标数组按各轴候选值展开；请遵守上述展开数量限制。
+坐标必须是 32 位整数，空数组、字符串、布尔值、小数或越界值会使机器定义被拒绝并写入加载诊断。单次展开及每个静态/动态模板最多 65,536 个不同位置。更多示例见 [功能范围与测试说明](../TESTING.md)。
 
 ### ⚠️ 三条必须知道的事
 
@@ -86,7 +86,7 @@
 
 ### `@N` 是方块状态变体
 
-**⇒ `modularmachinery:blockcasing@4` 里的 `@4` 是**变体序号**。** **⇒ 外壳有 7 种（`plain` / `vent` / `firebox` / `gearbox` / `reinforced` / `circuitry` …），总线与 hatch 各有 7-8 档（`tiny` … `ludicrous`）。** ✓ **⇒ 而**它们都显示各自的名字**（§629 修过这件事 —— 之前在世界上只显示基础名）。** ✓
+**⇒ `modularmachinery:blockcasing@4` 里的 `@4` 是**变体序号**。** **⇒ 外壳有 7 种（`plain` / `vent` / `firebox` / `gearbox` / `reinforced` / `circuitry` …），总线与 hatch 各有 7-8 档（`tiny` … `ludicrous`）。** ✓ **⇒ 而**它们都显示各自的名字**。** ✓
 
 ### 一个最小的完整机器
 
@@ -136,7 +136,7 @@
 
 **⇒ `chance` 只在**输出**上有意义（概率产出），而**没写就是 1.0（必出）**。** ✓
 
-**⚠️ 一台机器写**多条**输出时，房间是**合起来算的**（这是本移植与上游 1.12.2 的一处**已记录的有意偏离**，PLAN 704）：**
+**⚠️ 一台机器写**多条**输出时，房间是**合起来算的**：**
 
 - **必出的输出（没写 `chance`，或 `chance` ≥ 1）被**加总**之后一次性问「这条配方的全部产物放得下吗」。放不下 → **配方卡在 100% 不完成**，机器上显示 `craftcheck.failure.item.output.space`（流体是 `...fluid.output.space`），**一条都不放**；腾出格子后它自己就完成了。** ✓
 - 必定物品／流体输出默认会合并检查空间，防止多条输出重复计算同一空位。显式关闭输出检查会改变保护行为；也不能把预检理解为任意外部模组同时改仓时都绝对不会丢产物。
@@ -150,7 +150,7 @@
 { "type": "modularmachinery:fluid", "io-type": "output", "fluid": "minecraft:lava",  "amount": 250, "chance": 0.5 }
 ```
 
-**⇒ ⚠️ 而概率流体输出曾经**完全不生效**（§578 修好的）—— 那是 2.3.2 上游一个「记录为已修而实际没修」的缺陷，现在掷骰了。** ✓
+概率流体输出按配置概率生成。
 
 #### 能量
 
@@ -158,7 +158,7 @@
 { "type": "modularmachinery:energy", "io-type": "input", "energyPerTick": 100 }
 ```
 
-**⇒ `energyPerTick` 是**每 tick**，所以一条 `recipeTime: 200`、`energyPerTick: 100` 的配方**总共需要 20000 FE**，而**每 tick 只要 100 在仓里**。** ✓ **⇒ 而**并行度 N 会让它每 tick 抽 `100 × N`**（§611.3 修好的平衡漏洞 —— 之前只抽一份）。** ✓
+**⇒ `energyPerTick` 是**每 tick**，所以一条 `recipeTime: 200`、`energyPerTick: 100` 的配方**总共需要 20000 FE**，而**每 tick 只要 100 在仓里**。** ✓ **⇒ 而**并行度 N 会让它每 tick 抽 `100 × N`**。** ✓
 
 #### 智能接口的数值（用数字挑配方）
 
@@ -253,30 +253,9 @@
 
 **① 执行 `/reload`。** JSON 和脚本由服务器重新加载并同步给客户端，无需每次退出世界。资源包中的模型、动画、纹理还需要客户端 `F3+T`；已成型机器会重新绑定组件。若加载失败，先查看日志中的文件名和原因。
 
-**② 检查运行结果。** 普通作者可用 `/modularmachinery list`、`/modularmachinery recipes <机器名>`、`/modularmachinery form` 与 `/modularmachinery check` 确认加载和结构。源码工作区的自动回归使用隔离运行目录，见 [VERIFY](../VERIFY.md)；普通作者无需运行 Gradle，也不应对真实存档启动自测。
+**② 检查运行结果。** 普通作者可用 `/modularmachinery list`、`/modularmachinery recipes <机器名>`、`/modularmachinery form` 与 `/modularmachinery check` 确认加载和结构。源码工作区的自动回归使用隔离运行目录，见 [功能范围与测试说明](../TESTING.md)；普通作者无需运行 Gradle，也不应对真实存档启动自测。
 
-**③ 文件放对地方就够了 —— 名册已经没有了（§641 step 3 改掉了）**
-
-**⇒ 这一条在本轮之前是"把名字加进名册"，而那是本移植与上游的一处**真实差异**：**
-
-```
-上游 (MachineLoader.java L58-L65):  **扫目录** —— 而 ModDataHolder.java:72 先把机器文件从 jar **解压到目录**
-移植 (到 §641 之前):                **硬编码名册** MACHINE_FILES / RECIPE_FILES
-                                    ⇒ 不在名册里的文件被**静默忽略**：没有错误、没有日志
-§641 step 3 之后（现在）:            **两者都换成了上游那种目录扫描**
-                                    MachineLoader.discoverDirectory  /  RecipeLoader.discoverDirectory
-```
-
-**⇒ 所以现在**往 `config/modularmachinery/machinery/` 丢一个 JSON 就多一台机器，往 `recipes/` 丢一个 JSON 就多一个配方，**不用改 mod 源码** —— 与上游一致。** ✓
-
-**⇒ ⚠️ 而**文件名**仍然影响两件事，别搞错：** ✓
-
-| | 谁的名字 | 说明 |
-|---|---|---|
-| **机器** | 文件名 = 机器的**资源 id**（`new ResourceLocation(MODID, 文件名)`），而**匹配靠 JSON 里的 `registryname`** | 文件名与 `registryname` 不同也能用（例：`power_transformer.json` 的 `registryname` 是 `transformer`） |
-| **配方** | **靠 JSON 里的 `registryName`**，与文件名无关 | 只有**没有** `registryName` 的适配器模板（`*.adapter.json`）才回落到文件名 |
-
-**⇒ 自检里有一项专门盯这件事：「every machine and recipe file in the config directory is read, none skipped」—— 磁盘上有文件而加载器没读，它会**失败并报出文件名**。** ✓
+**③ 放入配置目录即可。** 加载器递归扫描机器和配方目录，不需要登记文件名或修改源码。机器使用 JSON 的 `registryname`，配方使用 `registryName`，整合包内应保持唯一。新机器注册独立控制器身份需要重启两端；修改已有配方后执行 `/reload`。
 
 ---
 
@@ -505,7 +484,7 @@
 **⇒ 所以：只改模组里的模板（`assets/modularmachinery/default_machinery|default_recipes/`）**不会有任何效果**，你会以为功能又坏了。** ✓
 
 **⇒ 处理办法（二选一）：**
-- **直接改 `config/modularmachinery/` 里**已经抽出来**的那一份 —— 本次 §692 就是这么做的（模板 + 你客户端的实例目录 `...\versions\<版本>\config\modularmachinery\` 里**同一份文件**都改了，两份内容一致）。
+- 直接修改 `config/modularmachinery/` 中已有配置；JAR 默认模板不会覆盖它。
 - 或者**删掉**该文件（机器名或配方名对应的 `.json`）**重启游戏**，让它按新模板重新抽一份。
 
 **⇒ 无论用哪种，**改完执行一次游戏内 `/reload` 就够了**：定义是挂在 `AddReloadListenerEvent` 上的（`MachineReloadListener.onAddReloadListeners`），`/reload` 会重新读取整个 `config/modularmachinery/`。** ✓
@@ -527,7 +506,7 @@
 |---|---|---|
 | **1** | **`registryname`（机器）与 `registryName`（配方）大小写不同** | **写错那个不会报错，配方只是**永远不被匹配**** |
 | **2** | **`elements` 数组是**任选其一**，不是「必须全部」** | **写 `["A","B"]` 以为要两个块，实际是 A 或 B** |
-| **3** | **配方的 `machine` 必须精确等于机器的 `registryname`** | **而**一个错的但真实存在的机器名**会让配方挂在一台**别的**机器上** —— **而那正是 §634 花了三轮才找到的形状** ✓ |
+| **3** | 配方的 `machine` 必须精确等于机器的 `registryname` | 错误的机器名可能使配方归属到其他机器，加载后请检查。 |
 
 
 全局批量默认、工厂默认线程数、ME 气体总线及各类魔法接口的当前写法，见[整合包作者教程](PACK_AUTHOR_GUIDE_ZH.md)。本文件较早示例中的 2048 表示初始全局默认，实际以 COMMON 配置和机器显式设置为准。

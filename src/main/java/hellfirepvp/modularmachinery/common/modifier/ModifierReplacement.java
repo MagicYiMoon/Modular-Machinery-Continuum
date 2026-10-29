@@ -41,6 +41,12 @@ import java.util.List;
  */
 public final class ModifierReplacement {
 
+    private static final java.util.concurrent.atomic.AtomicInteger DEFAULT_NAME_COUNTER = new java.util.concurrent.atomic.AtomicInteger();
+    private final String name = nextDefaultName();
+
+    public static String nextDefaultName() { return "ReplacementModifier - " + DEFAULT_NAME_COUNTER.getAndIncrement(); }
+    public String getName() { return name; }
+
     private final String blockId;
     private final int x;
     private final int y;
@@ -172,7 +178,7 @@ public final class ModifierReplacement {
                         controllerPos, facing, x, y, z);
         if (!level.isLoaded(world)) return false;
         // EXACT when the element names metadata, BLOCK-ONLY when it does not -- which is exactly what
-        // BlockStateResolver documents (PLAN section 237):
+         
         //
         //   modularmachinery:blockcasing@4   "explicit metadata, so exactly casing=reinforced.
         //                                     A plain casing must NOT satisfy it."

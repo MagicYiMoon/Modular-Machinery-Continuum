@@ -9,15 +9,10 @@ import hellfirepvp.modularmachinery.common.tiles.TileController;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.renderer.GeoRenderer;
 
 /** Resolves a controller's script-defined GeckoLib resources at render time. */
 public final class ControllerGeoModel extends GeoModel<TileController> {
     private static final ResourceLocation FALLBACK = new ResourceLocation("minecraft", "missingno");
-
-    private MachineGeoModel definition(TileController controller) {
-        return controller == null ? null : GeoMachineModelRegistry.getForController(controller);
-    }
 
     /**
      * Resolves the model selection event once for each resource lookup.  The source renderer's
@@ -28,13 +23,7 @@ public final class ControllerGeoModel extends GeoModel<TileController> {
      * describe the same model.
      */
     private MachineGeoModel selectedDefinition(TileController controller) {
-        MachineGeoModel base = definition(controller);
-        if (controller == null || base == null) return base;
-        var event = new hellfirepvp.modularmachinery.common.event.machine.ControllerModelGetEvent(
-                controller, base.getMachineName());
-        event.postEvent();
-        MachineGeoModel selected = GeoMachineModelRegistry.getForController(controller, event.getModelName());
-        return selected == null ? base : selected;
+        return GeoMachineModelRegistry.selectedForController(controller);
     }
 
     @Override

@@ -24,7 +24,7 @@ final class CatalystModifierPanel {
     private EditBox value;
     private Button target, direction, operation, mode, add, up, down;
     private String status = "";
-    private boolean visible;
+    private boolean visible,templateMode;
 
     void init(Font font, int left, int top, Consumer<AbstractWidget> register,
               Consumer<JsonArray> apply, Runnable cancel) {
@@ -53,7 +53,7 @@ final class CatalystModifierPanel {
         widgets.addAll(List.of(up, down));
         widgets.add(Button.builder(Component.literal("应用"), b -> { if (store()) apply.accept(draft.deepCopy()); })
                 .bounds(left + 228, top + 212, 66, 20)
-                .tooltip(Tooltip.create(Component.literal("应用到催化剂草稿；回到催化剂窗口点击保存后写入服务器"))).build());
+                .tooltip(Tooltip.create(Component.literal("应用到当前草稿；返回后统一保存到服务器"))).build());
         widgets.add(Button.builder(Component.literal("取消"), b -> cancel.run()).bounds(left + 298, top + 212, 66, 20).build());
         widgets.forEach(register);
         select();
@@ -62,6 +62,11 @@ final class CatalystModifierPanel {
     }
 
     void open(JsonArray source) {
+        open(source,false);
+    }
+
+    void open(JsonArray source,boolean templateMode) {
+        this.templateMode=templateMode;
         draft = source.deepCopy(); index = scroll = 0; status = ""; select(); setVisible(true);
     }
 
@@ -157,8 +162,8 @@ final class CatalystModifierPanel {
     void draw(GuiGraphics graphics) {
         graphics.fill(0, 0, 440, 260, 0x99000000);
         graphics.fill(58, 18, 382, 248, 0xFF252A31);
-        graphics.drawString(font, Component.literal("催化剂 · 修改器"), 70, 29, 0xFFFFFF, false);
-        graphics.drawString(font, Component.literal("找到催化剂才生效；点击按钮切换属性"), 70, 50, 0xFFB8C0C8, false);
+        graphics.drawString(font, Component.literal(templateMode?"导入模板 · 修改器":"催化剂 · 修改器"), 70, 29, 0xFFFFFF, false);
+        graphics.drawString(font, Component.literal(templateMode?"修改源配方；追加需求不重复套用修改器":"找到催化剂才生效；点击按钮切换属性"), 70, 50, 0xFFB8C0C8, false);
         graphics.fill(66, 62, 374, 160, 0xFF30363D);
         for (int row = 0; row < 4 && scroll + row < draft.size(); row++) {
             int i = scroll + row, y = 64 + row * 24;
@@ -173,9 +178,9 @@ final class CatalystModifierPanel {
                     + mod.get("multiplier").getAsString(), 262)), 76, y + 13, 0xFFB8C0C8, false);
             graphics.drawString(font, Component.literal("×"), 355, y + 8, 0xFFFF5555, false);
         }
-        if (draft.isEmpty()) graphics.drawString(font, Component.literal("点击 + 修改器添加效果；缺少催化剂仍可加工"), 74, 88, 0xFFB8C0C8, false);
+        if (draft.isEmpty()) graphics.drawString(font, Component.literal(templateMode?"点击 + 修改器调整导入配方的时间或资源":"点击 + 修改器添加效果；缺少催化剂仍可加工"), 74, 88, 0xFFB8C0C8, false);
         graphics.drawString(font, Component.literal("数值"), 70, 197, 0xFFFFFF, false);
-        String hint = status.isEmpty() ? "应用只改草稿；返回后保存催化剂才生效" : status;
+        String hint = status.isEmpty() ? templateMode?"应用只改草稿；返回后保存模板并重新生成":"应用只改草稿；返回后保存催化剂才生效" : status;
         graphics.drawString(font, Component.literal(trim(hint, 296)), 70, 234, status.isEmpty() ? 0xFFB8C0C8 : 0xFFFF7777, false);
     }
 }

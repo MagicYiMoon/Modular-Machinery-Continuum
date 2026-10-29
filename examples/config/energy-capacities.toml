@@ -1,6 +1,7 @@
 # Merge this section into the existing config/modularmachinery-common.toml.
 # Replace existing values under [energyhatch.size]; do not duplicate the section.
-# This fragment changes buffer capacity for both ordinary FE input/output hatches.
+# This fragment sets capacity and automatic transfer for ordinary FE input/output hatches.
+# Transfer setting 0 requires the 2026-10-28 source update (not in the existing JAR).
 # It is not a replacement for the complete configuration file.
 [energyhatch.size]
     tiny = 1000
@@ -11,3 +12,15 @@
     huge = 100000000
     ludicrous = 1000000000
     ultimate = 2147483647
+
+# Merge into the existing [energyhatch.limit] section; do not duplicate it.
+# 0 = floor(configured capacity / 10), minimum 1 FE. Positive values override it.
+[energyhatch.limit]
+    tiny = 0
+    small = 0
+    normal = 0
+    reinforced = 0
+    big = 0
+    huge = 0
+    ludicrous = 0
+    ultimate = 0

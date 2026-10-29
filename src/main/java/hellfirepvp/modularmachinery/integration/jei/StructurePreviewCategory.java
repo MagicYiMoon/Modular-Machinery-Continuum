@@ -11,6 +11,7 @@ import hellfirepvp.modularmachinery.client.preview.StructurePreviewHelper;
 import hellfirepvp.modularmachinery.client.preview.BlueprintPreviewDetails;
 import hellfirepvp.modularmachinery.client.preview.BlueprintPreviewOverlays;
 import hellfirepvp.modularmachinery.client.preview.BlueprintLayerScrollbar;
+import hellfirepvp.modularmachinery.client.preview.BlueprintPreviewScene;
 import hellfirepvp.modularmachinery.common.item.ItemBlueprint;
 import hellfirepvp.modularmachinery.common.machine.BlueprintPreviewState;
 import hellfirepvp.modularmachinery.common.machine.BlueprintMachineInfo;
@@ -36,26 +37,26 @@ import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.glfw.GLFW;
 import java.util.*;
+import static hellfirepvp.modularmachinery.integration.jei.StructurePreviewLayout.*;
 
 /** Source StructurePreviewWrapper/preview panel, expressed through JEI 15 extras. */
 public final class StructurePreviewCategory implements IRecipeCategory<StructurePreviewEntry> {
     public static final RecipeType<StructurePreviewEntry> TYPE =
             RecipeType.create(Modularmachinery.MODID, "structure_preview", StructurePreviewEntry.class);
-    private static final int WIDTH = 180, HEIGHT = 220, CONTROLS_Y = 145;
-    private static final int UPGRADE_X = 150, UPGRADE_Y = 24, UPGRADE_ROWS = 5, UPGRADE_ROW_HEIGHT = 19;
+    private static final int UPGRADE_X = 150, UPGRADE_ROW_HEIGHT = 19;
     private enum HeaderControl {
         RECENTER(86, "C"), INFO(104, "i");
         final int x;
         final String label;
         HeaderControl(int x, String label) { this.x = x; this.label = label; }
-        boolean contains(double x, double y) { return x >= this.x && x < this.x + 16 && y >= 2 && y < 19; }
+        boolean contains(double x, double y) { return x >= this.x && x < this.x + 16 && y >= 2 && y < 2 + BUTTON_HEIGHT; }
     }
     private enum Control {
         FORMED(2, 26), CYCLE(30, 26), UPGRADES(58, 16), SHRINK(78, 16), GROW(162, 16);
         final int x, width;
         Control(int x, int width) { this.x = x; this.width = width; }
         boolean contains(double mouseX, double mouseY) {
-            return mouseX >= x && mouseX < x + width && mouseY >= CONTROLS_Y && mouseY < CONTROLS_Y + 17;
+            return mouseX >= x && mouseX < x + width && mouseY >= CONTROLS_Y && mouseY < CONTROLS_Y + BUTTON_HEIGHT;
         }
         boolean visible(StructurePreviewEntry entry) {
             return switch (this) {
@@ -89,6 +90,14 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
                 .addItemStack(hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stackOrGeneric(entry.machine().getRegistryName(), false));
         builder.addSlot(RecipeIngredientRole.OUTPUT, 160, 2)
                 .addItemStack(hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stackOrGeneric(entry.machine().getRegistryName(), true));
+        // R finds the visible outputs. U also needs this per-entry catalyst index, like machine recipes.
+        // Global category catalysts would incorrectly associate every controller with every machine.
+        var controllers = builder.addInvisibleIngredients(RecipeIngredientRole.CATALYST);
+        for (boolean factory : new boolean[]{false, true}) {
+            ItemStack stack = hellfirepvp.modularmachinery.common.registry.DedicatedControllers
+                    .stack(entry.machine().getRegistryName(), factory);
+            if (!stack.isEmpty()) controllers.addItemStack(stack);
+        }
         var materials = builder.addInvisibleIngredients(RecipeIngredientRole.INPUT);
         entry.ingredients().forEach(materials::addItemStack);
         StructureMaterialWidget.addSlots(builder);
@@ -105,30 +114,23 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
                 entry.machine().getLocalizedName());
         g.drawString(mc.font, mc.font.plainSubstrByWidth(name.getString(), 80), 2, 5, 0x404040, false);
         for (HeaderControl control : HeaderControl.values()) button(g, control.x, 2, 16, Component.literal(control.label));
-        g.fill(1, 22, 179, 123, 0xFF30343A);
+        g.fill(1, SCENE_TOP - 1, 179, SCENE_BOTTOM + 1, 0xFF30343A);
         drawStructure(g, entry, mouseX, mouseY);
         drawUpgrades(g, entry);
         layerScrollbar(entry).draw(g, mouseX, mouseY);
         Component mode = entry.singleLayer ? Component.translatable("jei.modularmachinery.structure_layer",
                 entry.layer(), entry.definition().bounds().layerCount())
                 : Component.translatable("jei.modularmachinery.structure_all");
-        button(g, 2, 125, 88, mode);
-        button(g, 92, 125, 86, Component.translatable("jei.modularmachinery.project"));
+        button(g, 2, ACTIONS_Y, 88, mode);
+        button(g, 92, ACTIONS_Y, 86, Component.translatable("jei.modularmachinery.project"));
         drawControls(g, entry);
-        Component hint = Component.translatable("jei.modularmachinery.structure_hint");
-        g.pose().pushPose();
-        g.pose().translate(2, 167, 0);
-        float hintScale = Math.min(.7F, 176F / Math.max(1, mc.font.width(hint)));
-        g.pose().scale(hintScale, hintScale, 1);
-        g.drawString(mc.font, hint, 0, 0, 0x606060, false);
-        g.pose().popPose();
     }
     private static void button(GuiGraphics g, int x, int y, int width, Component label) {
         button(g, x, y, width, label, true, false);
     }
     private static void button(GuiGraphics g, int x, int y, int width, Component label, boolean enabled, boolean selected) {
-        g.fill(x, y, x + width, y + 17, !enabled ? 0xFF444444 : selected ? 0xFF335B40 : 0xFF777777);
-        g.drawCenteredString(Minecraft.getInstance().font, label, x + width / 2, y + 4,
+        g.fill(x, y, x + width, y + BUTTON_HEIGHT, !enabled ? 0xFF444444 : selected ? 0xFF335B40 : 0xFF777777);
+        g.drawCenteredString(Minecraft.getInstance().font, label, x + width / 2, y + 3,
                 !enabled ? 0x888888 : selected ? 0xA0FFAF : 0xFFFFFF);
     }
     private static void drawControls(GuiGraphics g, StructurePreviewEntry entry) {
@@ -157,13 +159,17 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
         }
     }
     @Override public List<Component> getTooltipStrings(StructurePreviewEntry entry, IRecipeSlotsView slots, double x, double y) {
-        if (x >= 92 && x < 178 && y >= 125 && y < 142) return List.of(
+        if (x >= 92 && x < 178 && y >= ACTIONS_Y && y < ACTIONS_Y + BUTTON_HEIGHT) return List.of(
                 Component.translatable("gui.modularmachinery.blueprint.project_world"),
                 Component.translatable("gui.blueprint.popout.info"));
         if (layerScrollbar(entry).contains(x, y)) return layerScrollbar(entry).tooltip(x, y);
         for (HeaderControl control : HeaderControl.values()) if (control.contains(x, y)) {
-            return control == HeaderControl.INFO ? BlueprintMachineInfo.tooltip(entry.machine(), entry.definition())
-                    : List.of(Component.translatable("gui.preview.button.reset_center.tip"));
+            if (control == HeaderControl.INFO) {
+                List<Component> lines = new ArrayList<>(BlueprintMachineInfo.tooltip(entry.machine(), entry.definition()));
+                lines.add(Component.translatable("jei.modularmachinery.structure_hint"));
+                return lines;
+            }
+            return List.of(Component.translatable("gui.preview.button.reset_center.tip"));
         }
         if (x >= 2 && x < 82 && y >= 2 && y < 19) return List.of(Component.translatableWithFallback(
                 entry.machine().getTranslationKey(), entry.machine().getLocalizedName()));
@@ -179,7 +185,7 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
                 case GROW -> Component.translatable("gui.preview.button.dynamic_pattern_plus.tip", entry.controls().dynamicSize());
             });
         }
-        if (!entry.machine().getDynamicPatterns().isEmpty() && x >= 94 && x < 160 && y >= CONTROLS_Y && y < CONTROLS_Y + 17) {
+        if (!entry.machine().getDynamicPatterns().isEmpty() && x >= 94 && x < 160 && y >= CONTROLS_Y && y < CONTROLS_Y + BUTTON_HEIGHT) {
             return List.of(Component.translatable("jei.modularmachinery.structure_size_range", entry.controls().dynamicSize(),
                     BlueprintPreviewState.minimumSize(entry.machine()), BlueprintPreviewState.maximumSize(entry.machine())));
         }
@@ -195,11 +201,9 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
         return List.of();
     }
 
-    private static boolean inScene(double x, double y) { return x >= 2 && x < 178 && y >= 23 && y < 122; }
-
     private static boolean overUpgradePanel(StructurePreviewEntry entry, double x, double y) {
         return entry.showUpgrades && !entry.definition().upgrades().isEmpty()
-                && x >= UPGRADE_X && x < 178 && y >= UPGRADE_Y && y < 122;
+                && x >= UPGRADE_X && x < 178 && y >= UPGRADE_Y && y < SCENE_BOTTOM;
     }
 
     private static boolean overScenePanel(StructurePreviewEntry entry, double x, double y) {
@@ -208,7 +212,7 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
 
     private static BlueprintLayerScrollbar layerScrollbar(StructurePreviewEntry entry) {
         boolean upgrades = entry.showUpgrades && !entry.definition().upgrades().isEmpty();
-        entry.layerScrollbar.setBounds(upgrades ? 138 : 167, UPGRADE_Y, 98);
+        entry.layerScrollbar.setBounds(upgrades ? 138 : 167, UPGRADE_Y, SCENE_BOTTOM - UPGRADE_Y);
         return entry.layerScrollbar;
     }
 
@@ -226,7 +230,7 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
         if (!entry.showUpgrades || entry.definition().upgrades().isEmpty()) return;
         var upgrades = entry.definition().upgrades();
         clampUpgradeScroll(entry);
-        g.fill(UPGRADE_X, UPGRADE_Y, 178, 122, 0xE0202328);
+        g.fill(UPGRADE_X, UPGRADE_Y, 178, SCENE_BOTTOM, 0xE0202328);
         for (int row = 0; row < UPGRADE_ROWS && row + entry.upgradeScroll < upgrades.size(); row++) {
             int index = row + entry.upgradeScroll, y = UPGRADE_Y + 1 + row * UPGRADE_ROW_HEIGHT;
             if (entry.interaction.upgradeEnabled(index)) g.fill(UPGRADE_X + 1, y, 175, y + 18, 0xAA27A345);
@@ -235,7 +239,7 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
             else g.renderItem(icon, UPGRADE_X + 4, y + 1);
         }
         if (upgrades.size() > UPGRADE_ROWS) {
-            int thumb = UPGRADE_Y + 1 + 76 * entry.upgradeScroll / (upgrades.size() - UPGRADE_ROWS);
+            int thumb = UPGRADE_Y + 1 + (SCENE_BOTTOM - UPGRADE_Y - 19) * entry.upgradeScroll / (upgrades.size() - UPGRADE_ROWS);
             g.fill(175, thumb, 178, thumb + 18, 0xFFBBBBBB);
         }
     }
@@ -256,21 +260,21 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
         float scale = entry.camera.scale(bounds);
         Vector3f center = entry.camera.center(bounds);
         g.flush();
-        var pose = g.pose();
+        var pose = BlueprintPreviewScene.copyPose(g.pose());
         Matrix4f recipeToGui = new Matrix4f(pose.last().pose());
         // GuiGraphics scissor coordinates are absolute; JEI has already translated the recipe pose.
-        Vector3f topLeft = pose.last().pose().transformPosition(new Vector3f(2, 23, 0));
-        Vector3f bottomRight = pose.last().pose().transformPosition(new Vector3f(178, 122, 0));
+        Vector3f topLeft = pose.last().pose().transformPosition(new Vector3f(2, SCENE_TOP, 0));
+        Vector3f bottomRight = pose.last().pose().transformPosition(new Vector3f(178, SCENE_BOTTOM, 0));
         g.enableScissor((int) Math.floor(Math.min(topLeft.x, bottomRight.x)),
                 (int) Math.floor(Math.min(topLeft.y, bottomRight.y)),
                 (int) Math.ceil(Math.max(topLeft.x, bottomRight.x)),
                 (int) Math.ceil(Math.max(topLeft.y, bottomRight.y)));
         boolean depthTest = GL11.glIsEnabled(GL11.GL_DEPTH_TEST);
         boolean depthWrite = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
-        var buffers = mc.renderBuffers().bufferSource();
+        var buffers = scene.buffers();
         pose.pushPose();
         try {
-            pose.translate(90, 74, 100);
+            pose.translate(90, (SCENE_TOP + SCENE_BOTTOM) / 2F, 100);
             // Flip both Y and depth so the exterior quad winding is preserved.
             pose.scale(scale, -scale, -scale);
             pose.mulPose(entry.camera.rotation());
@@ -326,7 +330,7 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
                     return true;
                 }
                 if (StructureMaterialWidget.overSelected(entry, x, y) || StructureMaterialWidget.overSummary(x, y)) return false;
-                if (y < 22 || y > 142) return false;
+                if (!inScene(x, y) && !(x >= 2 && x < 178 && y >= ACTIONS_Y && y < ACTIONS_Y + BUTTON_HEIGHT)) return false;
                 if (entry.singleLayer) entry.setLayer(new BlueprintLayerRange(entry.definition().bounds().minY(),
                         entry.definition().bounds().maxY()).step(entry.layer(), delta > 0 ? 1 : -1));
                 else entry.camera.zoomBy(delta);
@@ -372,7 +376,7 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
                 if (StructureMaterialWidget.overSelected(entry, x, y) || StructureMaterialWidget.overSummary(x, y)) return false;
                 if (inScene(x, y)) { entry.interaction.press(x, y, button); return true; }
                 if (button != 0) return false;
-                if (y < 125 || y >= 142) return false;
+                if (y < ACTIONS_Y || y >= ACTIONS_Y + BUTTON_HEIGHT) return false;
                 if (x >= 2 && x < 90) {
                     entry.singleLayer = !entry.singleLayer;
                     entry.layerScrollbar.cancel();

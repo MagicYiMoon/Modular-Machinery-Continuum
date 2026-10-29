@@ -29,81 +29,81 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The pattern provider own screen, client half (PLAN sections 480, and 712).
- *
- * <h2>What upstream's screen is, read at the body (rule A)</h2>
- *
- * <pre>
- *   GuiMEPatternProvider extends AEBaseGuiContainerDynamic            (upstream G36)
- *     G38-G39   GUI_TEXTURE = modularmachinery:textures/gui/mepatternprovider.png
- *     G49-G50   xSize = 256, ySize = 196, centred
- *     G57-G62   MultiLineLabel(gui.mepatternprovider.title)      at absXY(7,  11)
- *     G63-G68   MultiLineLabel(gui.mepatternprovider.cached)     at absXY(180, 11)
- *     G69-G74   MultiLineLabel(gui.mepatternprovider.inventory)  at absXY(7, 101)
- *     G75-G80   MultiLineLabel(gui.mepatternprovider.single_inv) at absXY(180,158)
- *     G83-G85   stackList.setMaxStackPerRow(3); setWidthHeight(69, 126); setAbsXY(180, 27)
- *     G88-G101  the RETURN ITEMS button: Button4State, art (176,214), tooltip keys
- *               gui.mepatternprovider.return_items(.desc), onClick sends
- *               PktMEPatternProviderAction(RETURN_ITEMS)
- *     G104-G155 the WORK MODE button: five ButtonElements, art (140 +- 18n, 196), onClick sends
- *               ENABLE_DEFAULT_MODE / ENABLE_BLOCKING_MODE / ENABLE_CRAFTING_LOCK_MODE /
- *               ENABLE_ENHANCED_BLOCKING_MODE / ENABLE_ENHANCED_ISOLATION_INPUT
- *     G158-G169 the "?" tip button: art (230,214), hovered (241,214), 9 x 11, at absXY(240, 157),
- *               tooltip key gui.mepatternprovider.single_inv.desc -- a TOOLTIP-ONLY widget
- *     G172-G173 the two buttons are one Row at absXY(215, 7): returnItems, then workModeSetting
- *     G217-G224 drawBG: one blit of the texture at (guiLeft, guiTop, 0, 0, xSize, ySize)
- * </pre>
- *
- * <h2>What is drawn here, and what is not</h2>
- *
- * <p><b>DRAWN: the four labels, at upstream's own coordinates, from upstream's own keys</b> (G57-G80). The keys were
- * already shipped in BOTH language files of this port with upstream's own text ("ME 机械样板供应器" /
- * "ME Machinery Pattern Provider", "已缓存" / "Cached", "独立存储" / "Single Inv"), which is why the title in this
- * port read short: nothing asked for them — vanilla's default {@code renderLabels} drew the OPEN-PACKET title
- * {@code gui.modularmachinery.me_pattern_provider} ("ME样板供应器") instead.</p>
- *
- * <p><b>DRAWN: the "?" tip button</b> (G158-G169), which is the one widget of this screen that needs no server
- * side: its whole function is to explain the label next to it, and its key resolves in both files.</p>
- *
- * <p><b>NOT DRAWN: the cache list, and the reason is that this port has no counterpart for what it DOES
- * (G83-G85 below). The other two entries were refused here by §729 for the same reason; §737 gave both a consumer
- * and drew them, and §745 gave them the hover text §729's refusal had also left out:</b></p>
- *
- * <pre>
- *   G88-G101  RETURN ITEMS   -&gt; DRAWN since §737. `TileMEPatternProvider.returnToNetwork()` walks the independent
- *                              storage into the ME network and sets `machineCompleted`, and
- *                              `PktMEPatternProviderAction` carries the click; §729's two reasons (no action packet,
- *                              nothing to return FROM) were true when it refused. Its tooltip is the two keys built
- *                              by `MEPatternProviderTooltips.returnItemsLines()`.
- *   G104-G155 WORK MODE      -&gt; DRAWN since §737. `WorkModeSetting` is a real, persisted, cyclable mode and the
- *                              button's own sprite is derived from its ordinal; §729's "ZERO hits" was true then.
- *                              Its tooltip is upstream's own list with the current-mode marker
- *                              (`MEPatternProviderTooltips.workModeLines`), and the marker follows the mode the
- *                              MENU reports. The server-side routing is implemented by
- *                              `TileMEPatternProvider`/`MachinePatternProviderLogic`: blocking, crafting-lock,
- *                              enhanced blocking and per-pattern isolation all use the selected mode.
- *   G83-G85   THE CACHE LIST -&gt; the port combines shared and isolated handlers through
- *                              `TileMEPatternProvider#getGuiCacheHandlers`, draws the same 3-column/7-row list,
- *                              supports mouse-wheel scrolling, and shows item/fluid tooltips. Block-entity updates
- *                              refresh the client-side handlers without exposing the fixed inventory twice.
- * </pre>
- *
- * <p><b>AND THE PATTERN SLOTS NEED NO ART FROM HERE:</b> the 36 wells are IN the panel texture (measured: 36/36
- * top borders, 18/19 dark pixels, at (8 + 18c, 28 + 18r)), and AE2 15.4.11 draws no slot background of its own to
- * borrow — its {@code AEBaseScreen.renderAppEngSlot} blits an {@code Icon} only when a slot has one set, fills an
- * invalid-slot overlay, and otherwise calls vanilla's {@code renderSlot}; its only mixin into a vanilla screen
- * ({@code AbstractContainerScreenMixin}) overrides stack DISPLAY and nothing else. What was missing was that the
- * menu never placed its slots on those wells; {@link MenuMEPatternProvider} does now, which is what makes the
- * wells live AE2 pattern slots instead of grey squares.</p>
- *
- * <p><b>AND THIS FILE HAS NEVER BEEN RENDERED.</b> The harness is a dedicated server: the geometry below is
- * measured (the suite reads {@code mepatternprovider.png} and the menu's slot objects), the labels' keys are
- * asserted to resolve in both language files, and the pixels are the user's to judge.</p>
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 public class ScreenMEPatternProvider extends AbstractContainerScreen<MenuMEPatternProvider> {
 
-    /** Upstream GUI_TEXTURE (G38-39), verbatim — the same asset this port ships, byte for byte. */
+     
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(Modularmachinery.MODID, "textures/gui/mepatternprovider.png");
 
@@ -223,34 +223,34 @@ public class ScreenMEPatternProvider extends AbstractContainerScreen<MenuMEPatte
         return BUTTON_ROW_X + BUTTON_SIZE + BUTTON_MARGIN_RIGHT;
     }
 
-    /**
-     * <b>THE CALL THAT MAKES THE HOVER TEXT EXIST (PLAN 745), and it is the whole of this round's defect.</b>
-     *
-     * <p>Up to here this screen overrode {@code renderBg}, {@code renderLabels} and {@code renderTooltip} -- and the
-     * third had <b>no caller at all</b>. On 1.12.2 upstream never had to think about it: its tooltip list is queried
-     * from {@code AEBaseGuiContainerDynamic.renderHoveredToolTip} (L54-L70), a {@code GuiScreen} hook that VANILLA's
-     * {@code drawScreen} calls by itself, which then calls {@code drawHoveringText} (L68).</p>
-     *
-     * <p><b>In 1.20.1 that hook is not called by anything, and it is measured rather than assumed:</b>
-     * {@code javap -p -c} over the mapped {@code forge-1.20.1-47.3.0_mapped_official_1.20.1.jar} finds exactly two
-     * mentions of {@code renderTooltip} in {@code AbstractContainerScreen} -- the declaration of
-     * {@code protected void renderTooltip(GuiGraphics, int, int)} and the {@code GuiGraphics.renderTooltip} call
-     * inside its own body. {@code AbstractContainerScreen.render} does not invoke it; vanilla's own
-     * {@code ContainerScreen.render} does, in this order: {@code renderBackground}, {@code super.render}, then
-     * {@code invokevirtual renderTooltip}. So on this version <b>every container screen that wants any tooltip at all
-     * must call it from its own {@code render}</b> -- which is exactly what was missing, and why two buttons with a
-     * hitbox, a click handler and a written tooltip showed nothing when the mouse was moved onto them.</p>
-     *
-     * <p><b>ORDER:</b> {@code super.render} first, because it is what runs {@code renderBg} (the one place the three
-     * hover flags are set) and what fills {@code hoveredSlot} for the parent's own item tooltip; {@code renderTooltip}
-     * second. That is vanilla's own order, and it makes the flags and the tooltip the SAME frame's mouse position.</p>
-     *
-     * <p><b>AND {@code renderBackground} IS DELIBERATELY NOT CALLED, which vanilla's own {@code ContainerScreen} does
-     * call.</b> It is not part of the missing call and adding it here would dim the world behind the panel for this
-     * screen alone: no screen in this port calls it, the panel texture is opaque over the whole 256x196 area, and a
-     * one-screen visual change is not what was asked for. Recorded rather than silently introduced, and named in
-     * PLAN.md as a measured difference from vanilla's shape.</p>
-     */
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
@@ -264,7 +264,7 @@ public class ScreenMEPatternProvider extends AbstractContainerScreen<MenuMEPatte
         // THE INDEPENDENT STORAGE'S FLUID BARREL, at upstream's own cell (G187-G189: 232, 172, 16 x 16).
         //
         // WHAT UPSTREAM DRAWS THERE is GuiFullCapFluidTank, an AE2 GuiFluidTank subclass. WHAT CANNOT BE FOLLOWED:
-        // `appeng/fluids/` has ZERO entries in AE2 15.4.11 (measured this round: 5156 jar entries, no match), so the
+         
         // widget does not exist and neither does the IGuiFluidStackHandler it draws through. WHAT IS DONE INSTEAD: the
         // tank's contents are drawn directly in the cell the art already frames -- the art cuts the well and the "F",
         // so this adds the fluid and nothing else.

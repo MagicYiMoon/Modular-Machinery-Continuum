@@ -2,14 +2,14 @@
 
 1.1.0 新增：请先阅读[独立控制器、颜色编辑与升级说明](DEDICATED_CONTROLLERS_ZH.md)。新机器身份与首次开启独立工厂控制器需要重启两端。
 
-核对日期：**2026-10-20**。全部当前教程见[文档目录](README.md)。
+核对日期：**2026-10-20**。全部当前教程见[文档目录](README.md)；功能范围以本版教程为准。
 
 这是一份面向玩家和整合包作者的快速教程，内容按当前 `Modular Machinery: Continuum` 1.20.1 移植版的实际行为编写。
 
 当前发布文件名：
 
 ```text
-modularmachinerycontinuum-1.2.0-1.20.1-all.jar
+modularmachinerycontinuum-1.3.0-1.20.1-all.jar
 ```
 
 主模组可以单独运行。JEI、AE2、Mekanism、The One Probe（TOP）和 CraftTweaker 都是可选集成，安装后才会启用相应功能。GeckoLib 已随本体打包，不需要再放一个 GeckoLib jar。
@@ -29,7 +29,7 @@ modularmachinerycontinuum-1.2.0-1.20.1-all.jar
 
 两个目录均递归扫描子目录，机器名和配方名仍需保持唯一。jar 内的 `default_machinery` 和 `default_recipes` 只在 `config/modularmachinery/` 首次创建时复制为模板，不覆盖已有文件；之后删除某个文件也不会自动补回。修改配置目录中的 JSON 后，在世界内执行 `/reload`；如果仍未更新，先查看加载日志中的报错。
 
-Botania、Blood Magic、Nature’s Aura、社区 Astral Sorcery 和 Extra Utilities Rebirth 也是可选依赖，不随本体打包；ME 气体需要 AE2、Mekanism 和 Applied Mekanistics。固定版本、前置和用法见[作者教程](PACK_AUTHOR_GUIDE_ZH.md)及[社区依赖说明](../libs/optional/README.md)。源质、GP、Impetus 六个接口仍是占位，不提供对应资源功能。客户端与服务器应使用相同版本的模组；当前网络协议为 **32**。
+Botania、Blood Magic、Nature’s Aura、社区 Astral Sorcery 和 Extra Utilities Rebirth 也是可选依赖，不随本体打包；ME 气体需要 AE2、Mekanism 和 Applied Mekanistics。固定版本、前置和用法见[作者教程](PACK_AUTHOR_GUIDE_ZH.md)及[社区依赖说明](../libs/optional/README.md)。源质、GP、Impetus 六个接口仍是占位，不提供对应资源功能。客户端与服务器应使用相同版本的模组；当前网络协议为 **33**。
 
 ## 2. 生存模式快速开始
 
@@ -53,7 +53,7 @@ modularmachinery:itemblueprint            蓝图
 modularmachinery:machine_projector        机器投影器
 ```
 
-`itemconstructtool` 用来选择两个角点并生成机器定义；它和木棍不是同一件物品。木棍是生存模式自动装配工具，默认配置键为 `auto-assembly-item`，可以在配置中改成其他物品。
+`itemconstructtool` 仅用来选择两个角点并生成机器定义，不会自动放置结构方块；没有选区时右键控制器会提示先选择区域。木棍负责自动装配，物品悬停说明会提示用法；默认配置键为 `auto-assembly-item`，可以在配置中改成其他物品。
 
 最简单的流程是：
 
@@ -61,6 +61,8 @@ modularmachinery:machine_projector        机器投影器
 2. 先让控制器绑定机器：看着控制器执行 `/modularmachinery bind <机器名>`，或者把对应蓝图右键放入控制器。
 3. 手持木棍右键控制器，开始自动补齐缺失方块并尝试成型；结构错误时聊天栏会列出世界内坐标。也可以执行 `/modularmachinery form` 手动检查和成型。
 4. 输入物品、流体和能量，等待配方完成。
+
+生存模式自动搭建会消耗背包材料；默认要求材料齐全，缺料时聊天栏列出缺少的数量、名称、可替代材料和流体 mB，不会先扣除已有材料。材料齐全后按配置间隔逐格补齐。关闭 `auto-assembly-need-all` 时允许先搭建有材料的部分。创造模式不检查材料，立即补齐结构。连续操作的 1 秒冷却提示是正常限制。
 
 控制器的朝向会影响结构坐标。结构 JSON 中的坐标都是相对于控制器的坐标，控制器本身位于 `(0, 0, 0)`，不需要在 `parts` 中再次声明。
 
@@ -148,7 +150,11 @@ modularmachinery:machine_projector        机器投影器
 - 显示缺失或错误方块；
 - 切换全部结构和单层结构；
 - 查看机器信息、升级信息和成型状态；
-- 在 JEI 中从机器配方进入结构预览。
+- 在 JEI 中，对机器独立普通／工厂控制器按 R 或 U 可查结构预览；U 同时显示该机器的加工配方。
+- 配方页面左侧输入、右侧输出，中间是处理箭头。单侧材料超过九格时，将鼠标放在该侧滚轮滚动；悬停下方说明区可查看完整信息。
+- 从结构预览点击世界投影后，先瞄准控制器或目标方块，再右键固定；投影随最低未完成层推进。
+
+内部流体在“全部层”模式中会被不透明外壳遮挡。要查看默认合金炉的岩浆，点击“全部层”切换到单层，再用预览区滚轮或右侧层数按钮选到 `Y=0`，从上方查看。单层模式只让当前层参与方块／流体面的遮挡判断；底部材料栏仍统计整台机器。
 
 ## 4. 创建一台最小自定义机器
 
@@ -392,4 +398,4 @@ config/modularmachinery/recipes/my_machine_diamond.json
 - [ADDING_MACHINES.md](ADDING_MACHINES.md)：JSON 结构、智能接口和高级需求补充。
 - [examples/recipe_builder.zs](examples/recipe_builder.zs)：CraftTweaker 14 配方示例；其他脚本入口见作者教程。
 
-最近服务端回归与构建证据见 [VERIFY](../VERIFY.md)。模板 JSON 可作为配置起点，示例中的机器名、接口和资源文件仍需与整合包实际配置相配；新联动的客户端效果尚需实测。
+最近服务端回归与构建证据见 [功能范围与测试说明](../TESTING.md)。模板 JSON 可作为配置起点，示例中的机器名、接口和资源文件仍需与整合包实际配置相配；新联动的客户端效果尚需实测。

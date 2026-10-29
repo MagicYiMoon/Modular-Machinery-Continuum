@@ -25,8 +25,9 @@ public final class StructurePreviewEntry implements AutoCloseable {
     private BlueprintPreviewScene scene;
     private WeakReference<ClientLevel> sceneWorld = new WeakReference<>(null);
     final BlueprintPreviewInteraction interaction = new BlueprintPreviewInteraction();
-    final BlueprintPreviewCamera camera = new BlueprintPreviewCamera();
-    final BlueprintMaterialState materials = new BlueprintMaterialState();
+    final BlueprintPreviewCamera camera = new BlueprintPreviewCamera(StructurePreviewLayout.CAMERA_SPAN);
+    final BlueprintMaterialState materials = new BlueprintMaterialState(
+            StructurePreviewLayout.SUMMARY_ROWS, StructurePreviewLayout.ALTERNATIVE_ROWS);
     Matrix4f sceneToRecipe;
     BlockPos hovered;
     boolean showUpgrades = true;

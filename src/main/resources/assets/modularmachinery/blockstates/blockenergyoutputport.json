@@ -1,0 +1,73 @@
+{
+  "variants": {
+    "facing=north,status=0": {
+      "model": "modularmachinery:block/blockenergyoutputport_0"
+    },
+    "facing=north,status=1": {
+      "model": "modularmachinery:block/blockenergyoutputport_1"
+    },
+    "facing=north,status=2": {
+      "model": "modularmachinery:block/blockenergyoutputport_2"
+    },
+    "facing=south,status=0": {
+      "model": "modularmachinery:block/blockenergyoutputport_0",
+      "y": 180
+    },
+    "facing=south,status=1": {
+      "model": "modularmachinery:block/blockenergyoutputport_1",
+      "y": 180
+    },
+    "facing=south,status=2": {
+      "model": "modularmachinery:block/blockenergyoutputport_2",
+      "y": 180
+    },
+    "facing=west,status=0": {
+      "model": "modularmachinery:block/blockenergyoutputport_0",
+      "y": 270
+    },
+    "facing=west,status=1": {
+      "model": "modularmachinery:block/blockenergyoutputport_1",
+      "y": 270
+    },
+    "facing=west,status=2": {
+      "model": "modularmachinery:block/blockenergyoutputport_2",
+      "y": 270
+    },
+    "facing=east,status=0": {
+      "model": "modularmachinery:block/blockenergyoutputport_0",
+      "y": 90
+    },
+    "facing=east,status=1": {
+      "model": "modularmachinery:block/blockenergyoutputport_1",
+      "y": 90
+    },
+    "facing=east,status=2": {
+      "model": "modularmachinery:block/blockenergyoutputport_2",
+      "y": 90
+    },
+    "facing=up,status=0": {
+      "model": "modularmachinery:block/blockenergyoutputport_0",
+      "x": 270
+    },
+    "facing=up,status=1": {
+      "model": "modularmachinery:block/blockenergyoutputport_1",
+      "x": 270
+    },
+    "facing=up,status=2": {
+      "model": "modularmachinery:block/blockenergyoutputport_2",
+      "x": 270
+    },
+    "facing=down,status=0": {
+      "model": "modularmachinery:block/blockenergyoutputport_0",
+      "x": 90
+    },
+    "facing=down,status=1": {
+      "model": "modularmachinery:block/blockenergyoutputport_1",
+      "x": 90
+    },
+    "facing=down,status=2": {
+      "model": "modularmachinery:block/blockenergyoutputport_2",
+      "x": 90
+    }
+  }
+}
