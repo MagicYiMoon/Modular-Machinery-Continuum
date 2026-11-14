@@ -95,6 +95,11 @@ public final class Config {
     /** The spec, built once in the static initialiser. */
     public static final ForgeConfigSpec SPEC;
     private static final ForgeConfigSpec.BooleanValue FACTORY_CONTROLLERS_DEFAULT;
+    private static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> EF_COOLANTS;
+    public static final java.util.List<String> DEFAULT_EF_COOLANTS = java.util.List.of(
+            "minecraft:water|1|steam|1|15", "ice|1|minecraft:water|1|30",
+            "ic2coolant|1|ic2hot_coolant|1|90", "liquid_helium|1|helium|320|170",
+            "liquid_nitrogen|1|nitrogen|320|190", "cryotheum|1|-|0|240");
 
     private static final ForgeConfigSpec.ConfigValue<String> MACHINE_COLOR;
     private static final ForgeConfigSpec.BooleanValue MACHINE_PARALLEL_DEFAULT;
@@ -114,6 +119,9 @@ public final class Config {
     private static final ForgeConfigSpec.IntValue AUTO_ASSEMBLY_INTERVAL;
     private static final ForgeConfigSpec.BooleanValue AUTO_ASSEMBLY_NEED_ALL;
     private static final ForgeConfigSpec.BooleanValue AUTO_ASSEMBLY_SKIP_NBT;
+    private static final ForgeConfigSpec.BooleanValue AUTO_ASSEMBLY_WIRELESS;
+    private static final ForgeConfigSpec.BooleanValue AUTO_ASSEMBLY_AUTO_CRAFT;
+    private static final ForgeConfigSpec.IntValue AUTO_ASSEMBLY_WAIT_TIMEOUT;
 
     /**
      * The default, and it is NOT invented: measured from the mod's own art, {@code blockcasing_plain.png}'s mean
@@ -237,6 +245,16 @@ public final class Config {
                 .comment("Skip structure parts that declare block-entity NBT during auto-assembly.",
                         "MMCE source setting: skipBlockContainNBT (default: false).")
                 .define("auto-assembly-skip-block-containing-nbt", false);
+        AUTO_ASSEMBLY_WIRELESS = builder
+                .comment("Allow survival assembly to extract missing items/fluids through a carried AE2 wireless terminal.")
+                .define("auto-assembly-wireless", true);
+        AUTO_ASSEMBLY_AUTO_CRAFT = builder
+                .comment("Request missing craftable materials from AE2 and wait for them before continuing assembly.")
+                .define("auto-assembly-auto-craft", true);
+        AUTO_ASSEMBLY_WAIT_TIMEOUT = builder
+                .comment("Cancel assembly after this many ticks without progress while waiting for wireless materials.",
+                        "Already submitted AE2 crafting orders continue and leave their output in ME storage.")
+                .defineInRange("auto-assembly-wait-timeout", 12000, 200, 72000);
         builder.pop();
 
         // --- fluid hatch capacity, from FluidHatchSize.loadFromConfig (upstream U45) ---
@@ -308,6 +326,15 @@ public final class Config {
         builder.push("mods").push("botania");
         MANA_PROVIDER_CAPACITY = builder.comment("ModularMagic mana buffer capacity, matching the source default.")
                 .defineInRange("Mana Capacity", 100000, 0, Integer.MAX_VALUE);
+        builder.pop(2);
+
+        builder.push("neco").push("efabricator");
+        EF_COOLANTS = builder.comment("Coolant conversions: input|input mB|output|output mB|cooling units.",
+                        "Use full fluid registry IDs. An unqualified source name resolves only if its registry path is unique.",
+                        "Use -|0 for no output. Missing/ambiguous fluids disable the entry; gases are not fluids.",
+                        "Cooling units must be 1..100000. Defaults follow NECO; installed fluids are required.",
+                        "Reloadable; accepted conversions retain their original terms until their output is delivered.")
+                .defineListAllowEmpty("coolants", DEFAULT_EF_COOLANTS, value -> value instanceof String);
         builder.pop(2);
 
         builder.push("factory-system");
@@ -387,6 +414,11 @@ public final class Config {
 
     private Config() {
     }
+
+    public static java.util.List<? extends String> efCoolants() {
+        return SPEC.isLoaded() ? EF_COOLANTS.get() : DEFAULT_EF_COOLANTS;
+    }
+    public static ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> efCoolantsSetting() { return EF_COOLANTS; }
 
     private static int topColor(ForgeConfigSpec.ConfigValue<String> value, int fallback) {
         if (!SPEC.isLoaded()) return fallback;
@@ -619,6 +651,10 @@ public final class Config {
     public static boolean autoAssemblyNeedAll() {
         return read(AUTO_ASSEMBLY_NEED_ALL, true);
     }
+
+    public static boolean autoAssemblyWireless() { return read(AUTO_ASSEMBLY_WIRELESS, true); }
+    public static boolean autoAssemblyAutoCraft() { return read(AUTO_ASSEMBLY_AUTO_CRAFT, true); }
+    public static int autoAssemblyWaitTimeout() { return read(AUTO_ASSEMBLY_WAIT_TIMEOUT, 12000); }
 
     /** Mirrors MMCE's {@code skipBlockContainNBT} assembler option. */
     public static boolean autoAssemblySkipBlockContainingNbt() {

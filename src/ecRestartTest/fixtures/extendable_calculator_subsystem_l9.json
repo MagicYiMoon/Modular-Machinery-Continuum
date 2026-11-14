@@ -1,0 +1,14 @@
+{
+  "registryname": "extendable_calculator_subsystem_l9",
+  "localizedname": "EC persistence disposable fixture",
+  "requires-blueprint": false,
+  "has-factory": false,
+  "parts": [
+    {"x": 1, "y": 0, "z": 0, "elements": "modularmachinery:ecalculator_cell_drive"},
+    {"x": 2, "y": 0, "z": 0, "elements": "modularmachinery:ecalculator_thread_core_l6"},
+    {"x": 3, "y": 0, "z": 0, "elements": "modularmachinery:ecalculator_thread_core_hyper_l4"},
+    {"x": 4, "y": 0, "z": 0, "elements": "modularmachinery:ecalculator_parallel_proc_l4"},
+    {"x": 5, "y": 0, "z": 0, "elements": "modularmachinery:ecalculator_casing"},
+    {"x": 0, "y": 0, "z": 1, "elements": "modularmachinery:ecalculator_me_channel"}
+  ]
+}

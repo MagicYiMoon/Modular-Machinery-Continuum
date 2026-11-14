@@ -23,7 +23,8 @@ public final class MachineAssemblyManager {
     }
 
     public static void add(net.minecraft.server.level.ServerLevel level, BlockPos pos, MachineAssembly assembly) {
-        JOBS.put(new Key(level.dimension(), pos), assembly);
+        MachineAssembly previous = JOBS.put(new Key(level.dimension(), pos), assembly);
+        if (previous != null && previous != assembly) previous.close();
     }
 
     public static List<MachineAssembly> forPlayer(ServerPlayer player) {
@@ -37,11 +38,16 @@ public final class MachineAssemblyManager {
     }
 
     public static void remove(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
-        JOBS.remove(new Key(level.dimension(), pos));
+        MachineAssembly removed = JOBS.remove(new Key(level.dimension(), pos));
+        if (removed != null) removed.close();
     }
 
     public static void removePlayer(ServerPlayer player) {
-        JOBS.entrySet().removeIf(entry -> entry.getValue().owner() == player);
+        JOBS.entrySet().removeIf(entry -> {
+            if (entry.getValue().owner() != player) return false;
+            entry.getValue().close();
+            return true;
+        });
     }
 
     public static void tick(ServerPlayer player) {
@@ -53,11 +59,15 @@ public final class MachineAssemblyManager {
             if (!assembly.controllerValid()) {
                 player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                         "message.assembly.tip.cancelled"), false);
+                assembly.close();
                 iterator.remove();
                 continue;
             }
             assembly.tick();
-            if (assembly.isFinished()) iterator.remove();
+            if (assembly.isFinished()) {
+                assembly.close();
+                iterator.remove();
+            }
         }
     }
 }

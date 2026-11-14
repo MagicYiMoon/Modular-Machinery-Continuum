@@ -74,6 +74,8 @@ public final class TopIntegration {
         InterModComms.sendTo("theoneprobe", GET_THE_ONE_PROBE,
                 () -> (Function<ITheOneProbe, Void>) probe -> {
                     probe.registerProvider(new MachineProbeProvider());
+                    probe.registerProvider(new ECalculatorProbeProvider());
+                    probe.registerProvider(new EFabricatorProbeProvider());
                     Modularmachinery.LOG.info(
                             "[MMCE] The One Probe: machine progress provider registered");
                     return null;

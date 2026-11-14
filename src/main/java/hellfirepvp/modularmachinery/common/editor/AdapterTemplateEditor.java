@@ -20,7 +20,7 @@ public final class AdapterTemplateEditor {
         for(var mod:mods){
             if(!mod.isJsonObject())throw new IllegalArgumentException("模板修改器必须为对象");
             var raw=mod.getAsJsonObject();var parsed=RecipeModifier.deserialize(raw);
-             
+            // Existing runtime-readable extension/legacy data survives unrelated edits verbatim.
             if(parsed!=null&&source.has("modifiers")&&source.getAsJsonArray("modifiers").contains(raw))continue;
             if(parsed==null||!Float.isFinite(parsed.getModifier())||ResourceLocation.tryParse(parsed.getTarget())==null
                     ||!raw.getAsJsonPrimitive("multiplier").isNumber()||!raw.getAsJsonPrimitive("operation").isNumber()
@@ -43,6 +43,11 @@ public final class AdapterTemplateEditor {
             if(!target.startsWith(root)||!Files.isRegularFile(target,LinkOption.NOFOLLOW_LINKS)||!target.toRealPath().equals(target)||!JsonParser.parseString(Files.readString(target)).equals(source))throw new IllegalArgumentException("模板源文件已在磁盘上变化或为链接，未覆盖修改");
         }
         var result=merge(source,edit);var owners=result.get("machine");var names=new ArrayList<String>();if(owners.isJsonArray())owners.getAsJsonArray().forEach(n->names.add(n.getAsString()));else names.add(owners.getAsString());
+        var retainedResearch=new ArrayList<String>();
+        if(source.has("requirements"))for(var old:source.getAsJsonArray("requirements"))
+            if(ResearchGateEditor.isResearch(old.getAsJsonObject()))retainedResearch.addAll(ResearchGateEditor.ids(old.getAsJsonObject()));
+        for(var entry:result.getAsJsonArray("requirements"))if(ResearchGateEditor.isResearch(entry.getAsJsonObject()))
+            ResearchGateEditor.validateKnownIds(retainedResearch,entry.getAsJsonObject());
         // References introduced in a template affect every owner and every generated recipe.
         for(String owner:names){var def=MachineReloadListener.getLoader().findByName(owner);if(def==null)throw new IllegalArgumentException("模板所属机器不存在："+owner);
             var profile=RecipeCopyEditor.profile(def);for(var requirement:result.getAsJsonArray("requirements")){

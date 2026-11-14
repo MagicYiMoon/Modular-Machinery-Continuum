@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,online=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/off/l9_parallel_module"
+    },
+    "facing=south,online=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/off/l9_parallel_module",
+      "y": 180
+    },
+    "facing=west,online=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/off/l9_parallel_module",
+      "y": 270
+    },
+    "facing=east,online=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/off/l9_parallel_module",
+      "y": 90
+    },
+    "facing=north,online=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/on/l9_parallel_module"
+    },
+    "facing=south,online=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/on/l9_parallel_module",
+      "y": 180
+    },
+    "facing=west,online=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/on/l9_parallel_module",
+      "y": 270
+    },
+    "facing=east,online=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/parallel_module/on/l9_parallel_module",
+      "y": 90
+    }
+  }
+}

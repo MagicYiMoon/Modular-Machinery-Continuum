@@ -210,12 +210,13 @@ public final class DedicatedControllerRegressionChecks {
         require(source!=null,"dedicated fixture needs a JSON source");
         Path file=Path.of(source); String original=Files.readString(file);
         boolean changedFactory = !loader.findByName(name).isHasFactory();
+        boolean changedBlueprint = !loader.findByName(name).isRequiresBlueprint();
         var player=new FakePlayer(level,new GameProfile(UUID.randomUUID(),"ControllerEditTest")) {
             @Override public boolean hasPermissions(int permissionLevel){return true;}
         };
         var menu=new MenuMachineEditor(9,player.getInventory(),PktMachineEditorRequest.snapshot()); player.containerMenu=menu;
         try {
-            var request=new PktMachineEditorRequest(9,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,0xE85D5D,changedFactory));
+            var request=new PktMachineEditorRequest(9,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,0xE85D5D,changedFactory,changedBlueprint));
             var buffer=new FriendlyByteBuf(Unpooled.buffer());
             PktMachineEditorRequest decoded;
             try { PktMachineEditorRequest.encode(request,buffer); decoded=PktMachineEditorRequest.decode(buffer); require(buffer.readableBytes()==0,"settings codec remainder"); }
@@ -225,24 +226,26 @@ public final class DedicatedControllerRegressionChecks {
             require(result.result().success(),"settings save failed: "+result.result().message());
             var actual=JsonParser.parseString(Files.readString(file)).getAsJsonObject();
             var expected=JsonParser.parseString(original).getAsJsonObject(); expected.addProperty("color","E85D5D"); expected.addProperty("has-factory",changedFactory);
+            expected.addProperty("requires-blueprint",changedBlueprint);
             require(expected.equals(actual),"settings save changed unrelated machine fields");
             require(DedicatedControllers.color(name)==0xE85D5D && MachineReloadListener.getLoader().findByName(name).isHasFactory()==changedFactory,"reload/color lookup stale");
             var snapshot=MachineLoader.fromSnapshot(MachineReloadListener.getLoader().snapshot());
             require(snapshot.findByName(name).getDefinedColor()==0xE85D5D && snapshot.findByName(name).isHasFactory()==changedFactory,"client snapshot lost appearance");
+            require(snapshot.findByName(name).isRequiresBlueprint()==changedBlueprint,"client snapshot lost blueprint setting");
             String saved=Files.readString(file);
             require(!PktMachineEditorRequest.process(player,decoded).result().success(),"duplicate save accepted");
             for(var bad:List.of(
-                    new PktMachineEditorRequest(10,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,1,false)),
-                    new PktMachineEditorRequest(9,UUID.randomUUID(),"stale",new PktMachineEditorControllerSettings(name,1,false)),
-                    new PktMachineEditorRequest(9,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,-1,false))))
+                    new PktMachineEditorRequest(10,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,1,false,true)),
+                    new PktMachineEditorRequest(9,UUID.randomUUID(),"stale",new PktMachineEditorControllerSettings(name,1,false,true)),
+                    new PktMachineEditorRequest(9,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,-1,false,true))))
                 require(!PktMachineEditorRequest.process(player,bad).result().success(),"invalid request accepted");
             var denied=new FakePlayer(level,new GameProfile(UUID.randomUUID(),"ControllerDenied")){
                 @Override public boolean hasPermissions(int permissionLevel){return false;}
             };
             denied.containerMenu=new MenuMachineEditor(9,denied.getInventory(),menu.snapshot());
-            require(!PktMachineEditorRequest.process(denied,new PktMachineEditorRequest(9,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,1,false))).result().success(),"non-op wrote appearance");
+            require(!PktMachineEditorRequest.process(denied,new PktMachineEditorRequest(9,UUID.randomUUID(),EditorSaveState.revision(menu.snapshot()),new PktMachineEditorControllerSettings(name,1,false,true))).result().success(),"non-op wrote appearance");
             require(saved.equals(Files.readString(file)),"rejected edit changed file");
-            Modularmachinery.LOG.info("[MMC][controller-appearance-regression] PASS: envelope codec, two-field JSON edits, reload/snapshot colors, duplicates, permissions, stale windows/revisions, invalid RGB");
+            Modularmachinery.LOG.info("[MMC][controller-appearance-regression] PASS: envelope codec, three-field JSON edits, reload/snapshot colors and blueprint setting, duplicates, permissions, stale windows/revisions, invalid RGB");
         } finally { Files.writeString(file,original); MachineReloadListener.reloadNow(); }
     }
 

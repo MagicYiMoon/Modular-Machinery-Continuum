@@ -67,6 +67,8 @@ public class MachineProbeProvider implements IProbeInfoProvider {
             }
         }
         var tile = level.getBlockEntity(hitData.getPos());
+        if (tile instanceof hellfirepvp.modularmachinery.common.ecalculator.TileECalculatorController) return;
+        if (tile instanceof hellfirepvp.modularmachinery.common.efabricator.TileEFabricatorController) return;
         if (tile instanceof TileParallelController parallel && Config.topShowParallel()) {
             addParallel(box(info), parallel.getParallelism(), parallel.getMaxParallelism());
         }
@@ -76,11 +78,37 @@ public class MachineProbeProvider implements IProbeInfoProvider {
         info.text(Component.translatable("top.modularmachinery.machine",
                 machineName == null || machineName.isEmpty() ? "-" : machineName));
         addOwnerAndStructure(info, controller, player, level);
+        addHyperNet(info,controller,level);
         if (!controller.isFormed()) return;
         addEnergy(info, controller, player, level);
         addPerformance(info, controller);
         if (controller instanceof TileFactoryController factory) addFactory(info, factory, player);
         else addSingle(info, controller, player);
+    }
+
+    private static void addHyperNet(IProbeInfo info,TileController controller,Level level) {
+        if(!(level instanceof ServerLevel))return;
+        var loader=MachineReloadListener.getLoader();
+        var machine=loader==null?null:loader.findByName(controller.getMachineName());if(machine==null)return;
+        var lines=new java.util.ArrayList<Component>();
+        hellfirepvp.modularmachinery.common.hypernet.HyperNetTooltips.append(machine,lines);
+        if(!lines.isEmpty()){var section=box(info);lines.forEach(section::text);}
+        var node=controller.peekHyperNetNode();if(node==null||!node.matches(machine))return;
+        var s=node.status();var section=box(info);
+        section.text(Component.translatable(s.online()?"top.modularmachinery.hypernet.online":"top.modularmachinery.hypernet.offline"));
+        section.text(Component.translatable("top.modularmachinery.hypernet.consumed",hellfirepvp.modularmachinery.common.hypernet.HyperNetTooltips.number(s.consumed())));
+        if(s.role()==hellfirepvp.modularmachinery.common.hypernet.HyperNetDefinition.Role.PROCESSOR)
+            section.text(Component.translatable("top.modularmachinery.hypernet.average_load",hellfirepvp.modularmachinery.common.hypernet.HyperNetTooltips.number(node.averageLoad())));
+        if(s.role()!=hellfirepvp.modularmachinery.common.hypernet.HyperNetDefinition.Role.PROCESSOR)
+            section.text(Component.translatable("top.modularmachinery.hypernet.demand",hellfirepvp.modularmachinery.common.hypernet.HyperNetTooltips.number(s.demanded()),s.demandConsumers()));
+        var definition=machine.getHyperNetDefinition();
+        if(s.role()==hellfirepvp.modularmachinery.common.hypernet.HyperNetDefinition.Role.CENTER){
+            section.text(Component.translatable("top.modularmachinery.hypernet.offered",hellfirepvp.modularmachinery.common.hypernet.HyperNetTooltips.number(s.offered())));
+            section.text(Component.translatable("top.modularmachinery.hypernet.connections",s.connections(),definition.maxConnections()));
+        }
+        if(definition.thermal()!=null)section.text(Component.translatable("top.modularmachinery.hypernet.heat",hellfirepvp.modularmachinery.common.hypernet.HyperNetTooltips.number(s.heat()),definition.thermal().overheatThreshold())
+                .withStyle(s.overheated()?ChatFormatting.RED:ChatFormatting.AQUA));
+        if(definition.circuit()!=null)section.text(Component.translatable("top.modularmachinery.hypernet.durability",s.durability(),definition.circuit().capacity()));
     }
 
     private static void addOwnerAndStructure(IProbeInfo info, TileController controller, Player player, Level level) {

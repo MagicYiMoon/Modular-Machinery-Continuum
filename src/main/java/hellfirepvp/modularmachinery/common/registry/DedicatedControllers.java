@@ -31,6 +31,7 @@ public final class DedicatedControllers {
         return block instanceof BlockController controller ? controller.getDedicatedMachine() : null;
     }
     public static Definition definition(String name) { return DEFINITIONS.get(name); }
+    public static List<Definition> registrationDefinitions() { return List.copyOf(DEFINITIONS.values()); }
 
     public static void register() {
         ModDataHolder data = ModDataHolder.INSTANCE;
@@ -61,16 +62,30 @@ public final class DedicatedControllers {
                 Modularmachinery.LOG.error("[MMC] Cannot register controllers from {}: {}", file, e.toString());
             }
         }
+        normalizeTerminalIdentity();
+        var localDefinitions = List.copyOf(DEFINITIONS.values());
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) {
+            try {
+                var merged = ControllerRegistryCache.merge(DEFINITIONS.values(), ControllerRegistryCache.read(ControllerRegistryCache.path()));
+                DEFINITIONS.clear();
+                merged.forEach(d -> DEFINITIONS.put(d.name(), d));
+                normalizeTerminalIdentity();
+            } catch (Exception failure) {
+                Modularmachinery.LOG.error("[MMC] Ignoring invalid/conflicting server controller cache; local registry is preserved", failure);
+            }
+        }
         Set<String> ids = new HashSet<>();
         RegistryBlocks.BLOCKS.getEntries().forEach(r -> ids.add(r.getId().getPath()));
         RegistryItems.ITEMS.getEntries().forEach(r -> ids.add(r.getId().getPath()));
         for (Definition definition : DEFINITIONS.values()) {
+            // NECO's terminal has a fixed block entity and card/power service instead of the recipe controller.
+            if(definition.name().equals("hypernet_terminal"))continue;
             add(definition, false, ids);
             if (definition.factory()) add(definition, true, ids);
         }
         try {
             JsonArray json = new JsonArray();
-            for (Definition d : DEFINITIONS.values()) {
+            for (Definition d : localDefinitions) {
                 JsonObject object = new JsonObject();
                 object.addProperty("registryname", d.name()); object.addProperty("localizedname", d.displayName());
                 object.addProperty("color", String.format(Locale.ROOT, "%06X", d.color()));
@@ -82,6 +97,14 @@ public final class DedicatedControllers {
             catch (AtomicMoveNotSupportedException ignored) { Files.move(temp, manifest, StandardCopyOption.REPLACE_EXISTING); }
         } catch (Exception e) { throw new IllegalStateException("Cannot preserve controller registry " + manifest, e); }
         Modularmachinery.LOG.info("[MMC] Registered {} dedicated controllers for {} machine identities", ENTRIES.size(), DEFINITIONS.size());
+    }
+
+    private static void normalizeTerminalIdentity(){
+        // This block is always registered, even without a local machine JSON. Never advertise a
+        // nonexistent terminal factory variant, including when a global factory default is enabled.
+        var old=DEFINITIONS.get("hypernet_terminal");
+        DEFINITIONS.put("hypernet_terminal",new Definition("hypernet_terminal",
+                old==null?"HyperNet Terminal":old.displayName(),old==null?0xFFFFFF:old.color(),false));
     }
 
     public static Definition parse(JsonObject json) {
@@ -140,6 +163,7 @@ public final class DedicatedControllers {
     /** Display dedicated identities first, retaining legacy controllers as accepted alternatives. */
     public static java.util.List<net.minecraft.world.level.block.state.BlockState> controllerStates(String name) {
         var states = new ArrayList<net.minecraft.world.level.block.state.BlockState>();
+        if(name.equals("hypernet_terminal"))return java.util.List.of(RegistryBlocks.hypernetTerminal.get().defaultBlockState());
         for (Entry e : ENTRIES) if (e.definition().name().equals(name)) states.add(e.block().get().defaultBlockState());
         states.add(RegistryBlocks.blockController.get().defaultBlockState());
         states.add(RegistryBlocks.blockFactoryController.get().defaultBlockState());
@@ -152,6 +176,7 @@ public final class DedicatedControllers {
     }
 
     public static ItemStack stack(String name, boolean factory) {
+        if(name.equals("hypernet_terminal"))return factory?ItemStack.EMPTY:new ItemStack(RegistryItems.hypernetTerminal.get());
         for (Entry entry : ENTRIES)
             if (entry.factory() == factory && entry.definition().name().equals(name)) return new ItemStack(entry.item().get());
         return ItemStack.EMPTY;

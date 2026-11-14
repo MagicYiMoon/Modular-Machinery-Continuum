@@ -69,7 +69,7 @@ repositories {
         name = 'CurseMaven'
         url = 'https://cursemaven.com/'
     }
-     
+    // Modrinth's maven (PLAN section 406). Added for GuideME, which AE2 REQUIRES and which is on neither
     // CurseMaven nor modmaven. The `content` filter keeps this repo from being consulted for anything else,
     // so a future dependency cannot silently start resolving from here.
     maven {
@@ -92,9 +92,77 @@ minecraft {
     copyIdeResources = true
     runs {
         client {
+            if(project.hasProperty('hypernetTerminalSmallTest')) jvmArgs '-Dmodularmachinery.hypernetTerminalSmallTest=true'
+            if(project.hasProperty('hypernetNetworkVisualTest')) jvmArgs '-Dmodularmachinery.hypernetNetworkVisualTest=true'
+            if(project.hasProperty('hypernetIconVisualTest')) jvmArgs '-Dmodularmachinery.hypernetIconVisualTest=true'
+            if(project.hasProperty('hypernetCreativeVisualTest')) jvmArgs '-Dmodularmachinery.hypernetCreativeVisualTest=true'
+            if(project.hasProperty('hypernetCompletionVisualTest')) jvmArgs '-Dmodularmachinery.hypernetCompletionVisualTest=true'
+            if(project.hasProperty('hypernetTerminalVisualTest')) {
+                jvmArgs '-Dmodularmachinery.hypernetTerminalVisualTest=true', '-Xms128M', "-Xmx${project.findProperty('verificationHeap') ?: '4G'}",
+                        '-XX:ActiveProcessorCount=2', '-XX:TieredStopAtLevel=1', '-XX:MaxDirectMemorySize=256M'
+                args '--quickPlaySingleplayer', 'MMC-HyperNet-Terminal-Fixture',
+                        '--width', (project.hasProperty('hypernetTerminalSmallTest') ? '854' : '1280'),
+                        '--height', (project.hasProperty('hypernetTerminalSmallTest') ? '480' : '800')
+            }
+            if(project.hasProperty('hypernetMonitorVisualTest')) {
+                // Keep this disposable GUI run within the desktop's shared commit budget.
+                // C1-only is for functional screenshots, not performance measurements.
+                jvmArgs '-Dmodularmachinery.hypernetMonitorVisualTest=true', '-Xms128M', "-Xmx${project.findProperty('verificationHeap') ?: '4G'}",
+                        '-XX:ActiveProcessorCount=2', '-XX:TieredStopAtLevel=1', '-XX:MaxDirectMemorySize=256M',
+                        '-XX:NativeMemoryTracking=summary', '-XX:+UnlockDiagnosticVMOptions', '-XX:+PrintNMTStatistics',
+                        '-Xlog:gc:file=hn-monitor-gc.log:time,uptime,level,tags'
+                args '--quickPlaySingleplayer', 'MMC-HyperNet-Monitor-Fixture',
+                        '--width', (project.hasProperty('hypernetMonitorSmallTest') ? '854' : '1280'),
+                        '--height', (project.hasProperty('hypernetMonitorSmallTest') ? '480' : '800')
+            }
             workingDirectory project.file(project.findProperty('clientRunDir') ?: 'run')
+            if (project.hasProperty('efBaseVisualTest')) {
+                jvmArgs '-Dmodularmachinery.efBaseVisualTest=true', '-Xmx2G', '-XX:ActiveProcessorCount=4'
+                args '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('ecAppearanceTest')) {
+                jvmArgs '-Dmodularmachinery.ecAppearanceTest=true'
+                args '--quickPlaySingleplayer', 'MMC-EC-Appearance-Fixture', '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('efAppearanceTest')) {
+                jvmArgs '-Dmodularmachinery.efAppearanceTest=true', '-Xmx2G', '-XX:ActiveProcessorCount=4'
+                args '--quickPlaySingleplayer', 'MMC-EF-Appearance-Fixture', '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('ecMenuVisualTest')) {
+                jvmArgs '-Dmodularmachinery.ecMenuVisualTest=true'
+                if (project.hasProperty('ecTopVisualTest')) jvmArgs '-Dmodularmachinery.ecTopVisualTest=true', '-Xmx2G', '-XX:ActiveProcessorCount=4'
+                args '--quickPlaySingleplayer', 'MMC-EC-Menu-Fixture', '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('efMenuVisualTest')) {
+                jvmArgs '-Dmodularmachinery.efMenuVisualTest=true', '-Xms128M', "-Xmx${project.findProperty('verificationHeap') ?: '4G'}", '-XX:ActiveProcessorCount=2', '-XX:TieredStopAtLevel=1', '-XX:MaxDirectMemorySize=256M'
+                if (project.hasProperty('efTopVisualTest')) jvmArgs '-Dmodularmachinery.efTopVisualTest=true'
+                args '--quickPlaySingleplayer', 'MMC-EF-Menu-Fixture', '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('efPatternVisualTest')) {
+                jvmArgs '-Dmodularmachinery.efPatternVisualTest=true', '-Xmx2G', '-XX:ActiveProcessorCount=4'
+                args '--quickPlaySingleplayer', 'MMC-EF-Pattern-Fixture', '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('ecVisualTest')) {
+                jvmArgs '-Dmodularmachinery.ecBaseVisualTest=true'
+                args '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('esVisualTest')) {
+                jvmArgs '-Dmodularmachinery.esVisualTest=true'
+                if (project.hasProperty('esFinishVisualTest')) jvmArgs '-Dmodularmachinery.esFinishVisualTest=true', '-Xmx2G', '-XX:ActiveProcessorCount=4'
+                if (project.hasProperty('esAppearanceTest')) jvmArgs '-Dmodularmachinery.esAppearanceTest=true'
+                args '--quickPlaySingleplayer', 'MMC-ES-Visual-Fixture', '--width', '1280', '--height', '800'
+            }
+            if (project.hasProperty('controllerLoginTest')) {
+                jvmArgs "-Dmodularmachinery.controllerLoginTest=${project.property('controllerLoginTest')}"
+                jvmArgs "-Dmodularmachinery.controllerLoginAddress=${project.findProperty('controllerLoginAddress') ?: '127.0.0.1:25597'}"
+                args '--username', 'MMCLoginTest', '--width', '960', '--height', '540'
+            }
             if (project.hasProperty('clientVisualTest')) {
                 jvmArgs '-Dmodularmachinery.clientVisualTest=true'
+                if (project.hasProperty('editorViewportVisualTest')) jvmArgs '-Dmodularmachinery.editorViewportVisualTest=true'
+                if (project.hasProperty('editorResearchGateVisualTest')) jvmArgs '-Dmodularmachinery.editorResearchGateVisualTest=true', '-Xms128M', "-Xmx${project.findProperty('verificationHeap') ?: '4G'}", '-XX:ActiveProcessorCount=2', '-XX:TieredStopAtLevel=1', '-XX:MaxDirectMemorySize=256M'
+                if (project.hasProperty('editorResearchVisualTest')) jvmArgs '-Dmodularmachinery.editorResearchVisualTest=true', '-Xms128M', "-Xmx${project.findProperty('verificationHeap') ?: '4G'}", '-XX:ActiveProcessorCount=2', '-XX:TieredStopAtLevel=1', '-XX:MaxDirectMemorySize=256M'
+                if (project.hasProperty('editorHyperNetVisualTest')) jvmArgs '-Dmodularmachinery.editorHyperNetVisualTest=true', (project.hasProperty('verificationLowMemory') ? "-Xmx${project.findProperty('verificationHeap') ?: '4G'}" : '-Xmx2G'), '-XX:ActiveProcessorCount=4'
                 if (project.hasProperty('editorCopyVisualTest')) jvmArgs '-Dmodularmachinery.editorCopyVisualTest=true'
                 if (project.hasProperty('editorPneumaticVisualTest')) jvmArgs '-Dmodularmachinery.editorPneumaticVisualTest=true'
                 if (project.hasProperty('editorExpandedVisualTest')) jvmArgs '-Dmodularmachinery.editorExpandedVisualTest=true'
@@ -103,7 +171,7 @@ minecraft {
                 if (project.hasProperty('editorNbtVisualTest')) jvmArgs '-Dmodularmachinery.editorNbtVisualTest=true'
                 if (project.hasProperty('editorBloodAuraVisualTest')) jvmArgs '-Dmodularmachinery.editorBloodAuraVisualTest=true'
                 if (project.hasProperty('editorResourcesVisualTest')) jvmArgs '-Dmodularmachinery.editorResourcesVisualTest=true'
-                args '--quickPlaySingleplayer', 'MMC-Visual-Fixture', '--width', '1280', '--height', '800'
+                args '--quickPlaySingleplayer', 'MMC-Visual-Fixture', '--width', (project.hasProperty('editorResearchSmallTest') ? '854' : '1280'), '--height', (project.hasProperty('editorResearchSmallTest') ? '480' : '800')
             }
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
@@ -111,6 +179,64 @@ minecraft {
         }
         server {
             workingDirectory project.file(project.findProperty('selfTestRunDir') ?: 'run')
+            if(project.hasProperty('verificationLowMemory'))
+                jvmArgs '-Xms128M', "-Xmx${project.findProperty('verificationHeap') ?: '4G'}", '-XX:ActiveProcessorCount=2', '-XX:TieredStopAtLevel=1'
+            if (project.hasProperty('hypernetHardwareTest') || project.hasProperty('hypernetRecipeTest') || project.hasProperty('hypernetThermalTest') || project.hasProperty('hypernetMaintenanceTest')) {
+                jvmArgs '-Dmodularmachinery.hypernetHardwareTest=true'
+                arg '--nogui'
+            }
+            if (project.hasProperty('hypernetFairTest')) jvmArgs '-Dmodularmachinery.hypernetFairTest=true'
+            if (project.hasProperty('hypernetStationTest')) jvmArgs '-Dmodularmachinery.hypernetStationTest=true'
+            if(project.hasProperty('researchEditorTest')) { jvmArgs '-Dmodularmachinery.researchEditorTest=true'; arg '--nogui' }
+            if(project.hasProperty('serverAssemblyTest')) { jvmArgs '-Dmodularmachinery.serverAssemblyTest=true'; arg '--nogui' }
+            if (project.hasProperty('hypernetTerminalTest')) jvmArgs '-Dmodularmachinery.hypernetTerminalTest=true'
+            if (project.hasProperty('hypernetStationResumeTest')) jvmArgs '-Dmodularmachinery.hypernetStationResumeTest=true'
+            if (project.hasProperty('hypernetDatabaseTest')) jvmArgs '-Dmodularmachinery.hypernetDatabaseTest=true'
+            if (project.hasProperty('hypernetResearchTest')) jvmArgs '-Dmodularmachinery.hypernetResearchTest=true'
+            if (project.hasProperty('hypernetCoreCycleTest')) jvmArgs '-Dmodularmachinery.hypernetCoreCycleTest=true'
+            if (project.hasProperty('hypernetRecipeTest')) jvmArgs '-Dmodularmachinery.hypernetRecipeTest=true'
+            if (project.hasProperty('hypernetRecipeHeatTest')) jvmArgs '-Dmodularmachinery.hypernetRecipeHeatTest=true'
+            if (project.hasProperty('hypernetThermalTest')) jvmArgs '-Dmodularmachinery.hypernetThermalTest=true'
+            if (project.hasProperty('hypernetMaintenanceTest')) jvmArgs '-Dmodularmachinery.hypernetMaintenanceTest=true'
+            if (project.hasProperty('hypernetThermalResumeTest')) {
+                jvmArgs '-Dmodularmachinery.hypernetThermalResumeTest=true'
+                arg '--nogui'
+            }
+            if (project.hasProperty('hypernetLifecycleTest')) {
+                jvmArgs '-Dmodularmachinery.hypernetLifecycleTest=true'
+                arg '--nogui'
+                arg '-mixin.config=mmc-hypernet-lifecycle-test.mixins.json'
+            }
+            if (project.hasProperty('efNetworkTest')) {
+                jvmArgs '-Dmodularmachinery.efNetworkTest=true'
+                arg '--nogui'
+            }
+            if (project.hasProperty('efPersistenceTest')) {
+                jvmArgs "-Dmodularmachinery.efPersistenceTest=${project.property('efPersistenceTest')}"
+                arg '--nogui'
+            }
+            if (project.hasProperty('ecLifecycleTest')) {
+                jvmArgs '-Dmodularmachinery.ecLifecycleTest=true'
+                arg '--nogui'
+                arg '-mixin.config=mmc-ec-lifecycle-test.mixins.json'
+            }
+            if (project.hasProperty('ecRestartTest')) {
+                jvmArgs "-Dmodularmachinery.ecRestartTest=${project.property('ecRestartTest')}"
+                arg '--nogui'
+            }
+            if (project.hasProperty('ecNetworkTest')) {
+                jvmArgs '-Dmodularmachinery.ecNetworkTest=true'
+                arg '--nogui'
+            }
+            if (project.hasProperty('wirelessAssemblyTest')) {
+                jvmArgs '-Dmodularmachinery.wirelessAssemblyTest=true'
+                arg '--nogui'
+            }
+            if (project.hasProperty('controllerLoginServerTest')) arg '--nogui'
+            if (project.hasProperty('esNetworkTest')) {
+                jvmArgs '-Dmodularmachinery.esNetworkTest=true'
+                arg '--nogui'
+            }
             // Enables the in-world machine self-test; see MachineSelfTest.
             if (project.hasProperty('selfTest')) {
                 jvmArgs '-Dmodularmachinery.selfTest=true'
@@ -250,7 +376,7 @@ dependencies {
     }
 
     // ---------------------------------------------------------------------------------------------
-     
+    // THE SAME FIVE AS RUNTIME DEPENDENCIES, BEHIND A FLAG (PLAN section 405).
     //
     // Every integration above is `compileOnly`, which makes "it compiles" actively misleading: the API
     // is on the compile classpath and deliberately NOT on the runtime one, so nothing that actually
@@ -283,7 +409,7 @@ dependencies {
         runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}")
         // GuideME, and it is not optional: AE2 15.4.11 declares a MANDATORY dependency on guideme
         // [20.1.7,20.2.0), and without it Forge's own ModSorter refuses to start the game. Found by running the
-         
+        // integrated configuration (PLAN section 405.2) -- the compileOnly build, the standalone run and the
         // whole self-test are all blind to it, because none of them loads an AE2 class.
         runtimeOnly fg.deobf("maven.modrinth:guideme:${guideme_version}")
     }
@@ -397,4 +523,81 @@ tasks.register('checkFactoryThreadList', JavaExec) {
 }
 
 // Disposable visual fixtures are excluded from ordinary compilation and release artifacts.
+if (project.hasProperty("hypernetLifecycleTest") || project.hasProperty("hypernetHardwareTest") || project.hasProperty("hypernetRecipeTest") || project.hasProperty("hypernetThermalTest") || project.hasProperty("hypernetThermalResumeTest") || project.hasProperty("hypernetMaintenanceTest")) {
+    sourceSets.main.java.srcDir "src/hypernetTest/java"
+    sourceSets.main.resources.srcDir "src/hypernetTest/resources"
+}
+if (project.hasProperty("efBaseVisualTest")) sourceSets.main.java.srcDir "src/efBaseTest/java"
+if (project.hasProperty("efMenuVisualTest")) sourceSets.main.java.srcDir "src/efMenuTest/java"
+if (project.hasProperty("efPatternVisualTest")) sourceSets.main.java.srcDir "src/efPatternMenuTest/java"
+if (project.hasProperty("efAppearanceTest")) sourceSets.main.java.srcDir "src/efAppearanceTest/java"
+if (project.hasProperty("efNetworkTest")) sourceSets.main.java.srcDir "src/efTest/java"
+if (project.hasProperty("efPersistenceTest")) sourceSets.main.java.srcDir "src/efPersistenceTest/java"
 if (project.hasProperty("clientVisualTest")) sourceSets.main.java.srcDir "src/visualTest/java"
+if (project.hasProperty("hypernetMonitorVisualTest")) sourceSets.main.java.srcDir "src/hypernetMonitorTest/java"
+if (project.hasProperty("hypernetTerminalVisualTest")) sourceSets.main.java.srcDir "src/hypernetTerminalTest/java"
+if (project.hasProperty("controllerLoginTest")) sourceSets.main.java.srcDir "src/loginTest/java"
+if (project.hasProperty("wirelessAssemblyTest")) sourceSets.main.java.srcDir "src/assemblyTest/java"
+if (project.hasProperty("esNetworkTest")) sourceSets.main.java.srcDir "src/esTest/java"
+if (project.hasProperty("esVisualTest")) sourceSets.main.java.srcDir "src/esVisualTest/java"
+if (project.hasProperty("ecMenuVisualTest")) sourceSets.main.java.srcDir "src/ecMenuTest/java"
+if (project.hasProperty("ecVisualTest")) sourceSets.main.java.srcDir "src/ecVisualTest/java"
+if (project.hasProperty("ecAppearanceTest")) sourceSets.main.java.srcDir "src/ecAppearanceTest/java"
+if (project.hasProperty("ecNetworkTest")) sourceSets.main.java.srcDir "src/ecTest/java"
+if (project.hasProperty("ecRestartTest")) sourceSets.main.java.srcDir "src/ecRestartTest/java"
+if (project.hasProperty("ecLifecycleTest")) {
+    sourceSets.main.java.srcDir "src/ecLifecycleTest/java"
+    sourceSets.main.resources.srcDir "src/ecLifecycleTest/resources"
+}
+if (project.hasProperty("esGasTest") || (project.hasProperty("selfTest") && project.hasProperty("withGasIntegration")))
+    sourceSets.main.java.srcDir "src/esGasTest/java"
+tasks.withType(Jar).configureEach {
+    exclude '**/ClientVisual*'
+    exclude '**/HyperNetLifecycleVerification*'
+    exclude '**/HyperNetProbeVerification*'
+    exclude '**/HyperNetMonitorVerification*'
+    exclude '**/HyperNetMonitorClientVerification*'
+    exclude '**/HyperNetHardwareVerification*'
+    exclude '**/HyperNetRecipeVerification*'
+    exclude '**/HyperNetFairVerification*'
+    exclude '**/HyperNetCoreCycleVerification*'
+    exclude '**/HyperNetResearchVerification*'
+    exclude '**/HyperNetStationVerification*'
+    exclude '**/HyperNetTerminalVerification*'
+    exclude '**/HyperNetTerminalClientVerification*'
+    exclude '**/HyperNetDatabaseVerification*'
+    exclude '**/HyperNetThermalVerification*'
+    exclude '**/HyperNetMaintenanceVerification*'
+    exclude '**/HyperNetChunkTicketTrace*'
+    exclude 'mmc-hypernet-lifecycle-test.mixins.json'
+    // Exclude the login driver even if a developer accidentally packages with the test flag.
+    exclude '**/ControllerRegistryLoginVerification*'
+    exclude '**/WirelessAssemblyVerification*'
+    exclude '**/EStorageNetworkVerification*'
+    exclude '**/EStorageClientVerification*'
+    exclude '**/EStorageAppearanceClientVerification*'
+    exclude '**/EStorageCompletionClientVerification*'
+    exclude '**/ECalculatorBaseClientVerification*'
+    exclude '**/ECalculatorAppearanceClientVerification*'
+    exclude '**/ECalculatorMenuClientVerification*'
+    exclude '**/ECalculatorTopClientVerification*'
+    exclude '**/EFabricatorBaseClientVerification*'
+    exclude '**/EFabricatorMenuClientVerification*'
+    exclude '**/EFabricatorTopClientVerification*'
+    exclude '**/EFabricatorPatternClientVerification*'
+    exclude '**/EFabricatorAppearanceClientVerification*'
+    exclude '**/EFabricatorNetworkVerification*'
+    exclude '**/EFabricatorPersistenceVerification*'
+    exclude '**/ECalculatorNetworkVerification*'
+    exclude '**/ECalculatorPersistenceVerification*'
+    exclude '**/ECalculatorLifecycleVerification*'
+    exclude '**/ECalculatorChunkTicketTrace*'
+    exclude 'mmc-ec-lifecycle-test.mixins.json'
+    exclude '**/GasRegistryFixtures*'
+}
+
+if (project.hasProperty("researchEditorTest")) sourceSets.main.java.srcDir "src/researchEditorTest/java"
+
+// Opt-in physical server assembly checks; excluded from ordinary compilation and release jars.
+if (project.hasProperty("serverAssemblyTest")) sourceSets.main.java.srcDir "src/serverAssemblyTest/java"
+tasks.withType(Jar).configureEach { exclude "**/ServerAssemblyVerification*"; exclude "**/ServerModuleVerification*" }

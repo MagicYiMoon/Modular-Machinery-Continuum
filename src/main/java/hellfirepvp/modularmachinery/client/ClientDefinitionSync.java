@@ -33,6 +33,8 @@ public final class ClientDefinitionSync {
                 var json = JsonParser.parseString(new String(complete, StandardCharsets.UTF_8)).getAsJsonObject();
                 MachineLoader machines = MachineLoader.fromSnapshot(json.getAsJsonObject("definitions"));
                 RecipeLoader recipes = RecipeLoader.fromSnapshot(json.getAsJsonArray("recipes"), machines);
+                if (json.has("controllerRegistry"))
+                    hellfirepvp.modularmachinery.common.registry.ControllerRegistryCache.cachePlaySnapshot(json.get("controllerRegistry"));
                 GeoMachineModelRegistry.installSnapshot(json.has("geoModels")
                         ? json.getAsJsonArray("geoModels") : null);
                 MachineReloadListener.installClientDefinitions(new MachineReloadListener.Definitions(machines, recipes));

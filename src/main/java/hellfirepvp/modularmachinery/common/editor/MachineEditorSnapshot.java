@@ -35,6 +35,7 @@ public final class MachineEditorSnapshot {
 
     public static String create(MachineLoader machines, RecipeLoader recipes) {
         JsonObject root = new JsonObject();
+        root.addProperty("researchRevision", HyperNetResearchEditor.revision());
         root.addProperty("defaultRecipeParallelized", hellfirepvp.modularmachinery.common.data.Config.recipeParallelizeEnabledByDefault());
         root.addProperty("pneumaticEditorAvailable", net.minecraftforge.fml.ModList.get().isLoaded("pneumaticcraft"));
         root.addProperty("manaEditorAvailable", net.minecraftforge.fml.ModList.get().isLoaded("botania"));
@@ -47,14 +48,23 @@ public final class MachineEditorSnapshot {
         root.add("editorAuraTypes", auraTypes);
         JsonArray machineArray = new JsonArray();
         JsonArray recipeArray = recipes.snapshot();
+        var networkDefinitions=machines.snapshot().getAsJsonObject("machines");
+        var upgradeTypes=new JsonArray();
+        hellfirepvp.modularmachinery.common.upgrade.RegistryMachineUpgrade.registeredTypes().forEach(t->upgradeTypes.add(t.getName()));
+        root.add("hypernetUpgradeTypes",upgradeTypes);
         for (DynamicMachine machine : machines.all()) {
             JsonObject entry = new JsonObject();
             RecipeCopyEditor.profile(machine).entrySet().forEach(e -> entry.add(e.getKey(), e.getValue()));
             entry.addProperty("name", machine.getRegistryName());
             entry.addProperty("localizedName", machine.getLocalizedName());
             entry.addProperty("editableName", true);
+            var config=new JsonObject();config.add("display-info",machine.getDisplayInfo().json());
+            var networkRaw=networkDefinitions.getAsJsonObject(machine.getRegistryName());
+            config.add("hypernet",networkRaw!=null&&networkRaw.has("hypernet")?networkRaw.get("hypernet").deepCopy():com.google.gson.JsonNull.INSTANCE);
+            entry.add("hypernetSettings",config);
             entry.addProperty("color", machine.getDefinedColor() & 0xFFFFFF);
             entry.addProperty("hasFactory", machine.isHasFactory());
+            entry.addProperty("requiresBlueprint", machine.isRequiresBlueprint());
             entry.addProperty("controllerRegistered", !hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stack(machine.getRegistryName(), false).isEmpty());
             entry.addProperty("factoryRegistered", !hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stack(machine.getRegistryName(), true).isEmpty());
             var smartTypes = new JsonArray();

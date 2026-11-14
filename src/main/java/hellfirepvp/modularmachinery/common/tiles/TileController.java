@@ -45,6 +45,36 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  */
 public class TileController extends TileEntityBase implements GeoBlockEntity,
         hellfirepvp.modularmachinery.common.helper.IMachineController {
+    private hellfirepvp.modularmachinery.common.hypernet.HyperNetNode hyperNetNode;
+    private CompoundTag hyperNetData = new CompoundTag();
+    private long hyperNetDataRevision;
+    /** Server-only runtime; callbacks retained across a reload must not revive the previous instance. */
+    public hellfirepvp.modularmachinery.common.hypernet.HyperNetNode getHyperNetNode() {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel server) || !server.getServer().isSameThread()) return null;
+        var machine = hellfirepvp.modularmachinery.common.machine.MachineReloadListener.serverDefinitions().machines().findByName(getMachineName());
+        if (hyperNetNode != null && !hyperNetNode.matches(machine)) invalidateHyperNet();
+        if (hyperNetNode == null && !isRemoved() && machine != null && machine.getHyperNetDefinition() != null)
+            hyperNetNode = new hellfirepvp.modularmachinery.common.hypernet.HyperNetNode(this, machine);
+        return hyperNetNode;
+    }
+    /** Inspection must not instantiate a runtime, initialise heat or reconnect a network. */
+    public hellfirepvp.modularmachinery.common.hypernet.HyperNetNode peekHyperNetNode() { return hyperNetNode; }
+    public CompoundTag getHyperNetData() { return hyperNetData.copy(); }
+    /** Copy only the requested private section, avoiding research-ledger copies on binding checks. */
+    public net.minecraft.nbt.Tag getHyperNetDataPart(String key) {
+        var value = hyperNetData.get(key); return value == null ? null : value.copy();
+    }
+    public CompoundTag getHyperNetBinding() { return hyperNetData.getCompound("binding").copy(); }
+    public long getHyperNetDataRevision() { return hyperNetDataRevision; }
+    public void setHyperNetData(CompoundTag data) {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel server) || !server.getServer().isSameThread())
+            throw new IllegalStateException("HyperNet data must be changed on the server thread");
+        hyperNetData = data.copy(); hyperNetDataRevision++; setChanged();
+    }
+    private void invalidateHyperNet() { if (hyperNetNode != null) { hyperNetNode.close(); hyperNetNode = null; } }
+    @Override public CompoundTag getUpdateTag() {
+        var tag = super.getUpdateTag(); tag.remove("hypernetData"); return tag;
+    }
     private final AnimatableInstanceCache animatableCache = GeckoLibUtil.createInstanceCache(this);
 
     @Override
@@ -90,6 +120,10 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
     /** Latest actually evaluated run; never serialize capability/context references into a save or packet. */
     private hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext runtimeRecipeContext;
     private long runtimeRecipeContextRevision;
+    private final java.util.UUID computationTicket = java.util.UUID.randomUUID();
+    /** Stable for this loaded logical thread, never serialized. */
+    public java.util.UUID computationTicket() { return computationTicket; }
+
 
     public void observeRuntimeRecipeContext(hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext run) {
         runtimeRecipeContext = run;
@@ -124,7 +158,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
                 @Override
                 protected void onContentsChanged(int slot) {
                     setChanged();
-                     
+                    // THE BLUEPRINT IN THE SLOT NAMES THE MACHINE (PLAN section 264).
                     //
                     // `setMachineName` had exactly two callers: the /modularmachinery bind command and the
                     // self-test. The slot accepted blueprints and nothing ever read one, so the ONLY way to
@@ -388,7 +422,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
     private final java.util.Set<Integer> activeCatalystRequirements = new java.util.LinkedHashSet<>();
     /** Ticks elapsed on the current recipe. */
     private int recipeTicks;
-     
+    // PARALLELISM OF THE RUNNING CRAFT (PLAN 592-601, upstream ActiveMachineRecipe U43/U58-U69/U156-U157).
     // IT IS PERSISTED BECAUSE IT IS PART OF THE RECIPE STATE, NOT OF THE MACHINE CONFIGURATION: a craft that is
     // half done when the world saves must remember how parallel it was, or it would resume producing a different
     // amount than it started with. UPSTREAM STORES BOTH THE VALUE AND ITS CEILING, and this port does too, because
@@ -527,11 +561,13 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
     public void acknowledgeStructureCheck() { structureCheckRequested = false; }
 
     @Override public void setRemoved() {
+        invalidateHyperNet();
         hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.unwatch(this);
         super.setRemoved();
     }
 
     @Override public void onChunkUnloaded() {
+        invalidateHyperNet();
         hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.unwatch(this);
         super.onChunkUnloaded();
     }
@@ -557,14 +593,14 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
      * <p>Callers should compare this against the count the formation itself reported, which is an
      * independent number.
      */
-    
-
-
-
-
-
-
- 
+    /**
+     * The component positions bound by the last formation, READ-ONLY.
+     *
+     * <p>Added for the machine event dispatch (PLAN sections 491-493, path 1): upstream iterates a map of
+     * live component objects, and this port holds this list instead. THE LIST IS NOT DUPLICATED -- the
+     * dispatch reuses the very list isStructureChunkLoaded walks, which is why the accessor lives here
+     * rather than a second index being built.</p>
+     */
     public java.util.List<BlockPos> getBoundPositions() {
         return boundPositions;
     }
@@ -575,21 +611,21 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
         this.hiddenPositions = positions == null ? java.util.List.of() : java.util.List.copyOf(positions);
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The pattern this machine was FORMED with — the definition's own parts with its dynamic sections merged in
+     * (PLAN §750), or {@code null} while it is unformed.
+     *
+     * <p><b>IT IS UPSTREAM'S {@code foundPattern}, AND THE SAME OBJECT IS THE POINT.</b> Upstream keeps the
+     * matched array on the tile ({@code TileMultiblockMachineController} U140) precisely so that after formation
+     * the structure is <i>the one that actually matched</i> — the wall PLUS the variable-length line — and every
+     * later reader (the re-check at U689, the component binding at U781, the casing walk at U490) asks THAT array
+     * rather than the definition. This port stored the bound <i>positions</i> instead, which is enough for the
+     * chunk-unloaded question but not for "which cells are components", so the engine kept asking the
+     * definition's static half and the shipped {@code assembly_line} had no reachable input or output bus.</p>
+     *
+     * <p>Transient and re-derived on every formation: it is a fact about the world,
+     * not about the machine, and a saved copy could disagree with the blocks after a reload.</p>
+     */
     private hellfirepvp.modularmachinery.common.machine.MachinePattern formedPattern;
     private final hellfirepvp.modularmachinery.common.machine.ControllerStructureQueries structureQueries =
             new hellfirepvp.modularmachinery.common.machine.ControllerStructureQueries(this);
@@ -717,58 +753,58 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
     // The parallelism READOUT (upstream GuiMachineController U145-U154 / GuiFactoryController U277-U311)
     // ------------------------------------------------------------------
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The two lines upstream's controller GUI prints under the progress line, as <b>finished components</b>.
+     *
+     * <pre>
+     * upstream GuiMachineController U145-U154        this port
+     *   int parallelism    = getParallelism()          getParallelism()
+     *   int maxParallelism = getMaxParallelism()       getMaxParallelism()
+     *   if (parallelism &gt; 1) {                        the SAME guard, so the pair is readout rather
+     *     I18n.format("gui.controller.parallelism", …)   than a constant 1/1 on every idle machine
+     *     I18n.format("gui.controller.max_parallelism",…)
+     *   }
+     * </pre>
+     *
+     * <p><b>RULE A0 -- THE SOURCE OF THE TWO NUMBERS IS NOT UPSTREAM'S.</b></p>
+     * <ol>
+     *   <li><b>upstream file:line.</b> {@code GuiMachineController} U145-U146 reads
+     *       {@code activeRecipe.getParallelism()} / {@code getMaxParallelism()} off the
+     *       {@code ActiveMachineRecipe}, and {@code GuiFactoryController} U277-U311 reads the factory's
+     *       {@code thread.getParallelism()} off the run it is describing. Both are the value of the craft
+     *       the line describes, and both are the ceiling it started under.</li>
+     *   <li><b>evidence of the difference.</b> On 1.12.2 the client's {@code GuiContainer} was CONSTRUCTED
+     *       WITH the tile ({@code GuiMachineController} U42-U44) and could therefore hold the tile's
+     *       {@code ActiveMachineRecipe}; the port's screens are constructed with a MENU, and the menu's six
+     *       int slots are defined by {@code MenuMachineController} (PROGRESS, DURATION, FORMED, COMPONENTS,
+     *       REDSTONE, CHUNK) with no parallelism among them. The port's screens nonetheless have the
+     *       reading -- {@code ScreenFactoryController} reads its machine name and its run list off the
+     *       client-side tile for exactly this reason (PLAN 664), and the sentence is in that class's own
+     *       table: the name "is not an int and the menu's data slots are int-only".</li>
+     *   <li><b>what this does instead.</b> Reads the two values off the tile the screen already resolves --
+     *       on a client that is the copy the update tag produced, which is why {@code saveAdditional} writes
+     *       both keys (see the field javadoc above). {@link TileFactoryController} overrides both getters to
+     *       report its FIRST RUNNING RUN, so the factory screen's numbers are the run's, i.e. upstream's
+     *       source, reached through the tile. NO MENU SLOT WAS ADDED: widening {@code DATA_SIZE} would change
+     *       what every screen that reuses the menu's layout reads, and a check on a dedicated server cannot
+     *       watch a screen draw either slot.</li>
+     * </ol>
+     *
+     * <p><b>WHY THE LINES ARE BUILT HERE RATHER THAN IN THE TWO SCREENS.</b> A screen class cannot be
+     * loaded on a dedicated server at all, so an assertion about what a line SAYS could not be made against
+     * one -- the suite reads client classes as bytes and can only ask which fields a body reads. Building
+     * the components on the TILE puts the key, the argument and the guard in a class the suite can call,
+     * and the screens are left with a loop. The port's own precedent is the factory menu's pinned
+     * arithmetic, stated there for this same reason: a value a check must see has to live where the check
+     * can reach it.</p>
+     *
+     * <p>The keys are the ones the lang files carry ({@code gui.controller.parallelism} /
+     * {@code gui.controller.max_parallelism}); the arguments are the two numbers, NOT literals -- a {@code
+     * Component} argument that happened to equal the value would still be the wrong argument, and the suite
+     * reads the argument back out of the component it gets here.</p>
+     *
+     * @return the two components in upstream's order, or an EMPTY list when this craft is not parallel
+     */
     public java.util.List<net.minecraft.network.chat.Component> parallelismReadoutLines() {
         if (getParallelism() <= 1) {
             return java.util.List.of();
@@ -778,9 +814,9 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
                 net.minecraft.network.chat.Component.translatable(MAX_PARALLELISM_KEY, getMaxParallelism()));
     }
 
-     
+    /** Upstream {@code GuiMachineController} U148, verbatim. Public so the screen and the suite share ONE name. */
     public static final String PARALLELISM_KEY = "gui.controller.parallelism";
-     
+    /** Upstream {@code GuiMachineController} U151, verbatim. */
     public static final String MAX_PARALLELISM_KEY = "gui.controller.max_parallelism";
 
     /**
@@ -803,25 +839,25 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
         this.maxParallelism = Math.max(1, parallelism);
         this.triggeredRequirements.clear();
         this.isolationGroupKey = null;
-         
+        // A NEW CRAFT HAS NO HOLD REASON (PLAN 683). Without this a machine that was held by a full output and
         // then started a different craft would keep displaying the previous craft's reason.
         setStatusMessage(null);
         markForUpdate();
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Advances the progress counter by one tick, <b>stopping at the duration</b>.
+     *
+     * <p><b>THE CLAMP IS UPSTREAM'S, AND WITHOUT IT THE COUNTER RAN AWAY (PLAN 683, DEFECT B).</b> Upstream
+     * {@code ActiveMachineRecipe.tick} returns <i>before</i> its own {@code this.tick++} once the craft is
+     * complete (U82-U85), where complete means {@code tick >= totalTick} (U117-U118) — so upstream's counter is
+     * clamped at {@code totalTick} by construction and a player can never read a progress above 100%.</p>
+     *
+     * <p>THE PORT INCREMENTED UNCONDITIONALLY, and the "output has no room" hold below leaves the increment in
+     * place while returning early — so a machine whose output bus was full counted up forever while the GUI
+     * read {@code 2478 / 60 t}. That is not cosmetic: progress is the only number a player has for telling
+     * "working" apart from "stuck", and it said "working" for 40 minutes.</p>
+     */
     public void advanceRecipe() {
         if (this.recipeTicks < this.recipeDuration) {
             this.recipeTicks++;
@@ -829,7 +865,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
         // Syncing every tick would flood the client with packets for no visual benefit; progress is
         // synced on the transitions and on completion instead.
     }
-         
+        // THE COUNTER, READ AND WRITTEN (PLAN 542, D7b). The READ was here all along; this is the WRITE.
         //
         // Upstream RecipeTickEvent.preventProgressing rewrites the recipe own tick counter: if it is above zero it
         // subtracts one, so the craft does not advance on that tick. THE PORT ADVANCES UNCONDITIONALLY ONE LINE
@@ -861,28 +897,28 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
         markForUpdate();
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Why the machine is being held, as an <b>unlocalized translation key</b>, or {@code null} when it is not.
+     *
+     * <p><b>ADDED FOR PLAN 683 (DEFECT B): A BLOCKED CRAFT HAD NO REASON ANYWHERE A PLAYER COULD SEE.</b> The
+     * hold itself is correct and upstream — {@code RecipeThread.onFinished} asks {@code canFinishCrafting()}
+     * and, on failure, sets {@code waitForFinish} and stores the failure message as the thread's status
+     * (upstream RecipeThread U73-U78) — but upstream's {@code CraftingStatus} carries that message to the GUI
+     * as an <b>unloc</b> key, and this port has no {@code CraftingStatus}.</p>
+     *
+     * <p><b>WHY A KEY AND NOT A SENTENCE.</b> Upstream's field is literally called {@code unlocMessage} and the
+     * client localizes it, so a Chinese client on an English server still reads Chinese. A server-side
+     * {@code getString()} would fix the text to the server's locale, which is the same defect the port's other
+     * status lines avoid by choosing their key client-side (ScreenMachineController). The port ships both
+     * language files.</p>
+     *
+     * <p><b>IT RIDES THE EXISTING SYNC RATHER THAN A NEW PACKET.</b> {@code saveAdditional} is what
+     * {@code getUpdateTag} returns, so writing it there puts it on the block entity's own update packet, which
+     * is how {@code formed} and the recipe state already reach the client — and
+     * {@code ScreenFactoryController}/{@code ScreenSmartInterface} already read extra state off the
+     * client-side block entity. {@link #markForUpdate()} is called only on a CHANGE, so a machine holding for
+     * a thousand ticks sends one packet, not a thousand.</p>
+     */
     private String statusMessage = null;
 
     /** @param key the unlocalized reason the machine is holding, or {@code null} to clear it */
@@ -899,29 +935,29 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
         return statusMessage;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Whether the craft this controller carries is <b>advancing</b> rather than held — upstream's
+     * {@code getControllerStatus().isCrafting()}.
+     *
+     * <p><b>WHO ASKS (PLAN 711).</b> Upstream's TheOneProbe provider paints its progress bar from exactly this
+     * question: {@code MMInfoProvider} U246 puts the machine controller's status through {@code isCrafting()}
+     * and takes the three FAILURE colours at U250-U252 when it answers false. The port's own probe
+     * ({@code MachineProbeProvider}) needs the same question answered once, at the tile, rather than rebuilt at
+     * the HUD — so this method is the tile's answer and the probe is its reader.</p>
+     *
+     * <p><b>THE PREDICATE, AND BOTH HOLDS THAT FEED IT.</b> {@code statusMessage} is this port's field for
+     * upstream's {@code CraftingStatus.unlocMessage}, and {@code MachineTicker} writes it at the output-room
+     * refusal (its U677) <b>and at the energy shortfall (PLAN 712, its stall branch)</b>. A machine holding
+     * because its output has no room therefore answers <b>false</b> here and takes upstream's red, and so does
+     * a machine stalled with no power — which is upstream's own behaviour on both paths: the output hold is
+     * {@code RecipeThread.onFinished} U73-U78, and the energy hold is {@code ActiveMachineRecipe.tick}
+     * U88-U98 returning {@code CraftingStatus.failure("craftcheck.failure.energy.input")} without reaching its
+     * own {@code this.tick++} U101, so {@code CraftingStatus.isCrafting()} U53-U55 answers false while the
+     * craft is kept. PLAN 711 recorded the energy half as an open gap; PLAN 712 closed it and this line is
+     * corrected with it, because a method javadoc that still describes its own predicate as wrong is the same
+     * defect as a wrong predicate. An empty {@code statusMessage} now means "this controller is holding nothing
+     * it can name" on every path this engine has.</p>
+     */
     public boolean isCrafting() {
         return hasActiveRecipe() && statusMessage == null;
     }
@@ -1017,6 +1053,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
     }
 
     public void setFormed(boolean formed) {
+        if (!formed) invalidateHyperNet();
         if (!formed) structureQueries.clear();
         if (!formed) runtimeRecipeContext = null;
         if (this.formed != formed) {
@@ -1024,7 +1061,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
             nextAutomaticStructureCheck = Long.MIN_VALUE;
             structureSearchRetries = 0;
         }
-         
+        // THE FIRE SITES LIVE HERE RATHER THAN AT THE CALLERS, AND THE REASON IS STRUCTURAL (PLAN 498):
         //
         //   upstream fires MachineStructureFormedEvent at TileMultiblockMachineController U609 and
         //   MachineStructureUpdateEvent at U610, right after it -- both inside the CONTROLLER OWN TICK.
@@ -1097,6 +1134,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
         String fixed = hellfirepvp.modularmachinery.common.registry.DedicatedControllers.binding(getBlockState().getBlock());
         String nextMachine = fixed == null ? machineName : fixed;
         if (!java.util.Objects.equals(this.machineName, nextMachine)) {
+            invalidateHyperNet();
             structureQueries.retainForMachine(nextMachine);
             resetNormalRecipeSearch();
             runtimeRecipeContext = null;
@@ -1148,6 +1186,8 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
 
     @Override
     public void load(CompoundTag tag) {
+        invalidateHyperNet();
+        hyperNetData = tag.getCompound("hypernetData").copy(); hyperNetDataRevision++;
         runtimeRecipeContext = null;
         super.load(tag);
         formedPattern = null;
@@ -1160,7 +1200,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
             finally { loadingBlueprint = false; }
         }
         this.formed = tag.getBoolean("formed");
-         
+        // A WORLD RELOAD IS NOT A FORMATION: the flag comes back and the binding does not (PLAN 627).
         this.pendingRebind = this.formed;
         this.hiddenPositions = readHiddenPositions(tag);
         // Legacy saves already carry the formed cells as hiddenPositions; use them as cleanup candidates
@@ -1215,6 +1255,7 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
+        if (!hyperNetData.isEmpty()) tag.put("hypernetData", hyperNetData.copy());
         structureQueries.save(tag);
         tag.putLongArray("boundPositions", boundPositions.stream().mapToLong(BlockPos::asLong).toArray());
         if (!pendingUnbindPositions.isEmpty())

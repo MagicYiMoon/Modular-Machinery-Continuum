@@ -1,0 +1,18 @@
+{
+  "registryname": "hn_sample_research_station",
+  "localizedname": "HyperNet Example Research Station",
+  "requires-blueprint": false,
+  "has-factory": true,
+  "parts": [
+    { "x": 0, "y": -1, "z": 0, "elements": "modularmachinery:blockenergyinputhatch" },
+    { "x": 0, "y": 1, "z": 0, "elements": "minecraft:gold_block" },
+    { "x": 0, "y": 2, "z": 0, "elements": "modularmachinery:blocksmartinterface" }
+  ],
+  "smart-interface-types": [
+    { "type": "overclocking", "default-value": 1 }
+  ],
+  "hypernet": {
+    "role": "research_station",
+    "max-tech-level": 1
+  }
+}

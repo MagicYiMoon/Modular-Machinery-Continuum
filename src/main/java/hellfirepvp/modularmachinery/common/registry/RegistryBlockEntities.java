@@ -58,6 +58,9 @@ public final class RegistryBlockEntities {
             BLOCK_ENTITIES.register("blockcontroller", () -> BlockEntityType.Builder
                     .of(TileController::new, DedicatedControllers.validBlocks(false, RegistryBlocks.blockController.get()))
                     .build(null));
+    public static final RegistryObject<BlockEntityType<hellfirepvp.modularmachinery.common.hypernet.TileHyperNetTerminal>> HYPERNET_TERMINAL =
+            BLOCK_ENTITIES.register("hypernet_terminal",()->BlockEntityType.Builder.of(
+                    hellfirepvp.modularmachinery.common.hypernet.TileHyperNetTerminal::new,RegistryBlocks.hypernetTerminal.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<TileItemInputBus>> ITEM_INPUT_BUS =
             BLOCK_ENTITIES.register("blockinputbus", () -> BlockEntityType.Builder
@@ -85,7 +88,7 @@ public final class RegistryBlockEntities {
     // references no AE2 type at all.
     //
     // So a tile that IS an AE2 machine cannot be reached from an unconditional register. The three ways forward are recorded in
-     
+    // PLAN section 404; the first is a separate DeferredRegister subscribed only when AE2 is present.
 
     public static final RegistryObject<BlockEntityType<TileFluidInputHatch>> FLUID_INPUT_HATCH =
             BLOCK_ENTITIES.register("blockfluidinputhatch", () -> BlockEntityType.Builder

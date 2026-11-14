@@ -1,0 +1,48 @@
+{
+  "parent": "modularmachinery:block/neco/block/estorage_energy_cell/storage_array_capacitance_c/storage_array_capacitance_c_empty",
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
+    }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "modularmachinery:estorage_charge": 1
+      },
+      "model": "modularmachinery:item/estorage_energy_cell_l9_low"
+    },
+    {
+      "predicate": {
+        "modularmachinery:estorage_charge": 2
+      },
+      "model": "modularmachinery:item/estorage_energy_cell_l9_mid"
+    },
+    {
+      "predicate": {
+        "modularmachinery:estorage_charge": 3
+      },
+      "model": "modularmachinery:item/estorage_energy_cell_l9_high"
+    },
+    {
+      "predicate": {
+        "modularmachinery:estorage_charge": 4
+      },
+      "model": "modularmachinery:item/estorage_energy_cell_l9_full"
+    }
+  ]
+}

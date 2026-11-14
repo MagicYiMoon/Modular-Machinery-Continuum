@@ -8,18 +8,23 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 /** Sent only inside the permission-, window- and revision-checked editor request envelope. */
-public record PktMachineEditorControllerSettings(String machine, int color, boolean factory) {
+public record PktMachineEditorControllerSettings(String machine, int color, boolean factory, boolean requiresBlueprint) {
     public static void encode(PktMachineEditorControllerSettings packet, FriendlyByteBuf buffer) {
-        buffer.writeUtf(packet.machine, 256); buffer.writeInt(packet.color); buffer.writeBoolean(packet.factory);
+        buffer.writeUtf(packet.machine, 256); buffer.writeInt(packet.color); buffer.writeBoolean(packet.factory); buffer.writeBoolean(packet.requiresBlueprint);
     }
     public static PktMachineEditorControllerSettings decode(FriendlyByteBuf buffer) {
-        return new PktMachineEditorControllerSettings(buffer.readUtf(256), buffer.readInt(), buffer.readBoolean());
+        return new PktMachineEditorControllerSettings(buffer.readUtf(256), buffer.readInt(), buffer.readBoolean(), buffer.readBoolean());
     }
     static String apply(ServerPlayer player, PktMachineEditorControllerSettings packet) {
         if (!player.hasPermissions(2) || !(player.containerMenu instanceof MenuMachineEditor)) return "权限不足或编辑窗口已关闭";
         try {
-            ControllerSettingsEditor.save(MachineReloadListener.getLoader(), packet.machine, packet.color, packet.factory);
-            MachineReloadListener.reloadNow(); return null;
+            var previous = MachineReloadListener.getLoader().findByName(packet.machine);
+            ControllerSettingsEditor.save(MachineReloadListener.getLoader(), packet.machine, packet.color, packet.factory, packet.requiresBlueprint);
+            MachineReloadListener.reloadNow();
+            var loaded = MachineReloadListener.getLoader().findByName(packet.machine);
+            if (previous != null && loaded != null && previous.isRequiresBlueprint() != loaded.isRequiresBlueprint())
+                hellfirepvp.modularmachinery.common.machine.MachineStructureChanges.blueprintRequirementChanged(packet.machine);
+            return null;
         } catch (Exception e) { return "控制器设置保存失败：" + e.getMessage(); }
     }
 }

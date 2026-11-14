@@ -29,40 +29,40 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+/**
+ * Factory controller block entity: MANY recipe runs on ONE structure.
+ *
+ * <p>This was a stub until factory mode landed (PLAN 662). The block, the menu and the screen already existed,
+ * so what was missing was the thing the class is named after: a controller that holds more than one run. A
+ * normal {@link TileController} carries ONE craft's state in its own fields; this one carries a LIST of
+ * {@link FactoryRecipeThread}s and is driven by {@link FactoryTicker} instead of {@link MachineTicker}.</p>
+ *
+ * <h2>What the single-craft fields inherited from TileController now mean</h2>
+ *
+ * <p>THEY ARE NOT USED, AND THE READERS ARE OVERRIDDEN RATHER THAN LEFT TO LIE. A factory controller never
+ * calls {@code beginRecipe}; the inherited {@code recipeName}/{@code recipeTicks}/{@code recipeDuration}
+ * therefore stay null/0, and a GUI reading them would show a factory that is always idle however much work it
+ * is doing. So {@code hasActiveRecipe}, {@code getRecipeName}, {@code getRecipeTicks},
+ * {@code getRecipeDuration}, {@code getParallelism} and {@code getMaxParallelism} report the FIRST RUNNING RUN
+ * -- which is upstream's own answer, since its {@code getActiveRecipe()} returns
+ * {@code getActiveRecipeList()[0]} and that list is built in thread order (upstream TileFactoryController
+ * U675-U699). The MVC data slots the machine screen reads
+ * ({@code MenuMachineController.liveData}) therefore show a factory's first run without the menu knowing
+ * anything changed.</p>
+ *
+ * <p>A SECOND ENGINE CANNOT PICK THIS TILE UP BY ACCIDENT: {@code MachineTicker.tick} refuses a
+ * {@code TileFactoryController} outright, because a tile that reports its state from its threads would make the
+ * single-craft engine find "idle", take a craft and consume its inputs on EVERY tick without ever appearing to
+ * run one. The block hands out this class's own ticker (see {@code BlockFactoryController.getTicker}).</p>
+ *
+ * <h2>Family bookkeeping</h2>
+ *
+ * <p>{@link FactoryControllerFamily} holds the live controllers per machine definition -- the port's answer to
+ * upstream's {@code BlockFactoryController.FACTORY_CONTROLLERS}, for the reason recorded on that class (a
+ * block per machine cannot be registered on 1.20.1, because the registries are frozen long before this port
+ * reads its machine definitions). Registration follows this tile's own lifecycle: on formation, on a machine
+ * binding change, and on every factory tick; removal on {@code setRemoved} and on unforming.</p>
+ */
 public class TileFactoryController extends TileController {
 
     /**
@@ -76,15 +76,15 @@ public class TileFactoryController extends TileController {
     /** Existing work-only search/cleanup clock; independent of the source-compatible lifetime getter. */
     private long factoryWorkTicks;
 
-    
-
-
-
-
-
-
-
- 
+    /**
+     * The machine definition's factory thread ceiling, mirrored once per tick by {@link FactoryTicker}.
+     *
+     * <p>Upstream reads {@code foundMachine.getMaxThreads()} on demand (U455-U457) because its tile holds the
+     * machine object. This port's tile deliberately does not hold the definition -- the definition is resolved
+     * by the ticker from the reload listener, and a tile that reached for it would be PLAN 599.2's dependency
+     * direction reversed. Zero means "no tick has happened yet", which is honest: the ceiling belongs to the
+     * definition, and until one is bound there is nothing to run.</p>
+     */
     private int maxThreads;
     /** Source runtime delta to the dynamic pool; core presets remain independent. */
     private int extraThreadCount;
@@ -490,24 +490,24 @@ public class TileFactoryController extends TileController {
         return thread == null ? 1 : thread.getMaxParallelism();
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Whether the run this tile REPORTS is advancing — upstream's per-thread {@code thread.getStatus()
+     * .isCrafting()}, which its TheOneProbe provider asks at {@code MMInfoProvider} U174 to choose between the
+     * running colours and the three FAILURE colours (U171-U181), and which its factory GUI asks at
+     * {@code GuiFactoryController} U126.
+     *
+     * <p><b>IT IS OVERRIDDEN FOR THE SAME REASON {@code getRecipeTicks} IS (PLAN 711).</b> The inherited
+     * single-craft fields stay unused here, so the inherited {@code TileController.isCrafting()} would answer
+     * from {@code statusMessage} — a field this tile never writes, because a factory run's reason lives on its
+     * thread — and would therefore report "crafting" for a run the engine has already HELD. That is the exact
+     * defect the HUD is being fixed for, one layer down.</p>
+     *
+     * <p><b>NO NEW SIGNAL.</b> The question is put to the same run whose progress this tile reports
+     * ({@link #firstActiveThread}, the walk upstream gets from {@code getActiveRecipeList()[0]}) through the
+     * same predicate the engine's reason feeds ({@link FactoryRecipeThread#isWorking()}, i.e.
+     * {@code hasActiveRecipe() && blockedReason == null}, written by {@code FactoryTicker} at U479, U493 and
+     * U526). The reason, the writer and the predicate are all pre-existing; this method only names the run.</p>
+     */
     @Override
     public boolean isCrafting() {
         FactoryRecipeThread thread = firstActiveThread();

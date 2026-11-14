@@ -16,23 +16,23 @@ package hellfirepvp.modularmachinery.common.event.machine;
 import hellfirepvp.modularmachinery.common.tiles.TileController;
 import net.minecraftforge.eventbus.api.Event;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+/**
+ * The base machine event, and the three-way dispatch (PLAN sections 491-493).
+ *
+ * RULE A0 -- upstream MachineEvent (94 lines) defines postEvent() as:
+ *
+ *     // ModularMachinery.EVENT_BUS.post(this);        <-- UPSTREAM COMMENTED THIS OUT
+ *     postEventToComponents();                            // path 1
+ *     UpgradeMachineEventHandler.onMachineEvent(this);    // path 2
+ *     if (!isCanceled()) postCrTEvent();                  // path 3
+ *
+ * TWO THINGS ARE WORTH STATING BECAUSE READING THE BODY IS WHAT SHOWED THEM, not the signature:
+ *
+ *   1. THE EVENT DOES NOT GO THROUGH THE FORGE BUS. The post is commented out upstream, so this is a DIRECT
+ *      DISPATCH class and needs no Forge event registration at all.
+ *   2. Path 3 uses the port's callback registry instead of the old CraftTweaker IEventHandler type.
+ *      The registry stores Java consumers so this core dispatch path also runs without CraftTweaker.
+ */
 @com.blamejared.crafttweaker.api.annotation.ZenRegister
 @org.openzen.zencode.java.ZenCodeType.Name("mods.modularmachinery.MachineEvent")
 public class MachineEvent extends Event {

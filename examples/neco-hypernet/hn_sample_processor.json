@@ -1,0 +1,71 @@
+{
+  "registryname": "hn_sample_processor",
+  "localizedname": "HyperNet Example Processor",
+  "requires-blueprint": false,
+  "has-factory": true,
+  "parts": [
+    {
+      "x": 0,
+      "y": -1,
+      "z": 0,
+      "elements": "modularmachinery:blockenergyinputhatch"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "elements": "minecraft:iron_block"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "z": 0,
+      "elements": "modularmachinery:blockupgradebus"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "z": 0,
+      "elements": "minecraft:iron_block"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "z": 0,
+      "elements": "modularmachinery:blockinputbus"
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "z": 0,
+      "elements": "modularmachinery:blockoutputbus"
+    }
+  ],
+  "hypernet": {
+    "role": "processor",
+    "thermal": {
+      "overheat-threshold": 1000,
+      "heat-distribution": 4
+    },
+    "modules": [
+      {
+        "upgrade": "hn_example_cpu",
+        "kind": "cpu",
+        "capacity": 2,
+        "energy": 20
+      },
+      {
+        "upgrade": "hn_example_gpu",
+        "kind": "gpu",
+        "capacity": 3,
+        "energy": 30
+      },
+      {
+        "upgrade": "hn_example_ram",
+        "kind": "ram",
+        "capacity": 4,
+        "energy": 12
+      }
+    ]
+  }
+}

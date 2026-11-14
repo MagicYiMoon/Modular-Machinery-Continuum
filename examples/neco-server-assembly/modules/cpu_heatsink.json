@@ -1,0 +1,11 @@
+{
+  "id": "example:cpu_heatsink",
+  "item": "minecraft:copper_ingot",
+  "type": "cpu_heatsink",
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

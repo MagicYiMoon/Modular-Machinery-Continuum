@@ -126,7 +126,7 @@ public final class BlockStateShim {
 
         // --- Stairs, whose 1.12.2 metadata IS documented: bits 0-1 are the FACING, bit 2 the HALF. ---
         //
-         
+        // Found by the dynamic-pattern walk (PLAN section 331), which could not rebuild the assembly line
         // because this pair was missing. Upstream's assembly_line.json uses quartz_stairs@0 at x=-1 and
         // quartz_stairs@1 at x=+1 -- a mirrored left/right pair -- and 1.12.2's order is EAST 0, WEST 1,
         // SOUTH 2, NORTH 3.

@@ -27,136 +27,138 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+/**
+ * The factory controller screen.
+ *
+ * <p>Blits {@code guifactory.png}, the texture the jar's own {@code GuiFactoryController} names — read out
+ * of its constant pool, not guessed. The same class also declares {@code guifactoryelements.png}, the second
+ * sheet upstream draws its run list from, and THAT ONE IS DRAWN NOW (PLAN 664): the panel's left column has
+ * six empty 86x32 boxes in the texture, and they were empty on screen because nothing drew into them.
+ *
+ * <p>The panel is <b>280x213</b>, distinctly wider than the machine controller's 176x166, because the
+ * blueprint slot sits at x=255. Taking the controller's size here would put the slot outside the frame.
+ *
+ * <h2>PLAN 664 — what was wrong and what this draws now</h2>
+ *
+ * <p>Reported from the client: the factory screen is an EMPTY BLACK BOX — no machine name, no progress bar,
+ * no run list. Both halves of that were true, and for two different reasons:</p>
+ *
+ * <ul>
+ *   <li><b>THE SCREEN DREW NOTHING.</b> Before this round {@code renderLabels} called
+ *       {@code super.renderLabels} and returned: no name, no status, no bar, no list. The black rectangle is
+ *       the TEXTURE's own preview area — guifactory.png's flat dark field, re-measured in PLAN 693 as
+ *       u=112..246, v=8..122 (the figure §664 quoted, u=111..252 v=8..131, counted the softer border pixels
+ *       around it) — waiting for the text upstream draws over it.</li>
+ *   <li><b>AND THE DATA IT NEEDS WAS ONLY SYNCED ON A TRANSITION.</b> The port pushed the tile's runs to
+ *       clients on start/finish/blocked-change only, where upstream syncs every tick while the factory has
+ *       threads ({@code markNoUpdateSync}, {@code TileFactoryController} U145-U148). A run list drawn from
+ *       that would have shown every bar frozen at the value its run began with, so the ticker's cadence was
+ *       fixed FIRST ({@code FactoryTicker.tick}, {@code TileEntityBase.markNoUpdateSync}).</li>
+ * </ul>
+ *
+ * <h2>Where each number comes from, because two channels exist and neither may be guessed</h2>
+ *
+ * <pre>
+ * what is drawn                        source                              why that one
+ * blueprint / structure name           the CLIENT tile, getMachineName()   the name is not an int and the
+ *                                                                          menu's data slots are int-only
+ * the run list, its names, progress    the CLIENT tile, thread list        same reason, and the list is
+ *   and blocked reasons                                                    the tile's own state
+ * formed / redstone / chunk / the      the MENU's data slots               the port's existing status
+ *   first run's ticks                                                      convention (the machine
+ *                                                                          controller screen reads the
+ *                                                                          same six indices)
+ * </pre>
+ *
+ * <p>Upstream reads its TILE for all of it ({@code drawFactoryStatus} U189-U246 and {@code drawRecipeQueue}
+ * U94-U109 both take the {@code TileFactoryController} its GUI was constructed with), and the client here has
+ * a tile too — that is what the two name/list rows use. The menu's slots are not redundant: they are the
+ * server-authoritative reading, updated by vanilla every tick, and they are what the OTHER controller screen
+ * already uses for the same six states.</p>
+ *
+ * <h2>PLAN 693 — the progress bar was in the wrong place, and there were two of them</h2>
+ *
+ * <p>Reported from the client: the progress bar is drawn in the wrong place. Measured against the shipped art
+ * rather than by eye, this screen drew TWO green things and neither was the bar the art implies:</p>
+ *
+ * <ul>
+ *   <li><b>THE TINTS WERE ON THE WRONG BLITS.</b> {@code drawRun} tinted the row's FRAME with the crafting
+ *       green and blitted the FILL with the colour reset to white, where upstream tints the frame plainly and
+ *       the fill green (U117-U122 vs U126-U130). Every crafting run's whole 86x32 row therefore turned green —
+ *       a green band over the run list — while the progress fill was invisible, because the element sheet is a
+ *       flat plate and a white clip of a white frame changes nothing. The bar is the fill, inside its own row,
+ *       at {@code RECIPE_ELEMENT_WIDTH * progress} pixels wide.</li>
+ *   <li><b>AND A SECOND BAR WAS DRAWN WHERE THE ART HAS NOTHING.</b> {@code drawFactoryStatus} drew a 135-pixel
+ *       aggregate bar inside the status text block. Upstream's factory has no such bar (its
+ *       {@code drawFactoryStatus} is text only) and guifactory.png has no trough for one — it is greyscale
+ *       from edge to edge and its preview area is a flat dark field. It is removed; the reasoning and the
+ *       measurements are on that method.</li>
+ * </ul>
+ *
+ * <p>The run list's geometry did NOT change: it was already upstream's, and the art agrees with it to the
+ * pixel — six wells in the left column whose top separators are at y = 7, 40, 73, 106, 139, 172 (a 33-pixel
+ * pitch) with a light interior from x=8 to x=92 between 1-pixel borders at x=7 and x=93, which is where
+ * {@code RECIPE_QUEUE_X/Y} + {@code RECIPE_ROW_PITCH} put the six rows. The self-test now measures that
+ * relation and the bar's width against those pixels.</p>
+ *
+ * <h2>PLAN 708 — the bars were drawn a WHOLE PANEL-ORIGIN away from their own wells</h2>
+ *
+ * <p>Reported again from the client after PLAN 693: the progress bars are still in the wrong place. 693
+ * measured the ART correctly and fixed the tint assignment and the width, and its check passed — because that
+ * check asserted the MENU's six row coordinates against the art and only asked the screen to <i>name</i> the
+ * pinned width arithmetic. What it could not see was the one number the SCREEN added on top: {@code drawRun}
+ * blitted both the frame and the fill at {@code leftPos + RECIPE_QUEUE_X}, {@code topPos + offsetY}, while
+ * {@code renderLabels} already runs inside a pose translated by exactly that origin. The rows therefore landed
+ * at {@code 2 * leftPos + 8}, i.e. in the status text area, and the row <i>text</i> — drawn inside a 0.72-scaled
+ * pose, where the origin contributes only 9 pixels — stayed in the left column where it belongs. That split is
+ * the whole of the report: text on the wells, green bars over the status lines.</p>
+ *
+ * <p>The arithmetic is upstream's now, and upstream's arithmetic is panel-relative (rule A0): a 1.12.2
+ * {@code GuiContainer} translates by (guiLeft, guiTop) before {@code drawGuiContainerForegroundLayer}, so
+ * {@code GuiFactoryController}'s {@code (RECIPE_QUEUE_OFFSET_X, offsetY)} blits are panel-relative on both
+ * versions. The self-test's new check reads this class's own compiled bytes and asserts that
+ * {@code drawRun} reads no panel origin field at all, that {@code renderBg} is the only method that does, and
+ * that the row rectangle is the art's well rectangle.</p>
+ *
+ * <p>The six visible rows scroll through all core and dynamic threads. Factory-wide thread and batch
+ * ceilings use the existing block-entity update tag. Performance timings use this open menu's own
+ * data slots; the work mode reports the port's actual synchronous engine.</p>
+ *
+ * <h2>PLAN 710 — the status line printed RUNNING TICKS where upstream prints a PERCENTAGE</h2>
+ *
+ * <p>The client's report, verbatim: <i>"我好像记得原mod没有显示运行刻，是显示的运行百分比，如果空间不足进度条会变红提示"</i>
+ * — the original mod showed a running PERCENTAGE rather than running ticks, and the progress bar turns RED
+ * when there is not enough space. Both halves were checked against upstream's own bodies before anything was
+ * changed, and both hold:</p>
+ *
+ * <ul>
+ *   <li><b>THE PERCENTAGE (fixed here).</b> {@code GuiFactoryController.drawRecipeStatus} U179-U183 is the only
+ *       place upstream forms this text, and it is
+ *       {@code int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();} followed by
+ *       {@code I18n.format("gui.controller.status.crafting.progress", progress + "%")}. This screen passed
+ *       {@code progress + " / " + duration + " t"} into that same key — the <i>string</i> fit the placeholder,
+ *       the <i>value</i> did not, and it is the line the client read
+ *       ({@code 进度: 300 / 60 t} beside rows reading {@code 进度: 100%}). Both lines now take their argument
+ *       from {@link MenuFactoryController#progressText}, which is upstream's integer arithmetic and upstream's
+ *       {@code "%"} concatenation, and therefore the only expression on this screen that can reach the key.</li>
+ *   <li><b>THE RED FILL (already correct, verified).</b> Upstream's predicate is
+ *       {@code if (status.isCrafting())} at U126 — green — {@code else} U129 — {@code (1.0F, 0.6F, 0.6F)} —
+ *       red, where {@code status} is {@code thread.getStatus()} (U112). Its two writers of a non-crafting
+ *       status are both failures: {@code ActiveMachineRecipe.tick} U88-U98 returns
+ *       {@code CraftingStatus.failure(...)} when {@code context.ioTick} refuses, and {@code RecipeThread
+ *       .onFinished} U73-U78 returns {@code CraftingStatus.failure(checkResult.getFirstErrorMessage(""))} when
+ *       {@code canFinishCrafting()} refuses — the output-room question, whose key family is
+ *       {@code craftcheck.failure.item.output.space}. This screen's equivalent is {@code thread.isWorking()},
+ *       which is {@code hasActiveRecipe() && blockedReason == null}, and the port's {@code FactoryTicker}
+ *       writes that reason at exactly those two points ({@code notWorking} U526 for the per-tick refusal, and
+ *       U479/U493 for the two output-room refusals, through {@code MachineTicker.outputSpaceKey} and
+ *       {@code outputAllocationFailure}). No new signal was created; the reason that already existed is what
+ *       selects upstream's red constant.</li>
+ * </ul>
+ */
 public class ScreenFactoryController extends AbstractContainerScreen<MenuFactoryController> {
+    private net.minecraft.client.gui.components.Button hypernetButton;
+    @Override public void containerTick(){super.containerTick();HyperNetMonitorButton.update(hypernetButton,menu.getControllerPos());}
     private final FactoryStatusViewport statusViewport = new FactoryStatusViewport();
     private final hellfirepvp.modularmachinery.common.menu.FactoryThreadViewport threadViewport =
             new hellfirepvp.modularmachinery.common.menu.FactoryThreadViewport();
@@ -175,7 +177,7 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
     private static final ResourceLocation TEXTURE_ELEMENTS =
             new ResourceLocation(Modularmachinery.MODID, "textures/gui/guifactoryelements.png");
 
-     
+    // THE RUN LIST'S GEOMETRY IS THE MENU'S, NOT THIS CLASS'S (PLAN 693), for the reason the panel size and the
     // player rows are already there: a screen is a client-only class, and the dedicated server the self-test runs
     // on cannot load it, so a coordinate written here cannot be asserted against the art it draws on. The menu
     // declares RECIPE_QUEUE_X/Y, RECIPE_ELEMENT_WIDTH/HEIGHT, RECIPE_ROW_PITCH and MAX_PAGE_ELEMENTS; this screen
@@ -194,7 +196,7 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
     private static final float ELEMENT_FRAME_R = 1.0F, ELEMENT_FRAME_G = 1.0F, ELEMENT_FRAME_B = 1.0F;
     private static final float CORE_FRAME_R = 0.7F, CORE_FRAME_G = 0.9F, CORE_FRAME_B = 1.0F;
 
-     
+    // THE FILL'S TWO TINTS ARE THE MENU'S, NOT THIS CLASS'S (PLAN 710), and the reason is the one the panel
     // size and the run-list geometry are already there for: a `private static final float` is INLINED by javac,
     // so nothing in this file's bytes records which of the two colours a branch uses -- and the suite runs on a
     // dedicated server, which cannot load this class at all (§203). `MenuFactoryController.fillTint(blocked)`
@@ -221,6 +223,8 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
     @Override
     protected void init() {
         super.init();
+        hypernetButton=addRenderableWidget(HyperNetMonitorButton.create(menu,leftPos+imageWidth-25,topPos+30));
+        HyperNetMonitorButton.update(hypernetButton,menu.getControllerPos());
         this.titleLabelY = -1000;   // vanilla's; this screen draws its own below
 
         // §218: and the INVENTORY label is derived from where the slots actually are, not from vanilla's
@@ -254,11 +258,11 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         // super draws the inventory label at inventoryLabelY, derived from the slot rows above.
         super.renderLabels(graphics, mouseX, mouseY);
-         
+        // NO TITLE IS DRAWN, and that is upstream's shape rather than an omission (PLAN 245): the jar's
         // GuiFactoryController.func_146979_b calls drawRecipeQueue() and drawFactoryStatus() and NOTHING ELSE.
         // What used to be here instead was a title at TEXT_DRAW_OFFSET in dark grey INSIDE the panel's dark
         // preview area, which the client reported as unreadable -- the space belongs to the two calls below,
-         
+        // which is what PLAN 245 said was missing and what this round finally draws.
         drawRunList(graphics);
         drawFactoryStatus(graphics);
     }
@@ -333,7 +337,7 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
 
         // THE FRAME, drawn untinted: the row's backdrop, not its bar (upstream U117-U123).
         //
-         
+        // PANEL-RELATIVE -- NO leftPos / topPos HERE (PLAN 708). `renderLabels` IS INVOKED INSIDE A POSE THAT
         // `AbstractContainerScreen.render` HAS ALREADY TRANSLATED BY (leftPos, topPos), so adding the panel
         // origin a second time draws every row one panel-origin away from where the art put its wells. The
         // authorising body is vanilla's own: `render` loads leftPos/topPos into locals, calls
@@ -369,7 +373,7 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
         // zero-width blit would be a bug in some drivers, so nothing is drawn when there is no progress.
         int filled = MenuFactoryController.runFillWidth(progress);
         if (filled > 0) {
-             
+            // THE RED WARNING IS UPSTREAM'S OWN PREDICATE (PLAN 710): a run that is not working -- held with no
             // room for its output, or starved of energy -- takes U129's (1.0, 0.6, 0.6), and a run that is
             // crafting takes U127's (0.6, 1.0, 0.75). `crafting` is `thread.isWorking()`, which is
             // `hasActiveRecipe() && blockedReason == null`, and `blockedReason` is the field the ENGINE writes
@@ -402,11 +406,11 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
         graphics.drawString(font, subject, textX, textY, COLOR_TEXT, false);
         textY += 12;
         // The run's own state, in the port's words: its blocked reason when it has one (the port's substitute
-         
+        // for upstream's CraftingStatus -- PLAN 521), otherwise the same two the machine screen uses.
         //
-         
+        // THE REASON IS RENDERED AS A TRANSLATION KEY, NOT AS A LITERAL (PLAN 708). The hold for a full
         // output now carries `craftcheck.failure.<type>.output.space` -- the SAME key the single-craft path
-         
+        // puts on the machine's controller (PLAN 683, MachineTicker.outputSpaceKey) -- and a literal would
         // print that key to the player. `translatable` RESOLVES A KEY AND PASSES A NON-KEY THROUGH
         // UNCHANGED, which is vanilla's own behaviour for an unresolved key, so the diagnostics the other
         // writer of this field produces (RecipeCraftingContext.describeBlockers, a sentence) still render
@@ -422,7 +426,7 @@ public class ScreenFactoryController extends AbstractContainerScreen<MenuFactory
             textY += 10;
         }
         // The percentage, from upstream's own arithmetic and its own '%' (U179-U183), through the ONE method
-         
+        // that forms it (PLAN 710). Both this line and the status area's line take their argument from there,
         // so the two cannot disagree about the unit — and neither can spell a tick pair.
         if (thread.hasActiveRecipe() && thread.getRecipeDuration() > 0) {
             graphics.drawString(font, Component.translatable("gui.controller.status.crafting.progress",

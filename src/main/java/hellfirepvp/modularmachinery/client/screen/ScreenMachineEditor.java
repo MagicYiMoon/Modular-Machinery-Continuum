@@ -88,6 +88,15 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private static final int GROUP_ROW_H = 24;
     private static final int GROUP_ROWS = 4;
 
+    private EditorViewport viewport = EditorViewport.fit(WIDTH, HEIGHT);
+    private EditorTooltip editorTooltip;
+    private record EditorTooltip(List<net.minecraft.util.FormattedCharSequence> lines,
+            net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner positioner) { }
+
+    /** Coordinates exposed to optional integrations and visual checks are screen coordinates. */
+    public double editorScreenX(double logicalX) { return viewport.screenX(logicalX); }
+    public double editorScreenY(double logicalY) { return viewport.screenY(logicalY); }
+
     private JsonObject document;
     private boolean adapterOpen, templateModifiers;
     private final AdapterTemplatePanel adapterPanel = new AdapterTemplatePanel();
@@ -137,6 +146,9 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private final EnvironmentPanel environmentPanel = new EnvironmentPanel();
     private Button pneumaticType;
     private final ResourceAmountPanel resourcePanel = new ResourceAmountPanel();
+    private final ResearchGatePanel researchGatePanel=new ResearchGatePanel();
+    /** Both are resource requirement forms; share the modal lifecycle, focus and save handling. */
+    private boolean researchGate;private Button researchGateType;
     private boolean resourceOpen, nbtOpen;
     private final RequirementNbtPanel nbtPanel = new RequirementNbtPanel();
     private Button requirementNbt;
@@ -169,7 +181,8 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     private boolean pickerReplacing;
     private boolean editorOpen;
     private boolean editorRecipe;
-    private boolean colorOpen;
+    private boolean colorOpen, hypernetOpen;
+    private final HyperNetSettingsPanel hypernetPanel = new HyperNetSettingsPanel();
     private boolean copyOpen;
     private String copiedMachineId = "";
     private final RecipeCopyPanel copyPanel = new RecipeCopyPanel();
@@ -220,6 +233,10 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         String weightDraft = groupWeight == null ? null : groupWeight.getValue();
         String searchDraft = pickerSearch == null ? null : pickerSearch.getValue();
         super.init();
+        viewport = EditorViewport.fit(width, height);
+        leftPos = (viewport.width() - WIDTH) / 2;
+        topPos = (viewport.height() - HEIGHT) / 2;
+        editorTooltip = null;
         mainWidgets.clear();
         typeWidgets.clear();
         groupWidgets.clear();
@@ -262,8 +279,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
         controllerAppearance.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), settings -> {
             if (machine() != null) submitMutation(new hellfirepvp.modularmachinery.common.network.PktMachineEditorControllerSettings(
-                    machine().get("name").getAsString(), settings.color(), settings.factory()));
+                    machine().get("name").getAsString(), settings.color(), settings.factory(), settings.requiresBlueprint()));
         }, this::closeControllerAppearance);
+        hypernetPanel.init(font,leftPos,topPos,widget->addRenderableWidget(widget),this::removeWidget, values->{
+            if(machine()!=null)submitMutation(new hellfirepvp.modularmachinery.common.network.PktMachineEditorHyperNet(machine().get("name").getAsString(),values.toString()));
+        },this::closeHyperNet,menu,this::submitMutation);
         copyPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), target -> {
             copiedRecipeId = target.newId(); copiedMachineId = target.machine();
             submitMutation(new ModularmachineryNetwork.PktMachineEditorAction(
@@ -271,9 +291,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         }, this::closeRecipeCopy);
         recipeCopy = addMainWidget(Button.builder(Component.literal("复制"), b -> openRecipeCopy())
                 .bounds(leftPos + 212, topPos + 2, 44, 18).build());
-        addMainWidget(Button.builder(Component.literal("控制器外观"), b -> openControllerAppearance())
-                .bounds(leftPos + 8, topPos + 174, 128, 20)
-                .tooltip(Tooltip.create(Component.literal("设置该机器普通／工厂控制器的外壳颜色，预览并保存\n新增机器或开启独立工厂控制器后需重启"))).build());
+        addMainWidget(Button.builder(Component.literal("控制器设置"), b -> openControllerAppearance())
+                .bounds(leftPos + 8, topPos + 174, 74, 20)
+                .tooltip(Tooltip.create(Component.literal("设置控制器颜色、独立工厂控制器和是否需要蓝图\n颜色与蓝图要求保存后同步生效；新增控制器需两端重启"))).build());
+        addMainWidget(Button.builder(Component.literal("算力/说明"),b->openHyperNet())
+                .bounds(leftPos+86,topPos+174,58,20).build());
         addMainWidget(Button.builder(Component.literal(templateDraft == null ? "导入模板" : "完成追加需求"), b -> {
             if(templateDraft != null) onClose(); else openAdapterTemplates();
         }).bounds(leftPos+8,topPos+199,128,18).build());
@@ -380,10 +402,13 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 .bounds(leftPos + 223, topPos + 202, 112, 20)
                 .tooltip(Tooltip.create(Component.literal("压缩空气（单次或逐 tick）、压力／真空、持续 Kelvin 温度条件"))).build());
         typeWidgets.add(pneumaticType);
-        resourceType = addRenderableWidget(Button.builder(Component.literal("魔法资源"), b -> openResourceAmount(-1))
+        resourceType = addRenderableWidget(Button.builder(Component.literal("资源／算力"), b -> openResourceAmount(-1))
                 .bounds(leftPos + 105, topPos + 230, 112, 20)
                 .tooltip(Tooltip.create(Component.literal("Botania 魔力、Embers 余烬、Blood Magic LP／意志、Nature’s Aura 灵气\n按服务端依赖和实际支持的方向开放"))).build());
         typeWidgets.add(resourceType);
+        researchGateType=addRenderableWidget(Button.builder(Component.literal("研究门槛"),b->openResearchGate(-1))
+                .bounds(leftPos+223,topPos+40,64,18).tooltip(Tooltip.create(Component.literal("开工时检查同网工作数据库是否具备全部所选研究\n不消耗成果，不随批量放大；支持搜索勾选"))).build());
+        typeWidgets.add(researchGateType);
         environmentType = addRenderableWidget(Button.builder(Component.literal("环境条件（输入）"), b -> openEnvironment(-1))
                 .bounds(leftPos + 223, topPos + 230, 112, 20)
                 .tooltip(Tooltip.create(Component.literal("高度、时间、维度、群系、月相和天气；需要环境检测器"))).build());
@@ -443,6 +468,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         adapterPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::submitMutation, this::closeAdapterTemplates,
                 this::openTemplateModifiers, this::openTemplateRequirements);
         resourcePanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::saveResourceAmount, this::closeResourceAmount);
+        researchGatePanel.init(font,leftPos,topPos,widget->addRenderableWidget(widget),this::removeWidget,menu,this::saveResearchGate,this::closeResourceAmount);
         environmentPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::saveEnvironment, this::closeEnvironment);
         pneumaticPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::savePneumatic, this::closePneumatic);
         smartPanel.init(font, leftPos, topPos, widget -> addRenderableWidget(widget), this::saveSmartInterface, this::closeSmartInterface);
@@ -453,6 +479,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         setPickerVisible(pickerOpen);
         setNamePreviewVisible(namePreviewOpen);
         controllerAppearance.setVisible(colorOpen, menu.saves().pending());
+        hypernetPanel.setVisible(hypernetOpen,menu.saves().pending());
         setTypePickerVisible(typePickerOpen);
         modifierPanel.setVisible(modifiersOpen);
         catalystTooltipPanel.setVisible(catalystTooltipsOpen);
@@ -464,7 +491,8 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         environmentPanel.setVisible(environmentOpen, menu.saves().pending());
         pneumaticPanel.setVisible(pneumaticOpen, menu.saves().pending());
         nbtPanel.setVisible(nbtOpen, menu.saves().pending());
-        resourcePanel.setVisible(resourceOpen, menu.saves().pending());
+        resourcePanel.setVisible(resourceOpen && !researchGate, menu.saves().pending());
+        researchGatePanel.setVisible(resourceOpen && researchGate,menu.saves().pending());
         recipeOptionsPanel.setVisible(recipeOptionsOpen);
         syncFields();
         syncMachineName();
@@ -493,7 +521,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private void syncMainWidgets() {
-        boolean visible = !copyOpen && !colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && !selectorOpen && !batchOpen && !triggerOpen && !smartOpen && !adapterOpen && !environmentOpen && !pneumaticOpen && !nbtOpen && !resourceOpen && !recipeOptionsOpen;
+        boolean visible = !copyOpen && !colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen && !selectorOpen && !batchOpen && !triggerOpen && !smartOpen && !adapterOpen && !environmentOpen && !pneumaticOpen && !nbtOpen && !resourceOpen && !hypernetOpen && !recipeOptionsOpen;
         for (AbstractWidget widget : mainWidgets) {
             widget.visible = visible;
             widget.active = visible && !menu.saves().pending();
@@ -514,6 +542,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             widget.visible&=allowed;widget.active&=allowed;
         }
         copyPanel.setVisible(copyOpen, menu.saves().pending());
+        hypernetPanel.setVisible(hypernetOpen,menu.saves().pending());
     }
 
     private void openAdapterTemplates(){if(machine()==null||menu.saves().pending())return;adapterOpen=true;saveStatus="";saveFailed=false;adapterPanel.open(document,machine());syncMainWidgets();setFocused(null);}
@@ -611,13 +640,16 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         syncMainWidgets(); setFocused(null);
     }
 
+    private void openHyperNet(){if(machine()==null||menu.saves().pending())return;hypernetOpen=true;saveStatus="";saveFailed=false;hypernetPanel.open(machine(),document);syncMainWidgets();setFocused(null);}
+    private void closeHyperNet(){hypernetOpen=false;hypernetPanel.setVisible(false,false);syncMainWidgets();setFocused(null);}
+
     private boolean resourceAvailable(String key) { return document.has(key) && document.get(key).getAsBoolean(); }
     private void openResourceAmount(int index) {
         if (recipe() == null || isReadOnly(recipe()) || menu.saves().pending()) return;
         JsonObject req = index < 0 ? null : recipeRequirements().get(index).getAsJsonObject();
         boolean output = req == null ? pickerOutput : "output".equals(req.get("io-type").getAsString());
         boolean mana = resourceAvailable("manaEditorAvailable"), ember = resourceAvailable("emberEditorAvailable");
-        if (req != null && !resourceAvailable(switch(ResourceAmountEditor.modId(req)) {
+        if (req != null && !ResourceAmountEditor.isHyperNet(req) && !resourceAvailable(switch(ResourceAmountEditor.modId(req)) {
             case "botania" -> "manaEditorAvailable"; case "embers" -> "emberEditorAvailable";
             case "bloodmagic" -> "bloodMagicEditorAvailable"; default -> "auraEditorAvailable";
         })) return;
@@ -630,11 +662,24 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             }
         }
         closeTypePicker(); requirementIndex = index; addingRequirement = index < 0; pendingRequirement = null;
-        resourceOpen = true; saveStatus = ""; saveFailed = false;
+        researchGate=false;resourceOpen = true; saveStatus = ""; saveFailed = false;
         resourcePanel.open(req, output, document); syncMainWidgets(); setFocused(null);
     }
     private void closeResourceAmount() {
+        researchGatePanel.close();researchGatePanel.setVisible(false,false);researchGate=false;
         resourceOpen = false; addingRequirement = false; resourcePanel.setVisible(false, false); syncMainWidgets(); setFocused(null);
+    }
+    private void openResearchGate(int index){
+        if(recipe()==null||isReadOnly(recipe())||menu.saves().pending()||index<0&&pickerOutput)return;
+        JsonObject req=index<0?null:recipeRequirements().get(index).getAsJsonObject();
+        try{if(req!=null)hellfirepvp.modularmachinery.common.editor.ResearchGateEditor.validate(req);}
+        catch(RuntimeException e){saveStatus="研究门槛无效："+e.getMessage();saveFailed=true;return;}
+        closeTypePicker();requirementIndex=index;addingRequirement=index<0;pendingRequirement=null;
+        researchGate=true;resourceOpen=true;saveStatus="";saveFailed=false;researchGatePanel.open(req);researchGatePanel.setVisible(true,false);syncMainWidgets();setFocused(null);
+    }
+    private void saveResearchGate(java.util.List<String> ids){
+        var current=recipe();submitMutation(new hellfirepvp.modularmachinery.common.network.PktMachineEditorResearchGate(current.get("name").getAsString(),addingRequirement?-1:requirementIndex,ids,
+                isNewRecipe(current)?machine().get("name").getAsString():"",current.get("duration").getAsInt(),current.has("displayName")?current.get("displayName").getAsString():""));
     }
     private void saveResourceAmount(JsonObject requirement) {
         var current = recipe();
@@ -834,8 +879,9 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         environmentType.active = environmentType.visible;
         pneumaticType.visible = visible && pneumaticAvailable();
         pneumaticType.active = pneumaticType.visible;
-        resourceType.visible = visible && (resourceAvailable("manaEditorAvailable") || !pickerOutput && resourceAvailable("emberEditorAvailable") || resourceAvailable("bloodMagicEditorAvailable") || resourceAvailable("auraEditorAvailable"));
+        resourceType.visible = visible && (!pickerOutput || resourceAvailable("manaEditorAvailable") || !pickerOutput && resourceAvailable("emberEditorAvailable") || resourceAvailable("bloodMagicEditorAvailable") || resourceAvailable("auraEditorAvailable"));
         resourceType.active = resourceType.visible;
+        researchGateType.visible=visible&&!pickerOutput;researchGateType.active=researchGateType.visible;
         syncMainWidgets();
     }
 
@@ -1024,6 +1070,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         JsonObject selectedRecipe = recipe();
         if (selectedRecipe == null || (selectedRecipe.has("editable") && !selectedRecipe.get("editable").getAsBoolean())) return;
         if (EnvironmentEditor.isEnvironment(recipeRequirements().get(index).getAsJsonObject())) { openEnvironment(index); return; }
+        if(hellfirepvp.modularmachinery.common.editor.ResearchGateEditor.isResearch(recipeRequirements().get(index).getAsJsonObject())){openResearchGate(index);return;}
         if (ResourceAmountEditor.isResource(recipeRequirements().get(index).getAsJsonObject())) { openResourceAmount(index); return; }
         if (PneumaticEditor.isPneumatic(recipeRequirements().get(index).getAsJsonObject())) { openPneumatic(index); return; }
         if (SmartInterfaceEditor.isSmart(recipeRequirements().get(index).getAsJsonObject())) {
@@ -1436,6 +1483,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         super.containerTick();
         if (environmentOpen) environmentPanel.tick();
         if (nbtOpen) nbtPanel.tick();
+        researchGatePanel.setVisible(resourceOpen&&researchGate,menu.saves().pending());
         if(templateDraft!=null)return;
         var result = menu.saves().takeReady();
         if (result != null) {
@@ -1444,6 +1492,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (result.success()) {
                 if (copyOpen) closeRecipeCopy();
                 if (colorOpen) closeControllerAppearance();
+                if (hypernetOpen) closeHyperNet();
                 if (batchOpen) closeRequirementBatch();
                 if (triggerOpen) closeRequirementTrigger();
                 if (nbtOpen) closeRequirementNbt();
@@ -1481,9 +1530,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         environmentPanel.setVisible(environmentOpen, menu.saves().pending());
         pneumaticPanel.setVisible(pneumaticOpen, menu.saves().pending());
         nbtPanel.setVisible(nbtOpen, menu.saves().pending());
-        resourcePanel.setVisible(resourceOpen, menu.saves().pending());
+        resourcePanel.setVisible(resourceOpen && !researchGate, menu.saves().pending());
+        researchGatePanel.setVisible(resourceOpen && researchGate,menu.saves().pending());
         }
         controllerAppearance.setVisible(colorOpen, menu.saves().pending());
+        hypernetPanel.setVisible(hypernetOpen,menu.saves().pending());
         String snapshot = menu.snapshot();
         if (!menu.saves().pending() && !snapshot.equals(loadedSnapshot)) refreshDocument(snapshot);
     }
@@ -1537,9 +1588,12 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         environmentPanel.setVisible(environmentOpen, menu.saves().pending());
         pneumaticPanel.setVisible(pneumaticOpen, menu.saves().pending());
         nbtPanel.setVisible(nbtOpen, menu.saves().pending());
-        resourcePanel.setVisible(resourceOpen, menu.saves().pending());
-        ModularmachineryNetwork.CHANNEL.sendToServer(new PktMachineEditorRequest(menu.containerId, id,
-                EditorSaveState.revision(menu.snapshot()), mutation));
+        resourcePanel.setVisible(resourceOpen && !researchGate, menu.saves().pending());
+        researchGatePanel.setVisible(resourceOpen && researchGate,menu.saves().pending());
+        var request=new PktMachineEditorRequest(menu.containerId,id,EditorSaveState.revision(menu.snapshot()),mutation);
+        if(mutation instanceof hellfirepvp.modularmachinery.common.network.PktMachineEditorResearch || mutation instanceof hellfirepvp.modularmachinery.common.network.PktMachineEditorResearchGate)
+            hellfirepvp.modularmachinery.common.network.HyperNetResearchUpload.send(request);
+        else ModularmachineryNetwork.CHANNEL.sendToServer(request);
     }
 
     private static int indexByName(JsonArray entries, String name) {
@@ -1823,15 +1877,24 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 "", current.get("name").getAsString(), requirementIndex, "", false));
     }
 
+    private void scrollVisibleWidget(double x, double y, double delta) {
+        // Hidden multiline widgets from other overlays can still report geometry hits in vanilla.
+        for (var child : children()) if (child instanceof AbstractWidget widget && widget.visible
+                && widget.active && widget.isMouseOver(x, y) && widget.mouseScrolled(x, y, delta)) return;
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        mouseX = viewport.logicalX(mouseX); mouseY = viewport.logicalY(mouseY);
         if (adapterOpen) { adapterPanel.scroll((int)mouseX-leftPos,(int)mouseY-topPos,delta); return true; }
         if (copyOpen) { copyPanel.scroll(delta); return true; }
         if (menu.saves().pending()) return true;
-        if (environmentOpen) { super.mouseScrolled(mouseX,mouseY,delta); return true; }
-        if (nbtOpen) { super.mouseScrolled(mouseX,mouseY,delta); return true; }
+        if (environmentOpen) { scrollVisibleWidget(mouseX,mouseY,delta); return true; }
+        if (nbtOpen) { scrollVisibleWidget(mouseX,mouseY,delta); return true; }
         if (batchOpen || triggerOpen) return true;
         if (recipeOptionsOpen) { recipeOptionsPanel.scroll((int) mouseX - leftPos, (int) mouseY - topPos, delta); return true; }
+        if (hypernetOpen) {hypernetPanel.scroll(delta);return true;}
+        if(resourceOpen&&researchGate){researchGatePanel.scroll(delta);return true;}
         if (resourceOpen || adapterOpen || environmentOpen || pneumaticOpen) return true;
         if (smartOpen) { smartPanel.scroll(delta); return true; }
         if (selectorOpen) { selectorPanel.scroll(delta); return true; }
@@ -1873,8 +1936,10 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        mouseX = viewport.logicalX(mouseX); mouseY = viewport.logicalY(mouseY);
         if(adapterOpen){if(!menu.saves().pending())super.mouseClicked(mouseX,mouseY,button);return true;}
         if (copyOpen) { if (!menu.saves().pending()) super.mouseClicked(mouseX, mouseY, button); return true; }
+        if (hypernetOpen) { super.mouseClicked(mouseX,mouseY,button); return true; }
         if (colorOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
         if (menu.saves().pending()) return true;
         if (batchOpen || triggerOpen) { super.mouseClicked(mouseX, mouseY, button); return true; }
@@ -2029,6 +2094,28 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    @Override public boolean mouseReleased(double x, double y, int button) {
+        x = viewport.logicalX(x); y = viewport.logicalY(y);
+        // AbstractContainerScreen handles slot drags but does not release focused scroll widgets.
+        boolean handled = getFocused() instanceof AbstractWidget widget && widget.visible
+                && widget.mouseReleased(x, y, button);
+        if (button == 0) setDragging(false);
+        return handled || super.mouseReleased(x, y, button);
+    }
+    @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (menu.saves().pending()) return true;
+        x = viewport.logicalX(x); y = viewport.logicalY(y);
+        dx /= viewport.scale(); dy /= viewport.scale();
+        // The editor has widgets rather than container slots. Forward text selection and scrollbar
+        // drags before the vanilla inventory path, which otherwise swallows these events.
+        if (isDragging() && button == 0 && getFocused() instanceof AbstractWidget widget
+                && widget.visible && widget.active && widget.mouseDragged(x, y, button, dx, dy)) return true;
+        return super.mouseDragged(x, y, button, dx, dy);
+    }
+    @Override public void mouseMoved(double x, double y) {
+        super.mouseMoved(viewport.logicalX(x), viewport.logicalY(y));
+    }
+
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xEE20242A);
@@ -2044,6 +2131,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         if (pickerOpen) drawPickerOverlay(graphics);
         if (editorOpen) drawEditorOverlay(graphics);
         if (namePreviewOpen) drawNamePreviewOverlay(graphics);
+        if (hypernetOpen) hypernetPanel.draw(graphics,saveStatus,saveFailed);
         if (colorOpen) controllerAppearance.draw(graphics, saveStatus, saveFailed);
         if (typePickerOpen) drawTypePickerOverlay(graphics);
         if (modifiersOpen) modifierPanel.draw(graphics);
@@ -2052,7 +2140,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         if (triggerOpen) triggerPanel.draw(graphics, saveStatus, saveFailed);
         if (selectorOpen) selectorPanel.draw(graphics, saveStatus, saveFailed);
         if (nbtOpen) nbtPanel.draw(graphics, saveStatus, saveFailed);
-        if (resourceOpen) resourcePanel.draw(graphics, saveStatus, saveFailed);
+        if (resourceOpen) {if(researchGate)researchGatePanel.draw(graphics,saveStatus,saveFailed);else resourcePanel.draw(graphics, saveStatus, saveFailed);}
         if (environmentOpen) environmentPanel.draw(graphics, saveStatus, saveFailed);
         if (pneumaticOpen) pneumaticPanel.draw(graphics, saveStatus, saveFailed);
         if (smartOpen) smartPanel.draw(graphics, saveStatus, saveFailed);
@@ -2064,7 +2152,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (copyOpen || colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || recipeOptionsOpen) return;
+        if (copyOpen || colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || hypernetOpen || recipeOptionsOpen) return;
         if(templateDraft!=null){graphics.drawString(font,Component.literal("导入模板 · 追加需求草稿"),8,6,0xFFFFFF,false);graphics.drawString(font,Component.literal("使用右侧 + 添加输入或输出"),12,32,0xDDDDDD,false);graphics.drawString(font,Component.literal("点击需求编辑；× 删除"),12,48,0xDDDDDD,false);graphics.drawString(font,Component.literal("完成后返回模板，保存并重新生成"),12,64,0xD9C98E,false);graphics.drawString(font,Component.literal("不会修改其他源配方或生成配方"),12,80,0xB5C5D5,false);graphics.drawString(font,Component.literal(trim(saveStatus,260)),12,112,saveFailed?0xFF8888:0x9BDEAA,false);drawRequirementRows(graphics);return;}
         graphics.drawString(font, Component.literal("机器"), MACHINE_X, 6, 0xFFFFFF, false);
         graphics.drawString(font, Component.literal("配方"), RECIPE_X, 6, 0xFFFFFF, false);
@@ -2177,6 +2265,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             String label = ItemTagSelection.isTag(req) ? "#" + key.substring(4) : key;
             if (EnvironmentEditor.isEnvironment(req)) { label = "环境 · " + EnvironmentEditor.label(req); try { value = EnvironmentEditor.summary(req); } catch (RuntimeException invalid) { value = "条件无效，请检查源文件"; } }
             if (ResourceAmountEditor.isResource(req)) label = ResourceAmountEditor.label(req);
+            if(hellfirepvp.modularmachinery.common.editor.ResearchGateEditor.isResearch(req)){label="研究门槛";value=req.getAsJsonArray("research").size()+" 项 · 全部满足";}
             if (PneumaticEditor.isPneumatic(req)) label = PneumaticEditor.isTemperature(req) ? "持续温度条件" : "压缩空气";
             if (FuelEditor.isFuel(req)) label = "熔炉燃料（任意）";
             if (SmartInterfaceEditor.isSmart(req)) label = "智能接口：" + req.get("interface").getAsString();
@@ -2396,6 +2485,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (keyCode == 256) onClose();
             return true;
         }
+        if (hypernetOpen && keyCode == 256) { closeHyperNet(); return true; }
         if (colorOpen && keyCode == 256) { closeControllerAppearance(); return true; }
         if(adapterOpen&&keyCode==256){closeAdapterTemplates();return true;}
         if (copyOpen && keyCode == 256) { closeRecipeCopy(); return true; }
@@ -2420,7 +2510,8 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (editorOpen) { closeEditor(); return true; }
         }
         // Multiline editing must consume inventory/hotbar shortcuts while typing NBT.
-        if ((nbtOpen || adapterOpen || environmentOpen) && keyCode != 258) {
+        if(resourceOpen&&researchGate&&(keyCode==257||keyCode==335)&&researchGatePanel.enter())return true;
+        if ((resourceOpen&&researchGate || hypernetOpen || nbtOpen || adapterOpen || environmentOpen) && keyCode != 258) {
             if (getFocused() != null) getFocused().keyPressed(keyCode, scanCode, modifiers);
             return true;
         }
@@ -2441,7 +2532,9 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     }
 
     private static ItemStack stackFor(JsonObject req) {
+        if(hellfirepvp.modularmachinery.common.editor.ResearchGateEditor.isResearch(req))return new ItemStack(net.minecraft.world.item.Items.KNOWLEDGE_BOOK);
         if (EnvironmentEditor.isEnvironment(req)) return new ItemStack(hellfirepvp.modularmachinery.common.registry.RegistryBlocks.environmentDetector.get());
+        if (ResourceAmountEditor.isHyperNet(req)) return new ItemStack(ResourceAmountEditor.isComputation(req)?net.minecraft.world.item.Items.COMPARATOR:ResourceAmountEditor.isCooling(req)?net.minecraft.world.item.Items.WATER_BUCKET:net.minecraft.world.item.Items.REDSTONE);
         if (ResourceAmountEditor.isResource(req)) {
             var id = ResourceLocation.tryParse(ResourceAmountEditor.isMana(req) ? "botania:mana_pearl" : ResourceAmountEditor.isEmber(req) ? "embers:ember_shard" : ResourceAmountEditor.isLife(req) ? "bloodmagic:weakbloodorb" : ResourceAmountEditor.isWill(req) ? "bloodmagic:basemonstersoul" : "naturesaura:aura_bottle");
             return new ItemStack(BuiltInRegistries.ITEM.containsKey(id) ? BuiltInRegistries.ITEM.get(id) : net.minecraft.world.item.Items.BLAZE_POWDER);
@@ -2469,14 +2562,34 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
+        graphics.flush();
+        var canvas = new EditorGuiGraphics(minecraft, graphics, viewport);
+        int x = (int) Math.floor(viewport.logicalX(mouseX)), y = (int) Math.floor(viewport.logicalY(mouseY));
+        try {
+            canvas.drawManaged(() -> {
+                renderEditor(canvas, x, y, partialTick);
+                // Screen.renderWithTooltip is final and runs after this pose is gone. Keep widget
+                // tooltips in the same canvas as their bounds, including keyboard focus positioning.
+                if (editorTooltip != null) canvas.renderTooltip(font, editorTooltip.lines(), editorTooltip.positioner(), x, y);
+            });
+        } finally { editorTooltip = null; }
+    }
+
+    @Override public void setTooltipForNextRenderPass(List<net.minecraft.util.FormattedCharSequence> lines,
+            net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner positioner, boolean override) {
+        if (editorTooltip == null || override) editorTooltip = new EditorTooltip(lines, positioner);
+    }
+
+    private void renderEditor(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
+        if(hypernetOpen){hypernetPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos,saveStatus);return;}
         if(adapterOpen){adapterPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos);return;}
         if (environmentOpen) { environmentPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos); return; }
         if (copyOpen) return;
         if (recipeOptionsOpen || batchOpen || triggerOpen) return;
         if (nbtOpen) { nbtPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos); return; }
-        if (resourceOpen) { resourcePanel.tooltip(graphics, mouseX, mouseY, mouseX - leftPos, mouseY - topPos); return; }
+        if (resourceOpen) {if(researchGate)researchGatePanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos,saveStatus);else resourcePanel.tooltip(graphics, mouseX, mouseY, mouseX - leftPos, mouseY - topPos); return; }
         if (environmentOpen) { environmentPanel.tooltip(graphics,mouseX,mouseY,mouseX-leftPos,mouseY-topPos); return; }
         if (pneumaticOpen) { pneumaticPanel.tooltip(graphics, mouseX, mouseY, mouseX - leftPos, mouseY - topPos); return; }
         if (smartOpen) {
@@ -2496,6 +2609,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         renderSmartTooltip(graphics, mouseX, mouseY);
         renderPneumaticTooltip(graphics, mouseX, mouseY);
         renderResourceTooltip(graphics, mouseX, mouseY);
+        renderResearchGateTooltip(graphics,mouseX,mouseY);
         renderSelectorTooltip(graphics, mouseX, mouseY);
         if (!colorOpen && !pickerOpen && !editorOpen && !namePreviewOpen && !typePickerOpen && !modifiersOpen && !catalystTooltipsOpen) {
             int x = mouseX - leftPos;
@@ -2566,8 +2680,18 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
+    private void renderResearchGateTooltip(GuiGraphics g,int mouseX,int mouseY){
+        if(colorOpen||pickerOpen||editorOpen||namePreviewOpen||typePickerOpen||modifiersOpen||catalystTooltipsOpen||selectorOpen||batchOpen||triggerOpen||smartOpen||adapterOpen||environmentOpen||pneumaticOpen||nbtOpen||resourceOpen||hypernetOpen||recipeOptionsOpen)return;
+        int x=mouseX-leftPos,y=mouseY-topPos;if(x<REQUIREMENT_X||x>=REQUIREMENT_X+REQUIREMENT_W-18||y<INPUT_TOP||y>=INPUT_TOP+SIDE_ROWS*ROW_HEIGHT)return;
+        var indices=sideIndices(false);int index=inputScroll+(y-INPUT_TOP)/ROW_HEIGHT;if(index>=indices.size())return;
+        var req=recipeRequirements().get(indices.get(index)).getAsJsonObject();if(!hellfirepvp.modularmachinery.common.editor.ResearchGateEditor.isResearch(req))return;
+        var ids=hellfirepvp.modularmachinery.common.editor.ResearchGateEditor.ids(req);var lines=new ArrayList<Component>();lines.add(Component.literal("研究门槛：全部 "+ids.size()+" 项"));
+        ids.stream().limit(4).forEach(id->lines.add(Component.literal(font.plainSubstrByWidth(id,240))));if(ids.size()>4)lines.add(Component.literal("……其余条目可点击查看"));
+        lines.add(Component.literal("开工检查，不消耗成果，不随批量放大"));lines.add(Component.literal(isReadOnly(recipe())?"只读，请修改源配方或适配器模板":"单击搜索勾选；× 移除整个门槛"));g.renderComponentTooltip(font,lines,mouseX,mouseY);
+    }
+
     private void renderFluidTickTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || hypernetOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 28) return;
         boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
@@ -2586,7 +2710,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
 
     private void renderPneumaticTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (copyOpen || colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen
-                || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || recipeOptionsOpen) return;
+                || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || hypernetOpen || recipeOptionsOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 18) return;
         boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
@@ -2606,14 +2730,14 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 if (!output) lines.add(Component.literal("压力：" + (clean.get("pressure").getAsFloat() < 0 ? "≤ " : "≥ ") + clean.get("pressure").getAsString() + " bar"));
                 lines.add(Component.literal("批量仅放大空气用量；输入为 0 时仅检查压力"));
             }
-            lines.add(Component.literal(isReadOnly(recipe()) ? "此配方只读，请修改其来源" : "单击修改；右键设置接口分组"));
+            lines.add(Component.literal(isReadOnly(recipe()) ? "此配方只读，请修改其来源" : ResourceAmountEditor.isHyperNet(req)?"单击修改；可在下方设置批量策略，不支持接口分组":"单击修改；右键设置接口分组"));
         } catch (RuntimeException invalid) { lines.add(Component.literal("请检查源文件：" + invalid.getMessage())); }
         graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
     private void renderResourceTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (copyOpen || colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen
-                || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || recipeOptionsOpen) return;
+                || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || hypernetOpen || recipeOptionsOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 18) return;
         boolean output = y >= OUTPUT_TOP; int top = output ? OUTPUT_TOP : INPUT_TOP;
@@ -2626,7 +2750,11 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         try {
             var clean = ResourceAmountEditor.validate(req);
             lines.add(Component.literal(ResourceAmountEditor.label(clean) + "：" + ResourceAmountEditor.amountText(clean)));
-            if (ResourceAmountEditor.isWill(clean)) {
+            if (ResourceAmountEditor.isComputation(clean)) {
+                lines.add(Component.literal(clean.get("triggerFailure").getAsBoolean()?"算力不足触发失败并取消，已投入材料不退还":"断网或算力不足时暂停并保留进度"));
+            } else if (ResourceAmountEditor.isCooling(clean)||ResourceAmountEditor.isRepair(clean)) {
+                lines.add(Component.literal("开工投入普通材料，完成时冷却／修复；取消与堵塞期间不生效"));
+            } else if (ResourceAmountEditor.isWill(clean)) {
                 lines.add(Component.literal("意志类型：" + clean.get("will-type").getAsString() + "；整批只算一份"));
                 lines.add(Component.literal(output ? "产出后至多 " + clean.get("max").getAsString() : "消耗后至少保留 " + clean.get("min").getAsString()));
             } else if (ResourceAmountEditor.isAura(clean)) {
@@ -2634,13 +2762,13 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
                 lines.add(Component.literal(output ? "产出后至多 " + clean.get("max-aura").getAsString() : "消耗后至少保留 " + clean.get("min-aura").getAsString()));
                 lines.add(Component.literal("用量受批量策略控制；阈值不放大"));
             } else lines.add(Component.literal("单次输入开工扣除／输出完工添加；rate 按加工 tick；用量受批量策略控制"));
-            lines.add(Component.literal(isReadOnly(recipe()) ? "此配方只读，请修改其来源" : "单击修改；右键设置接口分组"));
+            lines.add(Component.literal(isReadOnly(recipe()) ? "此配方只读，请修改其来源" : ResourceAmountEditor.isHyperNet(req)?"单击修改；可在下方设置批量策略，不支持接口分组":"单击修改；右键设置接口分组"));
         } catch (RuntimeException invalid) { lines.add(Component.literal("请检查源文件：" + invalid.getMessage())); }
         graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
     private void renderSmartTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen) return;
+        if (colorOpen || pickerOpen || editorOpen || namePreviewOpen || typePickerOpen || modifiersOpen || catalystTooltipsOpen || selectorOpen || batchOpen || triggerOpen || smartOpen || adapterOpen || environmentOpen || pneumaticOpen || nbtOpen || resourceOpen || hypernetOpen) return;
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (x < REQUIREMENT_X || x >= REQUIREMENT_X + REQUIREMENT_W - 28 || y < INPUT_TOP || y >= INPUT_TOP + SIDE_ROWS * ROW_HEIGHT) return;
         var indices = sideIndices(false); int index = inputScroll + (y - INPUT_TOP) / ROW_HEIGHT;
@@ -2662,6 +2790,7 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
         var indices = sideIndices(output); int index = (output ? outputScroll : inputScroll) + (y - top) / ROW_HEIGHT;
         if (index >= indices.size()) return;
         var req = recipeRequirements().get(indices.get(index)).getAsJsonObject();
+        if(hellfirepvp.modularmachinery.common.editor.ResearchGateEditor.isResearch(req))return;
         graphics.renderComponentTooltip(font, List.of(Component.literal("接口分组：" + (req.has("selector-tag")
                 ? req.get("selector-tag").getAsString() : "不限接口")), Component.literal("右键需求行修改；标签精确匹配，区分大小写")), mouseX, mouseY);
     }

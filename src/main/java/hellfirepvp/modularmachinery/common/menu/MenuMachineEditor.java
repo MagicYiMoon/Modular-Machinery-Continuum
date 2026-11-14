@@ -15,6 +15,25 @@ public final class MenuMachineEditor extends AbstractContainerMenu {
     /** Placeholder sent in the vanilla open-menu packet; the real document uses the mod channel. */
     public static final String EMPTY_SNAPSHOT = "{\"machines\":[]}";
     private String snapshot;
+    private java.util.UUID researchUpload;
+    private byte[] researchUploadBytes;
+    private int researchUploadOffset;
+    private long researchUploadExpires;
+    public byte[] acceptResearchUpload(java.util.UUID token,int total,int offset,byte[] part,long tick){
+        if(researchUploadBytes!=null&&tick>researchUploadExpires){researchUploadBytes=null;researchUpload=null;}
+        if(total<1||total>280*1024||part.length<1||part.length>16384||offset<0||offset>total-part.length)throw new IllegalArgumentException("Invalid research upload bounds");
+        if(offset==0){researchUpload=token;researchUploadBytes=new byte[total];researchUploadOffset=0;researchUploadExpires=tick+200;}
+        if(!token.equals(researchUpload)||researchUploadBytes==null||researchUploadBytes.length!=total||offset!=researchUploadOffset)throw new IllegalArgumentException("Expired or out-of-order research upload");
+        System.arraycopy(part,0,researchUploadBytes,offset,part.length);researchUploadOffset+=part.length;
+        if(researchUploadOffset!=total)return null;
+        var complete=researchUploadBytes;researchUploadBytes=null;researchUpload=null;return complete;
+    }
+    private java.util.UUID researchQuery;
+    private String researchPage;
+    public void beginResearchQuery(java.util.UUID token){researchQuery=token;researchPage=null;}
+    public void acceptResearchPage(java.util.UUID token,String page){if(token.equals(researchQuery))researchPage=page;}
+    public String researchPage(){return researchPage;}
+    public void clearResearchQuery(){researchQuery=null;researchPage=null;}
     private boolean initialSnapshotReceived;
     private final hellfirepvp.modularmachinery.common.editor.EditorSaveState saves = new hellfirepvp.modularmachinery.common.editor.EditorSaveState();
     private final java.util.LinkedHashSet<java.util.UUID> requests = new java.util.LinkedHashSet<>();

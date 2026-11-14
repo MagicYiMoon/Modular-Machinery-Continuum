@@ -1,0 +1,14 @@
+{
+  "id": "example:gpu",
+  "item": "minecraft:diamond",
+  "type": "gpu",
+  "generation": 2,
+  "energy-ratio": 1000,
+  "bandwidth": 8,
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

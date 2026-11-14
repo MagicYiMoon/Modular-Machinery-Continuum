@@ -40,7 +40,7 @@ public final class RequirementEnergy extends hellfirepvp.modularmachinery.common
 
     private final IOType ioType;
     private final int energyPerTick;
-     
+    // PARALLELISM (PLAN 591-609). The pair is upstream ComponentRequirement own, and the exemption resets the value
     // to one because an exempt requirement must not carry a multiplier it refuses to apply.
     private int parallelism = 1;
     private boolean parallelizeUnaffected = false;

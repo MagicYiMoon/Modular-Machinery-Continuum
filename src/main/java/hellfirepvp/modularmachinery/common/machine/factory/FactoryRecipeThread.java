@@ -23,44 +23,48 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.List;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+/**
+ * ONE recipe run inside a factory controller.
+ *
+ * <p>Upstream calls this {@code FactoryRecipeThread} and says in its own javadoc what it is:
+ * <i>"Part of the TileFactoryController that stores data for separate recipe runs. Not a thread in the
+ * true sense of the word."</i> (upstream U33-U38). The name is kept so the two read alike; THE TYPE NAME IS
+ * THE ONE THING ABOUT IT THAT IS NOT A THREAD, and that is upstream's wording rather than this port's.</p>
+ *
+ * <h2>RULE A0 -- what upstream's thread owns and what this one owns instead</h2>
+ *
+ * <pre>
+ * upstream FactoryRecipeThread extends RecipeThread (upstream RecipeThread, 301 lines)
+ *   ctrl, permanentModifiers, semiPermanentModifiers, activeRecipe, status (CraftingStatus),
+ *   waitForFinish, searchTask, context (RecipeCraftingContext), recipeSet (TreeSet)
+ * this port: the craft's own state, and NOTHING that only a thread pool needs
+ *   recipeName, ticks, duration, parallelism, maxParallelism, idleTime, blockedReason
+ * </pre>
+ *
+ * <p>WHY EACH OMISSION, because a dropped field is a dropped behaviour unless the reason is written down:</p>
+ *
+ * <ul>
+ *   <li>The last evaluated {@code RecipeCraftingContext} is retained for read-only runtime queries.
+ *       Each tick still resolves current modifiers; this observation never replaces evaluation, is not
+ *       serialized, and is unavailable after completion or a definition revision change.</li>
+ *   <li><b>No {@code searchTask}.</b> Upstream's per-thread search is asynchronous
+ *       ({@code FactoryRecipeSearchTask} hand its result back through a {@code ForkJoinTask}). This port
+ *       searches inline on the server thread, which is the whole point of B1's decision, so there is no
+ *       task handle to hold.</li>
+ *   <li><b>No {@code CraftingStatus}.</b> That class does not exist in the port at all (PLAN 521, proven
+ *       absent by concept search). Its reader here is {@code blockedReason}: the same string without the
+ *       four-state wrapper, and it is what the failure event carries and the GUI would print.</li>
+ *   <li>Per-thread permanent/semi-permanent modifiers and core recipe sets are retained below. Recipe sets
+ *       store names rather than old loader objects so a definition reload resolves the current recipe.</li>
+ * </ul>
+ */
 public class FactoryRecipeThread {
     private hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext runtimeRecipeContext;
     private long runtimeRecipeContextRevision;
+    private final java.util.UUID computationTicket = java.util.UUID.randomUUID();
+    /** Stable for this loaded logical thread, never serialized. */
+    public java.util.UUID computationTicket() { return computationTicket; }
+
 
     public void observeRuntimeRecipeContext(hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext run) {
         runtimeRecipeContext = run;
@@ -78,13 +82,13 @@ public class FactoryRecipeThread {
                 ? runtimeRecipeContext : null;
     }
 
-    
-
-
-
-
-
- 
+    /**
+     * How long an IDLE thread is kept before it is dropped (upstream U42, verbatim).
+     *
+     * <p>Load-bearing rather than cosmetic: upstream removes idle threads every 20 ticks
+     * (TileFactoryController U514-U519), and without the timeout a factory that once ran twenty different
+     * recipes would hold twenty thread objects for the rest of the world's life.</p>
+     */
     public static final int IDLE_TIME_OUT = 200;
 
     /** The controller this run belongs to. Never null for a live thread; upstream allowed null for a preset. */
@@ -128,19 +132,19 @@ public class FactoryRecipeThread {
     private final hellfirepvp.modularmachinery.common.modifier.RuntimeModifierState modifiers =
             new hellfirepvp.modularmachinery.common.modifier.RuntimeModifierState();
 
-    
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The loader's recipe object this run resolved to, or {@code null} while idle.
+     *
+     * <p>NOT A SECOND COPY OF STATE: it is the object the ticker already resolved out of the machine's
+     * candidate list, held so the events can hand a handler the run's recipe without every fire site
+     * re-resolving it. Upstream reaches the same result differently -- its thread owns an
+     * {@code ActiveMachineRecipe} and its events read {@code getContext().getActiveRecipe().getRecipe()}
+     * (upstream RecipeEvent L24) -- and this port's context is derived from the recipe instead (PLAN 500.3).</p>
+     *
+     * <p>NOT PERSISTED: the recipe is re-resolved by NAME from the loader on the first tick after a load, so a
+     * stored handle would only create a way for the saved object to disagree with the reloaded definitions --
+     * the reason MachineTicker abandons a run whose recipe name is gone.</p>
+     */
     private MachineRecipe recipe;
 
     public FactoryRecipeThread(TileFactoryController factory) {
@@ -261,39 +265,44 @@ public class FactoryRecipeThread {
         this.idleTime = 0;
     }
 
-    
+    /** Native service cores may map their paid task progress onto the recipe's display counter. */
+    public void setServiceRecipeProgress(int value) {
+        if (hasActiveRecipe()) ticks = Math.max(0,Math.min(duration,value));
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Advances this run's progress counter by one tick, <b>stopping at its own duration</b>.
+     *
+     * <p><b>THE CLAMP IS TILE CONTROLLER'S, AND WITHOUT IT A HELD FACTORY RUN COUNTED UP FOREVER (PLAN 708,
+     * DEFECT B).</b> It is the same guard, on the same kind of field, for the same reason, and the two must
+     * not disagree — a factory run and a single craft are the same craft with a different owner
+     * ({@code TileController.advanceRecipe}, PLAN 683; upstream {@code ActiveMachineRecipe.tick} U82-U85
+     * returns <i>before</i> its own {@code this.tick++} once {@code isCompleted()} — {@code tick >= totalTick},
+     * U117-U118 — so upstream's counter is clamped by construction on both paths).</p>
+     *
+     * <p><b>WHY THE FACTORY NEEDED IT EVEN THOUGH IT INHERITS NOTHING FROM {@code TileController}:</b> a factory
+     * run keeps its own {@code ticks}/{@code duration} on this class, and {@code FactoryTicker.tickThread}
+     * increments it <i>before</i> it asks whether the outputs have room, then RETURNS on the hold — so the
+     * increment survived the refusal and the next tick incremented again. The client saw the two numbers come
+     * from different sources: the TOP overlay and the GUI's ticks line read this raw counter
+     * ({@code 797 / 60}, {@code 300 / 60 t}), while the row's percentage and the bar are derived from
+     * {@code min(1, ticks/duration)} and so read 100% on every one of those ticks. Clamping at the writer makes
+     * all four agree at {@code duration/duration}.</p>
+     */
     public void advanceRecipe() {
         if (this.ticks < this.duration) {
             this.ticks++;
         }
     }
 
-    
-
-
-
-
-
-
- 
+    /**
+     * Rewinds this run's tick counter by one, floored at zero.
+     *
+     * <p>THE ONE-STEP REWIND IS THE WHOLE CONTRACT a {@code FactoryRecipeTickEvent} handler gets from
+     * {@code preventProgressing} (upstream U30-U38 subtracts one when the counter is above zero), and the
+     * floor is upstream's own. Carried over rather than reinvented, exactly as
+     * {@code TileController.rewindRecipeTick} was for the single-craft path at PLAN 542.</p>
+     */
     public void rewindRecipeTick() {
         if (this.ticks > 0) {
             this.ticks--;
@@ -421,7 +430,7 @@ public class FactoryRecipeThread {
 
     /** All per-thread modifiers in deterministic insertion order. */
     public List<RecipeModifier> activeModifiers() {
-        return modifiers.active();
+        return hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.coreModifiers(factory,this,modifiers.active());
     }
 
     // ------------------------------------------------------------------

@@ -1,0 +1,134 @@
+{
+  "registryname": "extendable_fabricator_subsystem_l9",
+  "localizedname": "EF F9 physical component demonstration",
+  "requires-blueprint": false,
+  "has-factory": false,
+  "parts": [
+    {
+      "x": -1,
+      "y": -1,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 0,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 1,
+      "elements": "modularmachinery:efabricator_casing"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 2,
+      "elements": "modularmachinery:efabricator_worker"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 2,
+      "elements": "modularmachinery:efabricator_parallel_proc_l9"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 3,
+      "elements": "modularmachinery:efabricator_pattern_bus"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 4,
+      "elements": "modularmachinery:efabricator_me_channel"
+    }
+  ]
+}

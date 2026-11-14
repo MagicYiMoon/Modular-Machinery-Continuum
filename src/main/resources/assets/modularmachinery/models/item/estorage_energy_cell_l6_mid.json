@@ -1,0 +1,22 @@
+{
+  "parent": "modularmachinery:block/neco/block/estorage_energy_cell/storage_array_capacitance_b/storage_array_capacitance_b_mid",
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
+    }
+  }
+}

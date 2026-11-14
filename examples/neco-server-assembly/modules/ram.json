@@ -1,0 +1,12 @@
+{
+  "id": "example:ram",
+  "item": "minecraft:paper",
+  "type": "ram",
+  "bandwidth": 10,
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/me_port_ec_system"
+    }
+  }
+}

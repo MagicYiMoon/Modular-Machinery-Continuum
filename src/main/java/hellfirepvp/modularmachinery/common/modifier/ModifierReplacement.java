@@ -178,7 +178,7 @@ public final class ModifierReplacement {
                         controllerPos, facing, x, y, z);
         if (!level.isLoaded(world)) return false;
         // EXACT when the element names metadata, BLOCK-ONLY when it does not -- which is exactly what
-         
+        // BlockStateResolver documents (PLAN section 237):
         //
         //   modularmachinery:blockcasing@4   "explicit metadata, so exactly casing=reinforced.
         //                                     A plain casing must NOT satisfy it."

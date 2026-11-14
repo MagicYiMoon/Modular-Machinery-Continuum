@@ -64,6 +64,8 @@ modularmachinery:machine_projector        机器投影器
 
 生存模式自动搭建会消耗背包材料；默认要求材料齐全，缺料时聊天栏列出缺少的数量、名称、可替代材料和流体 mB，不会先扣除已有材料。材料齐全后按配置间隔逐格补齐。关闭 `auto-assembly-need-all` 时允许先搭建有材料的部分。创造模式不检查材料，立即补齐结构。连续操作的 1 秒冷却提示是正常限制。
 
+未发布代码还支持 [AE 无线取料与缺料自动合成](WIRELESS_ASSEMBLY_ZH.md)：携带已连接且有电的无线终端，在有效范围内右键搭建；缺少的可合成材料会向 AE 请求并等待。潜行右键控制器可取消自己的搭建任务，已提交的 AE 订单继续执行。
+
 控制器的朝向会影响结构坐标。结构 JSON 中的坐标都是相对于控制器的坐标，控制器本身位于 `(0, 0, 0)`，不需要在 `parts` 中再次声明。
 
 ## 3. 可视化编辑器、蓝图和投影
@@ -346,7 +348,7 @@ config/modularmachinery/recipes/my_machine_diamond.json
 /modularmachinery recipes
 /modularmachinery recipes <machine>
 /modularmachinery bind <machine>
-/modularmachinery register <machine>
+/modularmachinery register <machine_id> [显示名称]
 /modularmachinery form
 /modularmachinery check
 /modularmachinery status
@@ -359,7 +361,7 @@ config/modularmachinery/recipes/my_machine_diamond.json
 - `list`：列出已加载的机器定义。
 - `recipes`：列出已加载配方，可按机器名筛选。
 - `bind`：将准星指向的控制器绑定到机器定义。
-- `register`：使用玩家当前建造工具的两个角选区，将准星指向控制器并保存为指定名称的机器 JSON。
+- `register`：使用玩家当前建造工具的两个角选区，将准星指向控制器并保存为指定 ID 的机器 JSON；可附加中文显示名称，例如 `/modularmachinery register alloy_smelter 合金炉`。ID 使用小写字母、数字、点、下划线或连字符。1.4.2 起自动加载并同步在线客户端，可立即打开 GUI 编辑，无需手动 `/reload`；新增独立控制器仍需统一两端注册文件并重启。
 - `form`：尝试让准星指向的控制器成型，并输出缺失方块的世界坐标。
 - `check`：检查当前结构和仓内资源能否运行各条配方。
 - `status`：查看控制器绑定的机器和成型状态。

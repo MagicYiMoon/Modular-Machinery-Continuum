@@ -1,0 +1,11 @@
+{
+  "machine": "hn_sample_node",
+  "registryname": "hn_json_consumer_demo",
+  "recipeTime": 100,
+  "requirements": [
+    {"type": "modularmachinery:item", "io-type": "input", "item": "minecraft:sand", "amount": 1},
+    {"type": "modularmachinery:item", "io-type": "output", "item": "minecraft:glass", "amount": 1},
+    {"type": "modularmachinery:energy", "io-type": "input", "energyPerTick": 1},
+    {"type": "modularmachinery:computation", "io-type": "input", "amount": 2.0, "triggerFailure": false}
+  ]
+}

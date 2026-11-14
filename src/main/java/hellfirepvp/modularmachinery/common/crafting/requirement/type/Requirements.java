@@ -15,27 +15,27 @@ package hellfirepvp.modularmachinery.common.crafting.requirement.type;
 import hellfirepvp.modularmachinery.Modularmachinery;
 import net.minecraft.resources.ResourceLocation;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+/**
+ * Registers the requirement types this mod ships, and is the place an addon's registration belongs beside.
+ *
+ * <h2>Why registration is idempotent and lazy rather than a static block</h2>
+ *
+ * <p>{@link #registerBuiltIns()} is called by the recipe loader before it consults the registry, and calling it twice does
+ * nothing the second time. That is deliberate for two reasons:
+ *
+ * <ul>
+ *   <li><b>Class-loading order cannot leave the registry empty.</b> A static initialiser runs when the class is first
+ *       touched; if the loader consulted the registry without touching this class first, it would find nothing and report
+ *       every built-in type as unknown -- a failure that would look like a parsing bug and be one line away from a fix
+ *       nobody could see.</li>
+ *   <li><b>The loader's own reload path can call it again harmlessly.</b> Recipe reloads are frequent, and a registration
+ *       that logged or threw on every reload would be noise.</li>
+ * </ul>
+ *
+ * <p><b>An addon registers into {@link RequirementTypeRegistry} directly.</b> There is nothing to unlock first: that was the
+ * whole point of PLAN section 374, where the port's loader could only report the types it did not implement because the
+ * three-case switch that replaced them could not be extended from outside its own class.
+ */
 public final class Requirements {
 
     private static boolean registered = false;
@@ -71,6 +71,10 @@ public final class Requirements {
             }
         }
         register(EnergyRequirementType.NAME, new EnergyRequirementType());
+        register("computation", new ComputationRequirementType());
+        register("research", new ResearchRequirementType());
+        register("hypernet_cooling", new HyperNetMaintenanceRequirementType(hellfirepvp.modularmachinery.common.crafting.requirement.RequirementHyperNetMaintenance.Kind.COOLING));
+        register("hypernet_circuit_repair", new HyperNetMaintenanceRequirementType(hellfirepvp.modularmachinery.common.crafting.requirement.RequirementHyperNetMaintenance.Kind.CIRCUIT_REPAIR));
         register(ItemRequirementType.NAME, new ItemRequirementType());
         register(ItemDurabilityRequirementType.NAME, new ItemDurabilityRequirementType());
         register(IngredientArrayRequirementType.NAME, new IngredientArrayRequirementType());
@@ -78,7 +82,7 @@ public final class Requirements {
         register(FluidRequirementType.NAME, new FluidRequirementType());
         register(FluidPerTickRequirementType.NAME, new FluidPerTickRequirementType());
         // Upstream's key is "interface_number_input" (RequirementTypesMM.KEY_INTERFACE_NUMBER_INPUT), so the
-         
+        // JSON spelling matches the id a pack already knows from upstream's own registry (§PLAN 663).
         register(InterfaceNumberRequirementType.NAME, new InterfaceNumberRequirementType());
         if (hellfirepvp.modularmachinery.common.integration.AstralIntegration.available()) {
             register("starlight", new hellfirepvp.modularmachinery.integration.astral.RequirementStarlight.Type());

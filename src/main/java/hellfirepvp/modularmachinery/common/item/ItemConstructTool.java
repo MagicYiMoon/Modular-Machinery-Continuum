@@ -50,6 +50,12 @@ public class ItemConstructTool extends Item {
         super(new Item.Properties().stacksTo(1));
     }
 
+    /** Select before a hatch, chest or other interactive block can consume the right-click. */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        return useOn(context);
+    }
+
     /**
      * Right-click a block: mark a corner. Right-click a controller: export the selected box.
      *

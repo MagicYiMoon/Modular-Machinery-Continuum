@@ -1,0 +1,14 @@
+{
+  "id": "example:cpu",
+  "item": "minecraft:redstone",
+  "type": "cpu",
+  "generation": 1,
+  "energy-ratio": 1000,
+  "bandwidth": 5,
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

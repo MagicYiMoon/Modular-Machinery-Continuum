@@ -13,12 +13,14 @@ import java.util.function.Consumer;
 
 /** Isolated modal: all widgets share the same lifecycle and never leak over the recipe editor. */
 final class ControllerAppearancePanel {
-    record Settings(int color, boolean factory) {}
+    record Settings(int color, boolean factory, boolean requiresBlueprint) {}
     private final List<AbstractWidget> widgets = new ArrayList<>();
     private EditBox hex;
     private Button factoryButton;
+    private Button blueprintButton;
     private Font font;
     private boolean factory, registered, factoryRegistered;
+    private boolean requiresBlueprint;
     private String machine = "", title = "", error = "", draftColor = "FFFFFF";
     private static final int X=60, Y=24, W=320, H=216;
 
@@ -37,11 +39,15 @@ final class ControllerAppearancePanel {
                     .bounds(left+X+10+i*30,top+Y+68,28,20).build());
         }
         factoryButton=Button.builder(Component.empty(), b->{factory=!factory; updateFactory();})
-                .bounds(left+X+10,top+Y+144,190,20)
+                .bounds(left+X+10,top+Y+144,148,20)
                 .tooltip(Tooltip.create(Component.literal("保存 has-factory 配置；新增工厂控制器需要客户端和服务端一起重启\n关闭此项不会删除已注册的旧 ID 或已有方块\n全局默认启用工厂时，以全局注册设置为准"))).build();
         widgets.add(factoryButton); updateFactory();
+        blueprintButton=Button.builder(Component.empty(), b->{requiresBlueprint=!requiresBlueprint; updateBlueprint();})
+                .bounds(left+X+164,top+Y+144,146,20)
+                .tooltip(Tooltip.create(Component.literal("开启：控制器需放入该机器蓝图才能自动成型\n关闭：通用控制器可自动识别匹配的结构\n保存后同步生效，无需重启；不会忽略方块或 NBT 条件"))).build();
+        widgets.add(blueprintButton); updateBlueprint();
         widgets.add(Button.builder(Component.literal("保存"),b->{
-            try { error=""; save.accept(new Settings(parse(),factory)); }
+            try { error=""; save.accept(new Settings(parse(),factory,requiresBlueprint)); }
             catch(IllegalArgumentException invalid) { error="请输入六位十六进制 RGB 颜色"; }
         }).bounds(left+X+174,top+Y+188,62,20).build());
         widgets.add(Button.builder(Component.literal("返回"),b->cancel.run()).bounds(left+X+244,top+Y+188,62,20).build());
@@ -52,14 +58,16 @@ final class ControllerAppearancePanel {
         machine=json.get("name").getAsString(); title=json.get("localizedName").getAsString();
         hex.setValue(String.format(Locale.ROOT,"%06X",json.get("color").getAsInt()&0xFFFFFF));
         factory=json.get("hasFactory").getAsBoolean(); registered=json.get("controllerRegistered").getAsBoolean();
+        requiresBlueprint=json.has("requiresBlueprint")&&json.get("requiresBlueprint").getAsBoolean(); updateBlueprint();
         factoryRegistered=json.get("factoryRegistered").getAsBoolean(); error=""; updateFactory();
     }
     private void updateFactory(){factoryButton.setMessage(Component.literal("独立工厂控制器："+(factory?"开启":"关闭")));}
+    private void updateBlueprint(){blueprintButton.setMessage(Component.literal("需要蓝图："+(requiresBlueprint?"开启":"关闭")));}
     private int parse(){String value=hex.getValue().replace("#",""); if(!value.matches("[0-9a-fA-F]{6}"))throw new IllegalArgumentException(); return Integer.parseInt(value,16);}
     void setVisible(boolean visible,boolean pending){for(var widget:widgets){widget.visible=visible;widget.active=visible&&!pending;}}
     void draw(GuiGraphics g,String status,boolean failed){
         g.fill(0,0,440,260,0xD0101216); g.fill(X,Y,X+W,Y+H,0xFF242A31);
-        g.drawString(font,"控制器外观",X+10,Y+9,0xFFFFFF,false);
+        g.drawString(font,"控制器设置",X+10,Y+9,0xFFFFFF,false);
         g.drawString(font,font.plainSubstrByWidth(title,292),X+10,Y+24,0xB5C5D5,false);
         g.drawString(font,"RGB 颜色",X+10,Y+46,0xDDDDDD,false);
         int color; try{color=parse();}catch(IllegalArgumentException invalid){color=0xFFFFFF;}
@@ -67,7 +75,7 @@ final class ControllerAppearancePanel {
         drawController(g,false,X+76,Y+96,color); drawController(g,true,X+221,Y+96,color);
         g.drawString(font,"普通控制器",X+55,Y+132,0xDDDDDD,false);
         g.drawString(font,"工厂控制器",X+200,Y+132,0xDDDDDD,false);
-        String hint=!registered||factory&&!factoryRegistered?"新增控制器需重启客户端与服务端":"颜色保存后同步生效；注册 ID 保持不变";
+        String hint=!registered||factory&&!factoryRegistered?"新增控制器需重启客户端与服务端":"颜色与蓝图要求保存后同步生效";
         g.drawString(font,hint,X+10,Y+169,0xD9C98E,false);
         String message=!error.isEmpty()?error:status;
         if(!message.isEmpty())g.drawString(font,font.plainSubstrByWidth(message,150),X+10,Y+194,!error.isEmpty()||failed?0xFF8888:0x9BDEAA,false);

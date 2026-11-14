@@ -1,0 +1,56 @@
+{
+  "registryname": "extendable_calculator_subsystem_l6",
+  "localizedname": "EC C6 component demonstration / 基础部件演示",
+  "requires-blueprint": false,
+  "has-factory": false,
+  "parts": [
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:ecalculator_transmitter_bus"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 0,
+      "elements": "modularmachinery:ecalculator_cell_drive"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": 0,
+      "elements": "modularmachinery:ecalculator_cell_drive"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:ecalculator_thread_core_l6"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:ecalculator_thread_core_hyper_l6"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:ecalculator_parallel_proc_l6"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "elements": "modularmachinery:ecalculator_me_channel"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:ecalculator_tail_l6"
+    }
+  ]
+}

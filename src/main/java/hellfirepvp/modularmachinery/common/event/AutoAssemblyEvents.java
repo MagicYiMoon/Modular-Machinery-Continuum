@@ -38,7 +38,7 @@ public final class AutoAssemblyEvents {
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getHand() != InteractionHand.MAIN_HAND || event.getEntity().isShiftKeyDown()) return;
+        if (event.getHand() != InteractionHand.MAIN_HAND) return;
         Level level = event.getLevel();
         BlockPos pos = event.getPos();
         if (!(level.getBlockState(pos).getBlock() instanceof BlockController)
@@ -48,6 +48,28 @@ public final class AutoAssemblyEvents {
         boolean blueprint = held.getItem() instanceof ItemBlueprint;
         boolean assembler = held.is(Config.autoAssemblyItem());
         if (!blueprint && !assembler) return;
+        if (event.getEntity().isShiftKeyDown()) {
+            if (assembler && level.isClientSide) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
+                return;
+            }
+            if (assembler && level instanceof ServerLevel server
+                    && event.getEntity() instanceof ServerPlayer player
+                    && MachineAssemblyManager.forPlayer(player).stream().anyMatch(job -> job.level() == server
+                    && job.controllerPos().equals(pos))) {
+                MachineAssemblyManager.remove(server, pos);
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                        "message.assembly.tip.cancelled"), false);
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
+            }
+            if (assembler) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
+            }
+            return;
+        }
 
         // Do not let BlockController open its GUI for the same click.  The server performs all world changes;
         // cancelling on the client also prevents a predicted menu from flashing open before the queue starts.

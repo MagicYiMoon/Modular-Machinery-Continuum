@@ -119,6 +119,13 @@ public final class RecipeSnapshotCodec {
                 rate.fluid().getNbt().write(entry);
             } else if (requirement instanceof RequirementEnergy energy) {
                 entry.addProperty("energyPerTick", energy.getEnergyPerTick());
+            } else if (requirement instanceof RequirementComputation computation) {
+                entry.addProperty("amount", computation.amount());
+                entry.addProperty("triggerFailure", computation.triggerFailure());
+            } else if (requirement instanceof RequirementResearch research) {
+                JsonArray ids = new JsonArray(); research.research().forEach(ids::add); entry.add("research",ids);
+            } else if (requirement instanceof RequirementHyperNetMaintenance maintenance) {
+                entry.addProperty("amount", maintenance.amount());
             } else if (requirement instanceof RequirementInterfaceNumInput number) {
                 entry.addProperty("interface", number.getInterfaceType());
                 entry.addProperty("min", number.getMinValue());

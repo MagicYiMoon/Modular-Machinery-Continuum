@@ -201,26 +201,26 @@ public abstract class RecipeAdapter {
         return Math.max(0, Math.round(value));
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The recipe duration after the template's duration modifiers, rounded the way upstream rounds it.
+     *
+     * <p>Upstream: {@code Math.round(Math.max(1, applyModifiers(modifiers,
+     * RequirementTypesMM.REQUIREMENT_DURATION, null, 120, false)))} at {@code AdapterMinecraftFurnace} U60.
+     * The port had no duration target at all (PLAN 750.1 records {@code REQUIREMENT_DURATION} as a zero-hit
+     * search), so this is where the key starts working rather than a re-derivation of it.</p>
+     *
+     * <p><b>IS THERE A DOUBLE APPLICATION? This was checked, because the port also applies a machine's own
+     * duration modifiers at tick time ({@code MachineTicker.effectiveRecipeDuration}).</b> There is not: the
+     * adapter's duration modifier belongs to the TEMPLATE and the tick-time one belongs to the MACHINE's
+     * structure modifier -- the two sources upstream has, applied at the two points upstream applies them
+     * (generation U60, and {@code MachineRecipe.copy} U250 per run). The shipped
+     * {@code alloy_smelter_furnaces.adapter.json} declares the template's; nothing declares a duration
+     * modifier on {@code alloy_furnace}'s own pattern.</p>
+     *
+     * @param base      the adapter's own default duration in ticks, 120 for the furnace
+     * @param modifiers the template's modifiers
+     * @return at least one tick -- a generated recipe of zero length could never complete
+     */
     @Nullable
     protected static Integer durationWithModifiers(int base, List<RecipeModifier> modifiers) {
         Integer ticks = scaledValue(base, modifiers, DURATION_TARGET, null);

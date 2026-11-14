@@ -35,68 +35,68 @@ import net.minecraft.world.level.Level;
 import java.util.ArrayList;
 import java.util.List;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+/**
+ * Advances a FACTORY controller by one tick: many recipe runs at once, on the server thread.
+ *
+ * <h2>RULE B -- this is the second caller of {@link MachineTicker}, not a second engine</h2>
+ *
+ * <p>Upstream's factory is a controller of its own kind ({@code TileFactoryController}, 757 lines) whose
+ * per-thread work calls the SAME requirement machinery a normal controller uses. This port's requirement
+ * machinery lives in {@code MachineTicker}, and THE FACTORY REUSES IT RATHER THAN RESTATING IT:</p>
+ *
+ * <pre>
+ * what the factory needs                              where it comes from
+ * is this recipe even runnable (adapter / duration 0)  MachineTicker.isRunnable
+ * can it start AND finish (with the check event pair)  MachineTicker.satisfies
+ * how parallel may this craft be, and the min reduction MachineTicker.effectiveParallelism
+ * take the inputs                                      MachineTicker.consumeInputs
+ * draw this tick's energy                              MachineTicker.consumeEnergyTick
+ * place the outputs                                    MachineTicker.emitOutputs
+ * the machine's parallelism ceiling                    MachineTicker.machineParallelism
+ * resolve a recipe by name                             MachineTicker.findByName
+ * the controller's facing, before a context exists     MachineTicker.facingOf
+ * </pre>
+ *
+ * <p>Those ten were private when this class was written and are public now. THAT IS THE REUSE, and it is
+ * the only reason the factory is a few hundred lines instead of a second copy of a thousand.</p>
+ *
+ * <h2>RULE A0 -- synchronous instead of upstream's thread pool, and what that changes</h2>
+ *
+ * <p>UPSTREAM'S THREADED MECHANISM, named by file and line: the per-controller work is submitted to
+ * {@code ModularMachinery.EXECUTE_MANAGER} as a {@code ForkJoinTask}
+ * (upstream TileFactoryController L84-U114, in the ASYNC and SEMI_SYNC work modes); the controller's own
+ * recipe search is a {@code FactoryRecipeSearchTask} pushed onto {@code waitToExecute} and run by a
+ * {@code SequentialTaskExecutor} (upstream L361-U372, L464-U472); each thread's search is the same
+ * (FactoryRecipeThread L161-U172); and the results are handed back through
+ * {@code waitToExecute}/{@code ForkJoinTask.get()} (upstream L322-U359).</p>
+ *
+ * <p><b>THE PORT HAS NO THREAD ARCHITECTURE TO HANG THAT ON, AND ITS OWN HEADER SAYS WHY (PLAN 521's
+ * neighbourhood, MachineTicker's class javadoc "R4: why this is strictly single-threaded"):</b> on 1.20.1
+ * {@code Level#getBlockState}/{@code getChunk} are not thread-safe, vanilla's chunk and entity machinery
+ * assumes a single writer, and every requirement in this port resolves capability handlers out of live block
+ * entities. Upstream could do it because 1.12.2's requirement model read components it had captured; this
+ * port's reads the world. So the port deliberately has NO worker pool anywhere in the recipe path, and
+ * MachineTicker already runs the normal controller synchronously for exactly that reason.</p>
+ *
+ * <p>THEREFORE the factory runs N recipe runs PER TICK ON THE SERVER THREAD, in thread-list order. WHAT A
+ * PLAYER CAN SEE, stated as the comparison rather than as a claim of equivalence:</p>
+ *
+ * <ul>
+ *   <li><b>The same:</b> how many runs are in flight at once and what they produce; that each run has its
+ *       own progress, its own parallelism and its own inputs; the ordering rule the recipe search follows;
+ *       the events, their payloads and their points in the flow; the thread-list contents a GUI reads; the
+ *       per-thread idle timeout.</li>
+ *   <li><b>Different:</b> the runs all advance within ONE server tick, so a factory with N runs costs that
+ *       tick N times the requirement evaluation. Upstream distributed that over a pool and paid latency per
+ *       run instead (a {@code ForkJoinTask} round trip, plus a search that is only picked up on a later
+ *       tick). A player sees the same numbers; a profiler sees one thread instead of several.</li>
+ *   <li><b>NOT preserved, and named rather than buried:</b> upstream's runs make progress INDEPENDENTLY of
+ *       one another in wall-clock time -- a run whose requirement stalls does not hold up another run's
+ *       evaluation, because the other run is on another worker. Here a slow requirement in run 1 delays run
+ *       2 within the same tick. The COUNT of runs and their outcomes are unaffected; the tick's duration is
+ *       the sum rather than the maximum.</li>
+ * </ul>
+ */
 public final class FactoryTicker {
 
     private FactoryTicker() {
@@ -131,7 +131,10 @@ public final class FactoryTicker {
             tickController(level, pos, controller);
             controller.countControllerTick();
         }
-        finally { controller.recordPerformanceNanos(System.nanoTime() - started); }
+        finally {
+            hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.tickController(controller);
+            controller.recordPerformanceNanos(System.nanoTime() - started);
+        }
     }
 
     private static void tickController(Level level, BlockPos pos, TileFactoryController controller) {
@@ -163,7 +166,7 @@ public final class FactoryTicker {
         }
         controller.refreshRecipeSearchRevision(MachineReloadListener.getServerDefinitionRevision());
 
-         
+        // RE-BIND AFTER A WORLD LOAD, the same one-shot request MachineTicker consumes (PLAN 627).
         if (controller.consumeRebindRequest()) {
             java.util.List<BlockPos> rebound = hellfirepvp.modularmachinery.common.machine.MachineFormation
                     .rebind((net.minecraft.server.level.ServerLevel) level, pos,
@@ -174,7 +177,7 @@ public final class FactoryTicker {
 
         Direction facing = MachineTicker.facingOf(controller);
         // THE STRUCTURE RE-CHECK, ON THE SAME CADENCE AND THROUGH THE SAME CALL AS THE NORMAL CONTROLLER
-         
+        // (PLAN 683, DEFECT A). UPSTREAM COVERS FACTORIES WITH ONE METHOD, NOT TWO: doStructureCheck lives on
         // the SHARED base TileMultiblockMachineController (U533-U559), and both TileMachineController.U116-U118
         // and TileFactoryController.U126-U128 call it from their own doAsyncStep. So a factory whose casing is
         // broken has to stop exactly like a single-craft machine, and leaving this out would have been a silent
@@ -193,7 +196,7 @@ public final class FactoryTicker {
             }
         }
 
-         
+        // THE SAME FORMED PATTERN THE NORMAL CONTROLLER USES (PLAN §750): a factory whose dynamic sections hold the
         // busses must see them, and the factory is the second reader of one rule rather than a second rule.
         MachineContext context = new MachineContext(
                 (net.minecraft.server.level.ServerLevel) level, pos, facing, machine, loader.getVariables(),
@@ -215,13 +218,13 @@ public final class FactoryTicker {
 
         // THE MACHINE TICK BRACKET, at upstream's factory position (TileFactoryController U133/U156:
         // onMachineTick(START) ... work ... onMachineTick(END)) and around the WORK rather than around the
-         
+        // guards above, which is exactly how MachineTicker brackets the normal controller (PLAN 498.2/403).
         new MachineTickEvent(controller, Phase.START).postEvent();
         try {
             controller.countFactoryTick();
             // THE CEILING AND THE PARALLELISM BUDGET ARE MIRRORED ONCE PER TICK (upstream reads
             // foundMachine.getMaxThreads() and getMaxParallelism() directly; this port's tile holds no
-             
+            // machine object, which is PLAN 599.2's deliberate dependency direction).
             controller.setFactoryCeiling(machine.getMaxThreads(), MachineTicker.machineParallelism(machine, context));
             controller.syncCoreThreadPresets(machine.getCoreThreadPresets(), machine.getCoreThreadPermanentModifiers(),
                     machine.getCoreThreadSemiPermanentModifiers());
@@ -243,7 +246,7 @@ public final class FactoryTicker {
                 controller.recordRecipeSearchNanos(System.nanoTime() - searchStarted);
             }
 
-             
+            // THE CLIENT NEEDS THE RUNS, AND TRANSITIONS ALONE ARE TOO LATE (PLAN 664).
             //
             // UPSTREAM'S CADENCE, named exactly: doSyncStep calls markNoUpdateSync() on EVERY tick in which the
             // factory has any thread at all (TileFactoryController U145-U148), and that call is what makes its
@@ -307,6 +310,7 @@ public final class FactoryTicker {
             // dynamic thread has no modifiers yet; allocate it only after the checks succeed, preserving
             // the idle factory's no-update behavior when every candidate lacks materials.
             FactoryRecipeThread thread = controller.findIdleThreadFor(recipe);
+            if (!hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.permitsCoreWork(controller, thread)) continue;
             RecipeCraftingContext run = MachineTicker.resolvedRun(machine, recipe, context,
                     thread == null ? List.of() : thread.activeModifiers());
             if (!MachineTicker.satisfies(recipe, run, context, true)) {
@@ -325,7 +329,7 @@ public final class FactoryTicker {
             // WHOLE ONE (upstream passes getAvailableParallelism() into the search task, L465-U470), and it is
             // still min-reduced against the requirements, so a second run cannot be granted parallelism the
             // first one has already spent.
-             
+            // THE REDUCTION AND THE DRAW BOTH TAKE THAT SAME RESOLVED LIST (PLAN 723.3): a scaled input is
             // reduced against its scaled amount and paid for at the scaled amount, so what the check demanded
             // is what the run costs -- and `effectiveParallelism` writes the granted value into THE LIST THE
             // WORK PATH READS, which is the only reason the fluid half of the emission knows about it.
@@ -335,36 +339,74 @@ public final class FactoryTicker {
             if (parallelism <= 0) {
                 continue;
             }
-             
+            // NOTHING IS TAKEN BEFORE BOTH CHECKS AGREE (MachineTicker.tryStart's ordering argument, PLAN 597.3):
             // a craft whose inputs cannot be taken must leave the machine exactly as it found it.
             if (!MachineTicker.consumeInputs(immediate, context, parallelism)) {
                 trace("recipe '{}' passed its checks but its inputs could not be taken", recipe.registryName());
                 continue;
             }
-            thread.setRecipe(recipe);
-             
-            // gap): upstream scales the recipe's tick time with the duration modifiers for a factory run exactly
-            // as it does for a single one (the run holds its own ActiveMachineRecipe), and MachineTicker
-            // .effectiveRecipeDuration is where that arithmetic and the ONE active-modifier scan now live.
-            thread.beginRecipe(recipe.registryName(), run.effectiveDuration(), parallelism);
-            thread.setActiveCatalystRequirements(run.activeCatalystIndices());
-            thread.setIsolationGroupKey(run.getSelectedIsolationGroupKey());
-            thread.observeRuntimeRecipeContext(run);
-            recipe.commands().runStartCommands(controller);
-
-            // RECIPE START, at upstream's point (TileFactoryController.onThreadRecipeStart U275 fires it
-            // BEFORE activeRecipe.start): the handler observes a run that has a recipe and no progress yet.
-            // The port takes the inputs one line above rather than inside activeRecipe.start, which is the
-            // port's own consumption model (MachineTicker.tryStart consumes before beginRecipe for the same
-             
-            // difference is stated rather than implied.
-            new FactoryRecipeStartEvent(thread, controller, run).postEvent();
-            controller.markForUpdate();
-            trace("started '{}' on a factory thread: duration={}, parallelism={}, {} of {} run(s)",
-                    recipe.registryName(), thread.getRecipeDuration(), parallelism,
-                    controller.getRunningThreadCount(), controller.getThreadCount());
+            beginRecipe(thread, controller, recipe, run, parallelism);
             return;
         }
+    }
+
+    /** The first start and a successful core restart pay through the same initialization path. */
+    private static void beginRecipe(FactoryRecipeThread thread, TileFactoryController controller,
+                                    MachineRecipe recipe, RecipeCraftingContext run, int parallelism) {
+        thread.setRecipe(recipe);
+
+        // THE MODIFIED DURATION, THROUGH THE SINGLE-CRAFT PATH'S OWN PRODUCER (PLAN section 353.3's duration
+        // gap): upstream scales the recipe's tick time with the duration modifiers for a factory run exactly
+        // as it does for a single one (the run holds its own ActiveMachineRecipe), and MachineTicker
+        // .effectiveRecipeDuration is where that arithmetic and the ONE active-modifier scan now live.
+        thread.beginRecipe(recipe.registryName(), run.effectiveDuration(), parallelism);
+        thread.setActiveCatalystRequirements(run.activeCatalystIndices());
+        thread.setIsolationGroupKey(run.getSelectedIsolationGroupKey());
+        thread.observeRuntimeRecipeContext(run);
+        recipe.commands().runStartCommands(controller);
+
+        // RECIPE START, at upstream's point (TileFactoryController.onThreadRecipeStart U275 fires it
+        // BEFORE activeRecipe.start): the handler observes a run that has a recipe and no progress yet.
+        // The port takes the inputs one line above rather than inside activeRecipe.start, which is the
+        // port's own consumption model (MachineTicker.tryStart consumes before beginRecipe for the same
+        // reason and says so at PLAN 513/497) -- so here the event sees consumed inputs, and that
+        // difference is stated rather than implied.
+        new FactoryRecipeStartEvent(thread, controller, run).postEvent();
+        controller.markForUpdate();
+        trace("started '{}' on a factory thread: duration={}, parallelism={}, {} of {} run(s)",
+                recipe.registryName(), thread.getRecipeDuration(), parallelism,
+                controller.getRunningThreadCount(), controller.getThreadCount());
+    }
+
+    /**
+     * Source RecipeThread.onFinished -> FactoryRecipeThread.tryRestartRecipe starts the same recipe
+     * before returning. Restore that boundary for the designated HyperNet work core: clearing it until
+     * next tick would falsely stop the network. This starts, but never advances, the next craft.
+     * Other threads retain the existing one-new-search-per-tick policy.
+     */
+    private static void restartHyperNetCore(FactoryRecipeThread thread, TileFactoryController controller,
+                                           DynamicMachine machine, MachineContext context, MachineRecipe recipe) {
+        var network = machine.getHyperNetDefinition();
+        if (network == null || network.role() == hellfirepvp.modularmachinery.common.hypernet.HyperNetDefinition.Role.NODE
+                || !thread.isPresetThread() || !thread.getThreadName().equals(network.workingThread())) return;
+        if (!thread.isIdle() || !controller.getFactoryRecipeThreadList().contains(thread)
+                || controller.isRemoved() || !controller.isFormed() || controller.isStructureCheckRequested()
+                || !controller.isStructureChunkLoaded() || controller.isRedstoneStopped()
+                || MachineReloadListener.serverDefinitions().machines().findByName(controller.getMachineName()) != machine
+                || !thread.acceptsRecipe(recipe) || !MachineTicker.isRunnable(recipe)
+                || !canCheck(recipe, runningRecipeCounts(controller), controller)
+                || !hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.permitsCoreWork(controller, thread)) return;
+        int available = controller.getAvailableParallelism();
+        if (available <= 0) return;
+        // Resolve again after completion cleared semi-permanent modifiers. Never reuse paid requirements.
+        context.selectIsolationGroup(null);
+        var run = MachineTicker.resolvedRun(machine, recipe, context, thread.activeModifiers());
+        if (!MachineTicker.satisfies(recipe, run, context, true)) return;
+        context.selectIsolationGroup(run.getSelectedIsolationGroupKey());
+        var immediate = run.getRequirements().stream().filter(r -> r.getTriggerTime() <= 0).toList();
+        int parallelism = MachineTicker.effectiveParallelism(recipe, immediate, context, available);
+        if (parallelism <= 0 || !MachineTicker.consumeInputs(immediate, context, parallelism)) return;
+        beginRecipe(thread, controller, recipe, run, parallelism);
     }
 
     // ------------------------------------------------------------------
@@ -466,7 +508,9 @@ public final class FactoryTicker {
         }
         thread.setRecipe(recipe);
 
-         
+        hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.prepareDatabaseCoreTick(controller,thread);
+
+        // THIS RUN'S RESOLVED REQUIREMENTS FOR THIS TICK (PLAN 723.3, the factory half of the fix). Built once
         // per run per tick through the ONE producer (`MachineTicker.resolvedRun`), and every requirement read
         // below comes from it rather than from `recipe.requirements()` -- the same list the start check of this
         // run asked its questions of, so a modifier cannot change what the run DEMANDS without changing what it
@@ -482,6 +526,7 @@ public final class FactoryTicker {
         // THE PER-RUN TICK BRACKET (upstream U227-U252: the PreTickEvent, the work, the PostTickEvent).
         FactoryRecipeTickEvent start = new FactoryRecipeTickEvent(thread, controller, Phase.START, run);
         start.postEvent();
+        boolean completed = false;
         try {
             if (!thread.hasActiveRecipe()) return;
             RecipeCraftingContext updated = thread.getRuntimeRecipeContext();
@@ -495,15 +540,27 @@ public final class FactoryTicker {
                 return;
             }
 
+            String hyperNetFailure=hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.coreWorkFailure(controller, thread);
+            if (hyperNetFailure!=null) {
+                notWorking(thread, controller, recipe, run, context, hyperNetFailure);
+                return;
+            }
             int currentTick = thread.getRecipeTicks();
-            String tickFailure = MachineTicker.processTriggeredInputs(requirements, run, context, thread.getParallelism(), currentTick,
-                    thread::hasTriggeredRequirement, thread::markTriggeredRequirement);
             List<Requirement> activeRequirements = MachineTicker.activeRequirementsAtTick(run, requirements, currentTick);
+            var computation = thread.getRecipeTicks() >= thread.getRecipeDuration() ? null
+                    : hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.workPlan(context, activeRequirements, thread.getParallelism(), thread.computationTicket());
+            String tickFailure = computation == null ? null : computation.failure();
+            if (tickFailure == null) tickFailure = MachineTicker.processTriggeredInputs(requirements, run, context, thread.getParallelism(), currentTick,
+                    thread::hasTriggeredRequirement, thread::markTriggeredRequirement);
             if (tickFailure == null) tickFailure = MachineTicker.processPerTick(recipe, activeRequirements, context, thread.getParallelism(),
-                    thread.getRecipeTicks() >= thread.getRecipeDuration());
+                    thread.getRecipeTicks() >= thread.getRecipeDuration(), computation);
             if (tickFailure != null) {
+                if (computation != null && !hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.QUEUED.equals(tickFailure)) computation.abandon();
+                if (hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.pauses(activeRequirements, tickFailure)) {
+                    setBlockedReason(thread, controller, tickFailure); return;
+                }
                 // A SHORTFALL STALLS THE RUN, exactly as it does for a single-craft controller, and the reason
-                 
+                // is the port's own (describeBlockers) because the port has no CraftingStatus -- PLAN 521 and
                 // MachineTicker.advance's failure branch. DESCRIBED OVER THE RESOLVED LIST: a diagnostic that
                 // reported the definition's amounts while the run demanded the scaled ones would be a third
                 // description of the same craft. With no modifier active the two lists are THE SAME OBJECT
@@ -513,9 +570,15 @@ public final class FactoryTicker {
             }
             setBlockedReason(thread, controller, null);
 
+            if(currentTick<thread.getRecipeDuration()) {
+                String researchFailure=hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.workResearchCore(controller,thread);
+                if(researchFailure!=null){setBlockedReason(thread,controller,researchFailure);return;}
+            }
             recipe.commands().runTickCommands(controller, thread.getRecipeTicks());
 
-            thread.advanceRecipe();
+            if(!hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.alignResearchCore(controller,thread)
+                    &&!hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.holdDatabaseCore(controller,thread))thread.advanceRecipe();
+            if(currentTick<thread.getRecipeDuration())hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.onCoreWorked(controller,thread);
             trace("'{}' {}/{} on a factory thread", recipe.registryName(),
                     thread.getRecipeTicks(), thread.getRecipeDuration());
 
@@ -529,7 +592,7 @@ public final class FactoryTicker {
                 // Completion mirrors upstream finishCrafting: delayed trigger metadata controls start-time IO,
                 // but every output requirement is still considered by the final placement pass.
                 MachineTicker.setParallelism(requirements, thread.getParallelism());
-                 
+                // ASK THE OUTPUTS ONLY, BEFORE PLACING ANYTHING -- the port's ruling at PLAN 345/346, applied
                 // per run. Upstream reaches the same conclusion by a different route (RecipeThread.onFinished
                 // U73-U78 checks canFinishCrafting and holds the craft at 100% until there is room); the port
                 // re-checks every tick rather than every tenth, which is what MachineTicker.advance does and is
@@ -538,12 +601,12 @@ public final class FactoryTicker {
                     if (requirement.getIOType() != IOType.OUTPUT) {
                         continue;
                     }
-                     
+                    // THE SAME MULTIPLIER AS THE EMISSION (PLAN 683.2 fact 8): a factory run is granted its own
                     // parallelism (thread.getParallelism(), handed to emitOutputs two lines below), so the room
                     // it must find is `amount * that`, not `amount`. A run held here is re-asked next tick, which
                     // is the port's single-craft convention this branch deliberately copies.
                     //
-                     
+                    // AND THE SAME ALLOCATION AS THE SINGLE-CRAFT GATE (PLAN 704, RULE A0). A factory run has
                     // exactly the same multi-output exposure: the loop below used to ask each output
                     // separately against the same free space, so a nine-output recipe could be admitted and lose
                     // its tail. MACHINE AND FACTORY MUST NOT DISAGREE ABOUT THIS -- the two call the SAME
@@ -552,7 +615,7 @@ public final class FactoryTicker {
                     if (!requirement.canEmit(context, thread.getParallelism())) {
                         trace("run '{}' at {} is complete but its output has no room; holding",
                                 recipe.registryName(), controller.getBlockPos());
-                         
+                        // THE HOLD IS REPORTED, AND THAT IS THE HALF THAT WAS MISSING (PLAN 708, DEFECT B).
                         // A held run is NOT working -- FactoryRecipeThread.isWorking's own javadoc says so
                         // ("a recipe that is held ... is NOT working") -- but nothing wrote the reason, so
                         // blockedReason stayed null, the run kept counting as RUNNING in
@@ -574,14 +637,19 @@ public final class FactoryTicker {
                 if (allocationFailure != null) {
                     trace("run '{}' at {} is complete but its outputs have no room together; holding",
                             recipe.registryName(), controller.getBlockPos());
-                     
+                    // THE KEY THE ALLOCATION ITSELF RETURNED, not a second derivation of it (PLAN 708).
                     setBlockedReason(thread, controller, allocationFailure);
                     return;
                 }
                 // THE EMISSION TAKES THAT SAME LIST, which is the point of threading it: `emitOutputs` asks and
                 // places what `satisfies` asked, so a factory run with an active modifier makes the doubled
-                 
+                // output instead of the definition's own amount (PLAN 723.3 -- this was `recipe.requirements()`,
                 // and it is the line the audit's "the check demands two and one is placed" symptom ended on).
+                var maintenance=hellfirepvp.modularmachinery.common.hypernet.HyperNetMaintenance.plan(context,requirements,thread.getParallelism(),false);
+                if(!maintenance.valid()||!maintenance.execute()) {
+                    setBlockedReason(thread,controller,maintenance.failure()==null?hellfirepvp.modularmachinery.common.hypernet.HyperNetMaintenance.INVALID:maintenance.failure());
+                    return;
+                }
                 MachineTicker.emitOutputs(recipe, run, context, thread.getParallelism());
                 recipe.commands().runFinishCommands(controller);
                 // FINISHED, at upstream's point (TileFactoryController.onThreadRecipeFinished U304, called
@@ -589,17 +657,22 @@ public final class FactoryTicker {
                 // while the thread still carries the completed recipe. This ordering is observable through
                 // FactoryRecipeFinishEvent#getContext and lets a handler inspect the run that just finished.
                 new FactoryRecipeFinishEvent(thread, controller, run).postEvent();
+                hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.finishResearchCore(controller,thread);
                 // The source clears the active recipe only after the finish event. Keep that lifetime here so
                 // event handlers see a non-null recipe/context, while the thread is idle for the next search.
                 thread.finishRecipe();
+                completed = true;
                 controller.markForUpdate();
             }
         } finally {
-             
+            // THE PAIR IS THE CONTRACT (PLAN 561/565): a handler that prepared at START gets its END. Upstream's
             // factory SKIPS the end event on its own early-return paths (U242-U249 isNotWorking returns before
             // U252) -- the port does not, because the port's established rule for a bracketed tick is that the
             // bracket always closes, and a run that starved is exactly the case a handler needs to observe.
             new FactoryRecipeTickEvent(thread, controller, Phase.END, run).postEvent();
+            // Close the old craft's observation first. An END callback must not see, rewind or destroy
+            // the next craft merely because it has the same recipe identity.
+            if (completed) restartHyperNetCore(thread, controller, machine, context, recipe);
         }
     }
 

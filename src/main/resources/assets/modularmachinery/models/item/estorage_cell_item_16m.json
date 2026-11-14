@@ -1,0 +1,7 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "modularmachinery:neco/items/estorage_cell_disks_a1_item_16m",
+    "layer1": "modularmachinery:neco/items/bloom/estorage_cell_disks_a1_item_16m"
+  }
+}

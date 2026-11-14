@@ -110,21 +110,21 @@ public final class MachineReloadListener {
         event.addListener((ResourceManagerReloadListener) resourceManager -> load(resourceManager));
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Re-reads the machine and recipe definitions on demand.
+     *
+     * <p>Exists so a non-Forge trigger can refresh them. CraftTweaker's script run is the case that needs
+     * it: a {@code /reload} drives CraftTweaker's own script execution and this mod's reload listener, and
+     * a script-added machine must not end up a revision behind the JSON ones.
+     *
+     * <p>Passes {@code null} for the {@link ResourceManager} because the loaders read their files from
+     * {@code config/modularmachinery/} rather than through the vanilla resource pack stack — these are the
+     * mod's own config templates, and on a dedicated server the mod's {@code assets} tree is not part of
+     * that stack at all. The parameter is therefore unused by the load path, and passing null documents
+     * that rather than inventing a manager that would be ignored. (It was unused before this round for the
+     * same reason, when the files were read from the classpath instead; PLAN 636/641 only moved the source
+     * from the jar to the config directory the jar seeds.)
+     */
     public static void reloadNow() {
         // CT also runs on remote clients. Only the server owns definitions; a local
         // script run must not replace the server's synchronized recipes with local files.
@@ -142,6 +142,11 @@ public final class MachineReloadListener {
 
     private static void load(ResourceManager resourceManager) {
         try {
+            var machinery = hellfirepvp.modularmachinery.common.data.ModDataHolder.INSTANCE.getMachineryDirectory();
+            if (machinery != null) hellfirepvp.modularmachinery.common.hypernet.HyperNetResearchRegistry.reload(
+                    machinery.toPath().getParent().resolve("research"));
+            if (machinery != null) hellfirepvp.modularmachinery.common.hypernet.server.ServerModuleRegistry.reload(
+                    machinery.toPath().getParent().resolve("server_modules"));
             serverDefinitions.machines().load(resourceManager);
             // CT's listener can execute before or after this listener, including initial startup.
             // Reapply declarations to newly parsed definitions instead of discarding script settings.

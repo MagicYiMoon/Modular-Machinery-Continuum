@@ -1,0 +1,11 @@
+{
+  "id": "example:calculate_heatsink",
+  "item": "minecraft:amethyst_shard",
+  "type": "calculate_heatsink",
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "example:capacitor",
+  "item": "minecraft:comparator",
+  "type": "capacitor",
+  "energy-capacity": 1000000,
+  "energy-consumption": 100000,
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

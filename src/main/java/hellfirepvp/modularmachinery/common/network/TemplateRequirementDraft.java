@@ -15,6 +15,7 @@ public final class TemplateRequirementDraft {
         else if(edit instanceof PktMachineEditorIngredientGroup p){index=p.index();value=JsonParser.parseString(p.groupJson()).getAsJsonObject();}
         else if(edit instanceof PktMachineEditorEnvironment p){index=p.index();value=JsonParser.parseString(p.requirementJson()).getAsJsonObject();}
         else if(edit instanceof PktMachineEditorPneumatic p){index=p.index();value=JsonParser.parseString(p.requirementJson()).getAsJsonObject();}
+        else if(edit instanceof PktMachineEditorResearchGate p){index=p.index();value=ResearchGateEditor.create(p.research());}
         else if(edit instanceof PktMachineEditorResourceAmount p){index=p.index();value=JsonParser.parseString(p.requirementJson()).getAsJsonObject();}
         else if(edit instanceof PktMachineEditorSmartInterface p){index=p.index();value=JsonParser.parseString(p.requirementJson()).getAsJsonObject();}
         else if(edit instanceof PktMachineEditorFluidTick p){index=p.index();value=JsonParser.parseString(p.requirementJson()).getAsJsonObject();}
@@ -32,6 +33,7 @@ public final class TemplateRequirementDraft {
         else if(ItemRequirementEditor.isItem(value))value=ItemRequirementEditor.merge(old,value);
         else if(EnvironmentEditor.isEnvironment(value))value=EnvironmentEditor.merge(old,value);
         else if(PneumaticEditor.isPneumatic(value))value=PneumaticEditor.merge(old,value);
+        else if(ResearchGateEditor.isResearch(value)||old!=null&&ResearchGateEditor.isResearch(old))value=ResearchGateEditor.merge(old,value);
         else if(ResourceAmountEditor.isResource(value))value=ResourceAmountEditor.merge(old,value);
         else if(SmartInterfaceEditor.isSmart(value))value=SmartInterfaceEditor.merge(old,value,strings(owner,"smartInterfaceTypes"));
         else if(FluidTickEditor.isRate(value))value=FluidTickEditor.merge(old,value);

@@ -64,10 +64,13 @@ public final class RegistryCreativeTabs {
             // The wildcard is required and the compiler established it twice: `RegistryObject<BlockItem>` is
             // not a `Supplier<Item>`, because Java generics are invariant. `Supplier<? extends Item>` accepts
             // both the block items and the plain ones, which is what this list holds.
-            EXPLICIT_ITEMS = java.util.List.of(
+            EXPLICIT_ITEMS = java.util.stream.Stream.concat(
+                    java.util.stream.Stream.<java.util.function.Supplier<? extends net.minecraft.world.item.Item>>of(
                     RegistryItems.itemModularium,
                     RegistryItems.itemMachineProjector,
                     RegistryItems.blockController,
+                    RegistryItems.hypernetTerminal,
+                    RegistryItems.HYPERNET_CONNECT_CARD,
                     RegistryItems.blockCasing,
                     RegistryItems.itemInputBus,
                     RegistryItems.itemOutputBus,
@@ -95,7 +98,12 @@ public final class RegistryCreativeTabs {
                     hellfirepvp.modularmachinery.common.upgrade.UpgradeItems.speedItem(),
                     hellfirepvp.modularmachinery.common.upgrade.UpgradeItems.energyItem(),
                     hellfirepvp.modularmachinery.common.upgrade.UpgradeItems.outputItem(),
-                    hellfirepvp.modularmachinery.common.upgrade.UpgradeItems.timeItem());
+                    hellfirepvp.modularmachinery.common.upgrade.UpgradeItems.timeItem()),
+                    java.util.stream.Stream.concat(
+                        hellfirepvp.modularmachinery.common.estorage.EStorageRegistration.ITEM_FORMS.values().stream(),
+                        java.util.stream.Stream.concat(
+                            hellfirepvp.modularmachinery.common.ecalculator.ECalculatorRegistration.ITEM_FORMS.values().stream(),
+                            hellfirepvp.modularmachinery.common.efabricator.EFabricatorRegistration.ITEM_FORMS.values().stream()))).toList();
 
     /**
      * THE ONE LIST OF FAMILIES THE TAB SWEEPS -- read by the CREATIVE TAB and by the SELF-TEST.
@@ -148,7 +156,7 @@ public final class RegistryCreativeTabs {
                 for (ItemStack blueprint : RegistryItems.blueprintVariants()) {
                     output.accept(blueprint);
                 }
-                         
+                        // ONE STACK PER TIER (PLAN section 270), FOR EVERY FAMILY IN THE ONE LIST ABOVE.
                         //
                         // The hatch and bus sizes are BLOCKSTATE VARIANTS of a single block each, and one
                         // BlockItem per block means the creative tab can only ever offer the DEFAULT tier.
@@ -186,25 +194,25 @@ public final class RegistryCreativeTabs {
         return sweep(VARIANT_FAMILIES);
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * THE ONE RULE THAT SAYS WHICH STACKS CARRY WHICH TIER -- read by the CREATIVE TAB and by the SELF-TEST.
+     *
+     * <p><b>Why this is a list and not a write.</b> It was written straight into {@code output} until the fluid
+     * hatch report ("all fluid input and output hatches are 1000 mB", PLAN 719), which asked whether the eight
+     * tiers are REACHABLE. A check answering that has to compare its expectation against the very stacks the tab
+     * shows. Asserting against a SEPARATE re-implementation would have passed even if the tab's own sweep
+     * regressed -- the shape PLAN 629 measured, where the item and the TOP provider each re-derived the variant
+     * and drifted apart. TWO CALLERS READING ONE METHOD CANNOT DISAGREE; that is the whole reason this exists.
+     *
+     * <p><b>Why the block is reached through the ITEM.</b> {@link net.minecraft.world.item.BlockItem#getBlock()}
+     * means this needs no reference to {@code RegistryBlocks}' field names, so the sweep can be added or trimmed
+     * by editing one list. A name that does not match would be a compile error either way, but this way there is
+     * only one name per entry instead of two.
+     *
+     * <p><b>Why the property values are strings.</b> A blockstate property serialises by NAME, not by ordinal or
+     * by the enum constant's Java name -- {@code size=big}, not {@code size=2}. Writing the ordinal would place
+     * the wrong tier or fail to parse, and it would look like a data problem rather than a code one.
+     */
     public static java.util.List<ItemStack> variantStacks(
             java.util.function.Supplier<? extends net.minecraft.world.item.Item>... items) {
         return sweep(java.util.Arrays.asList(items));

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "modularmachinery:block/neco/efabricator/module_molecular_assembly_matrix/carbon_fiber_structural_radiators"
+    },
+    "facing=south": {
+      "model": "modularmachinery:block/neco/efabricator/module_molecular_assembly_matrix/carbon_fiber_structural_radiators",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "modularmachinery:block/neco/efabricator/module_molecular_assembly_matrix/carbon_fiber_structural_radiators",
+      "y": 270
+    },
+    "facing=east": {
+      "model": "modularmachinery:block/neco/efabricator/module_molecular_assembly_matrix/carbon_fiber_structural_radiators",
+      "y": 90
+    }
+  }
+}

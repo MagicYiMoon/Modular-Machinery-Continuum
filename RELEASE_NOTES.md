@@ -1,3 +1,119 @@
+# Modular Machinery: Continuum 2.0.0 — Minecraft 1.20.1
+
+## 中文
+
+- 新增 NECO ES 大容量存储系统：S4／S6／S9 主机、矩阵驱动器、物品／流体／气体矩阵及内部 AE 能源单元，包含库存界面、实时占用统计与成型外观。
+- 新增 EC 合成 CPU 系统：线程核心、合成内存、并行部件、任务查看与取消，以及断电／卸载后的任务恢复。
+- 新增 EF 制造系统：工作核心、样板总线与样板检索、制造队列、并行、冷却、超频和产物回网；监控界面显示累计制造量与近期制造速度。
+- 新增 HyperNet 计算中心、数据处理器与消费节点，支持 CPU／GPU／RAM 升级参数、算力配方需求、共享预算、热量、冷却与中心维护。TOP 可查看处理器平均负载。
+- 新增研究数据库、研究站及独立 HyperNet 网络终端，支持研究依赖、进度保存、研究门槛、完成通知和带 NBT 的物品图标；创造模式管理员可中键快速研究。
+- 可视化编辑器可配置算力、研究、等级标签和说明；等级标签仅供显示，实际能力由参数决定。小窗口下编辑界面整体缩放，相关界面支持平滑字体和资源包替换。
+- 木棍自动搭建可从背包内可用的 AE 无线终端网络取料，并合并请求合成缺少的材料；支持等待恢复、超时和潜行右键取消。已提交的 AE 订单继续执行，成品留在 ME 网络。详见[使用说明](docs/WIRELESS_ASSEMBLY_ZH.md)。
+- 登录前自动取得服务端独立控制器注册信息，缺少注册项时缓存并提示重启客户端；本地作者 JSON 保留，运行定义以服务端同步为准。新增独立方块仍须在服务端启动时注册，不能运行时增加 Forge 注册项。详见[同步说明](docs/SERVER_DEFINITION_SYNC_ZH.md)。
+- 普通 FE 舱室默认传输上限随容量调整为每 tick 10%；已有明确配置的上限保留。
+
+需要 **Java 17／Forge 1.20.1**，推荐 Forge **47.4.23**。网络协议为 **49**，客户端和服务端必须同时更新。GeckoLib **4.8.4** 已内嵌；ME 功能需要另装 AE2 及其前置，气体矩阵另需 Applied Mekanistics。
+
+NECO 系统的机器结构、生存配方、模块物品与数值由整合包作者提供；本次没有内置新星工程的完整玩法配置。循环研究保留占位，新式模块化服务器装配器及历史曲线暂未提供。升级前备份存档和配置，并保留控制器注册文件。
+
+## English
+
+- Adds the NECO ES storage system: S4/S6/S9 hosts, matrix drives, item/fluid/gas matrices and internal AE energy cells, with inventory screens, live usage statistics and formed models.
+- Adds the EC crafting CPU system with thread cores, crafting memory, parallel components, task monitoring/cancellation and recovery after power loss or unloading.
+- Adds the EF fabrication system with work cores, pattern buses and search, persistent queues, parallel crafting, cooling, overclocking and output delivery to ME storage. The monitor shows total crafts and recent crafting throughput.
+- Adds HyperNet centers, data processors and consumer nodes, CPU/GPU/RAM upgrade parameters, recipe computation requirements, shared budgets, heat, cooling and center maintenance. TOP can display average processor load.
+- Adds research databases, research stations and a separate HyperNet terminal, with prerequisites, saved progress, recipe research gates, completion notifications and NBT-aware item icons. Creative administrators can middle-click to fast-track research.
+- Extends the visual editor with computation, research, tier labels and descriptions. Labels are informational; configured parameters determine capabilities. Editor screens scale to smaller windows, and supported screens use replaceable smooth fonts.
+- Stick assembly can draw materials through a carried AE wireless terminal and submit aggregated crafting orders for shortages. Supports waiting/resume, timeouts and sneak-right-click cancellation. Submitted orders continue and leave their output in ME storage.
+- Downloads dedicated controller identities before Forge registry synchronization. Missing identities are cached with a client restart prompt; local author files are preserved and runtime definitions remain server-authoritative. New dedicated blocks still require server startup registration.
+- Ordinary FE hatches now default to a per-tick transfer limit of 10% of their capacity. Existing explicit limits are preserved.
+
+Requires **Java 17 / Forge 1.20.1**; Forge **47.4.23** is recommended. Network protocol is **49**: update both client and server. GeckoLib **4.8.4** is bundled. ME features require AE2 and its dependencies; gas matrices additionally require Applied Mekanistics.
+
+Modpack authors provide NECO machine structures, survival recipes, module items and balancing. This release does not include Nova Engineering's complete pack configuration. Repeatable research remains a placeholder; the newer modular server assembler and historical charts are not provided. Back up worlds/configuration and retain the controller registry file before upgrading.
+
+---
+
+# Modular Machinery: Continuum 1.4.4 — Minecraft 1.20.1
+
+## 中文
+
+- 机器编辑器的“控制器设置”新增“需要蓝图”开关，可直接保存 `requires-blueprint`，保留结构与其他机器设置。
+- 关闭后，通用控制器与通用工厂控制器可自动识别匹配的结构；开启后，自动成型需要对应机器蓝图。未设置此字段时保留默认关闭的行为。
+- 保存后重新加载并同步在线客户端的机器与编辑器数据；方块和 NBT 条件仍须满足。
+- 修复指令／建造工具导出的空物品列表被要求始终为空的问题：结构 SNBT 列表使用源版的包含匹配，放入物品后不会仅因原先的 `Items: []` 条件失去成型。数字类型、数组和字面字符串仍保留原意。
+
+网络协议更新为 **35**，客户端和服务端需同时更换 JAR。此次不改变启动时的独立控制器注册规则。
+
+## English
+
+- Adds a **Requires Blueprint** toggle under the machine editor's **Controller Settings**, preserving the structure and other machine fields.
+- When disabled, generic controllers and factory controllers can automatically recognize matching structures. When enabled, automatic formation requires the matching blueprint. Omitted values remain disabled by default.
+- Saved settings reload and sync to connected clients. Block and NBT constraints still apply.
+- Fixes exported empty item lists requiring buses to stay empty. Structure SNBT lists now follow the source mod's containment rules, so inserting items does not invalidate an exported `Items: []` condition. Numeric types, arrays and literal strings are preserved.
+
+Network protocol is now **35**; update both client and server. Startup registration of dedicated controllers is unchanged.
+
+---
+
+# Modular Machinery: Continuum 1.4.3 — Minecraft 1.20.1
+
+## 中文
+
+- 修复带 NBT 舱室的机器导出后无法加载、GUI 列表缺失的问题，兼容旧建造工具导出的 SNBT 字符串。
+- 修正新导出的 JSON 转义，保留方块实体的原始 NBT，避免错误加入原版结构文件的 `data`／`palette` 字段。
+- 原有 JSON 对象形式的结构 NBT 匹配规则保留；SNBT 字符串按具体 NBT 值读取，保留数字类型、数组和字面字符串。
+
+协议更新为 **34**，客户端和服务端都需更换 JAR。旧导出文件可以加载，无需重新创建；作者明确写入的 NBT 条件仍会生效。GeckoLib 4.8.4 继续内嵌。
+
+## English
+
+- Fixes exported machines with hatch block-entity NBT failing to load or appear in the editor; accepts literal SNBT strings from older tool exports.
+- Writes correctly escaped JSON and preserves original block-entity NBT without injecting vanilla structure-file `data`/`palette` fields.
+- Keeps existing JSON-object NBT patterns; literal SNBT preserves numeric types, arrays and literal strings.
+
+Network protocol is now **34**; update both client and server. Existing exports can load without recreation, while their explicit NBT constraints remain active. GeckoLib 4.8.4 remains bundled.
+
+---
+
+# Modular Machinery: Continuum 1.4.2 — Minecraft 1.20.1
+
+## 中文
+
+- `register` 创建机器后自动加载并向在线客户端同步，无需手动执行 `/reload` 即可打开 `/modularmachinery gui` 编辑新机器。
+- 自动加载失败时明确报告错误并保留文件与选区。新增独立控制器仍需两端启动前统一注册文件并重启；本更新不改变 Forge 注册规则。
+
+协议仍为 **33**，配置与存档格式不变，GeckoLib 4.8.4 继续内嵌。
+
+## English
+
+- Machines created with `register` now load immediately and sync to connected clients, making them available in `/modularmachinery gui` without a manual `/reload`.
+- Failed automatic loads report an error and preserve the file and selection. New dedicated controller registrations still require matching startup files and a restart on both sides.
+
+Network protocol remains **33**. Configuration and world formats are unchanged; GeckoLib 4.8.4 remains bundled.
+
+---
+
+# Modular Machinery: Continuum 1.4.1 — Minecraft 1.20.1
+
+## 中文
+
+- 修复主手持建造选择工具右键仓室等可交互方块时，先打开 GUI、无法标记选区角点的问题。工具现在优先处理选区操作。
+- 保留普通右键第一角、潜行右键第二角、右键控制器导出及潜行右键空气清空选区的操作。
+- `register` 新增可选的显示名称参数，支持直接填写中文，例如 `/modularmachinery register alloy_smelter 合金炉`；机器 ID 保持原有规则。
+
+网络协议仍为 **33**，配置与存档格式不变。替换两端的 MMC JAR；GeckoLib 4.8.4 继续内嵌。
+
+## English
+
+- Fixes the construction selection tool opening hatch GUIs instead of selecting corners. Main-hand tool interactions now run before interactive block actions.
+- Preserves first/second corner selection, controller export and sneak-right-click-air clearing.
+- Adds an optional Unicode display name to `register`, e.g. `/modularmachinery register alloy_smelter 合金炉`, while retaining valid registry IDs.
+
+Network protocol remains **33**. Configuration and world formats are unchanged. Replace the MMC JAR on both sides; GeckoLib 4.8.4 remains bundled.
+
+---
+
 # Modular Machinery: Continuum 1.4.0 — Minecraft 1.20.1
 
 ## 中文

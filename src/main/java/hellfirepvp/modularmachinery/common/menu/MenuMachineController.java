@@ -341,4 +341,7 @@ public class MenuMachineController extends AbstractContainerMenu {
                 && player.distanceToSqr(controllerPos.getX() + 0.5, controllerPos.getY() + 0.5,
                         controllerPos.getZ() + 0.5) <= 64.0;
     }
+    @Override public boolean clickMenuButton(Player player,int action){
+        return action==MenuHyperNetMonitor.OPEN_BUTTON&&MenuHyperNetMonitor.open(player,this,controllerPos);
+    }
 }

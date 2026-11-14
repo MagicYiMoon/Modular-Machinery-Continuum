@@ -1,0 +1,45 @@
+{
+  "registryname": "hn_sample_center",
+  "localizedname": "HyperNet Example Center",
+  "requires-blueprint": false,
+  "has-factory": true,
+  "parts": [
+    {
+      "x": 0,
+      "y": -1,
+      "z": 0,
+      "elements": "modularmachinery:blockenergyinputhatch"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "elements": "minecraft:stone"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "z": 0,
+      "elements": "modularmachinery:blockinputbus"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "z": 0,
+      "elements": "modularmachinery:blockoutputbus"
+    }
+  ],
+  "hypernet": {
+    "role": "center",
+    "carrying": 100,
+    "max-connections": 8,
+    "max-nodes-per-type": 4,
+    "connection-card": "modularmachinery:hypernet_connect_card",
+    "circuit": {
+      "capacity": 10000,
+      "min-wear": 1,
+      "max-wear": 3,
+      "wear-chance": 0.1
+    }
+  }
+}

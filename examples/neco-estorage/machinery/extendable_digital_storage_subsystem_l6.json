@@ -1,0 +1,32 @@
+{
+  "registryname": "extendable_digital_storage_subsystem_l6",
+  "localizedname": "ES S6 demonstration / ES S6 简化演示",
+  "requires-blueprint": false,
+  "has-factory": false,
+  "parts": [
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:estorage_cell_drive"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:estorage_casing"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "elements": "modularmachinery:estorage_me_channel"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 0,
+      "elements": "modularmachinery:estorage_energy_cell_l6"
+    }
+  ]
+}

@@ -75,6 +75,18 @@ public final class MachineStructureChanges {
         }
     }
 
+    /** Apply an editor blueprint-policy change to loaded formed machines without loading chunks. */
+    public static void blueprintRequirementChanged(String machine) {
+        var affected = new ArrayList<TileController>();
+        for (var index : LEVELS.values()) {
+            for (var controller : index.controllers.keySet()) {
+                if (!controller.isRemoved() && machine.equals(controller.getMachineName())) affected.add(controller);
+            }
+        }
+        // Removing the formed flag removes its watch, so iterate a snapshot of the index.
+        affected.forEach(TileController::syncMachineFromBlueprint);
+    }
+
     @SubscribeEvent
     public static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel() instanceof ServerLevel level) LEVELS.remove(level);

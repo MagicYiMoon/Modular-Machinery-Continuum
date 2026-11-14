@@ -1,0 +1,14 @@
+{
+  "id": "example:soul_card",
+  "item": "minecraft:emerald",
+  "type": "soul_card",
+  "generation": 1,
+  "energy-ratio": 1000,
+  "bandwidth": 8,
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

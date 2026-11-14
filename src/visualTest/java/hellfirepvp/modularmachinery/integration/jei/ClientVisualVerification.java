@@ -13,7 +13,7 @@ import net.minecraftforge.fml.common.Mod;
 public final class ClientVisualVerification {
     private static int ticks;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if(Boolean.getBoolean("modularmachinery.releaseGallery") || Boolean.getBoolean("modularmachinery.editorOptionalVisualTest") || Boolean.getBoolean("modularmachinery.editorExpandedVisualTest") || Boolean.getBoolean("modularmachinery.editorNbtVisualTest") || Boolean.getBoolean("modularmachinery.editorBloodAuraVisualTest") || Boolean.getBoolean("modularmachinery.editorCopyVisualTest") || Boolean.getBoolean("modularmachinery.editorPneumaticVisualTest") || Boolean.getBoolean("modularmachinery.editorResourcesVisualTest"))return;
+        if(Boolean.getBoolean("modularmachinery.editorResearchGateVisualTest") || Boolean.getBoolean("modularmachinery.editorResearchVisualTest") || Boolean.getBoolean("modularmachinery.editorHyperNetVisualTest") || Boolean.getBoolean("modularmachinery.releaseGallery") || Boolean.getBoolean("modularmachinery.editorOptionalVisualTest") || Boolean.getBoolean("modularmachinery.editorExpandedVisualTest") || Boolean.getBoolean("modularmachinery.editorNbtVisualTest") || Boolean.getBoolean("modularmachinery.editorBloodAuraVisualTest") || Boolean.getBoolean("modularmachinery.editorCopyVisualTest") || Boolean.getBoolean("modularmachinery.editorPneumaticVisualTest") || Boolean.getBoolean("modularmachinery.editorResourcesVisualTest"))return;
         if(event.phase!=TickEvent.Phase.END || !Boolean.getBoolean("modularmachinery.clientVisualTest"))return;
         var mc=Minecraft.getInstance();if(mc.player==null || mc.level==null || mc.getOverlay()!=null)return;
         ticks++;

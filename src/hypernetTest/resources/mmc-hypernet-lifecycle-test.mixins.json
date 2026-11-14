@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "hellfirepvp.modularmachinery.common.hypernet.trace",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "mixins.mmce.refmap.json",
+  "mixins": ["HyperNetChunkTicketTrace"],
+  "injectors": {"defaultRequire": 1}
+}

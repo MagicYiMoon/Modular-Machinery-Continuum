@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "type": "minecraft:directory",
+      "source": "neco/blocks",
+      "prefix": "neco/blocks/"
+    },
+    {
+      "type": "minecraft:directory",
+      "source": "neco/items",
+      "prefix": "neco/items/"
+    },
+    {
+      "type": "minecraft:directory",
+      "source": "neco/efabricator",
+      "prefix": "neco/efabricator/"
+    }
+  ]
+}

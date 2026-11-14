@@ -94,7 +94,10 @@ public final class CommandModularMachinery {
                 // --- save the current player's two-corner selection as a named machine ---
                 .then(Commands.literal("register")
                         .then(Commands.argument("machine", StringArgumentType.word())
-                                .executes(CommandModularMachinery::registerMachine)))
+                                .executes(ctx -> registerMachine(ctx, null))
+                                .then(Commands.argument("displayName", StringArgumentType.greedyString())
+                                        .executes(ctx -> registerMachine(ctx,
+                                                StringArgumentType.getString(ctx, "displayName"))))))
 
                 // --- attempt formation on the controller under the crosshair ---
                 .then(Commands.literal("form").executes(CommandModularMachinery::form))
@@ -230,7 +233,7 @@ public final class CommandModularMachinery {
 
         ServerLevel level = ctx.getSource().getLevel();
         Direction facing = controllerFacing(level, pos);
-         
+        // THE FORMED PATTERN, NOT THE DEFINITION'S (PLAN §750): `/modularmachinery check` exists to answer "can this
         // machine run", and a diagnostic that reads the static half reports the dynamic sections' busses as
         // unreachable on a machine whose recipe layer can see them perfectly well -- the report would be wrong in
         // the direction that hides the defect rather than exposing it.
@@ -363,7 +366,7 @@ public final class CommandModularMachinery {
      * only supplies the name and controller position.  This keeps the item and command paths byte-for-byte
      * consistent for block states, block-entity NBT, facing rotation and the volume limit.</p>
      */
-    private static int registerMachine(CommandContext<CommandSourceStack> ctx) {
+    private static int registerMachine(CommandContext<CommandSourceStack> ctx, String displayName) {
         if (!(ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
             ctx.getSource().sendFailure(Component.literal(
                     "只有玩家可以使用 register；请先用建造选择工具标记两个角"));
@@ -373,7 +376,7 @@ public final class CommandModularMachinery {
         String name = StringArgumentType.getString(ctx, "machine");
         if (!PlayerStructureSelectionHelper.isValidMachineName(name)) {
             ctx.getSource().sendFailure(Component.literal(
-                    "机器名只能使用小写字母、数字、点、下划线和连字符"));
+                    "机器 ID 只能使用小写字母、数字、点、下划线和连字符；中文名写在 ID 后，例如：/modularmachinery register alloy_smelter 合金炉"));
             return 0;
         }
 
@@ -402,14 +405,29 @@ public final class CommandModularMachinery {
         }
         boolean written = PlayerStructureSelectionHelper.finalizeSelection(
                 controllerFacing(ctx.getSource().getLevel(), pos),
-                ctx.getSource().getLevel(), pos, player, name);
+                ctx.getSource().getLevel(), pos, player, name, displayName);
         if (!written) {
+            return 0;
+        }
+        // The GUI and client snapshots read loaded definitions, not the JSON files on disk.
+        // Commands run on the server thread, so reloadNow completes and broadcasts before returning.
+        try {
+            MachineReloadListener.reloadNow();
+            if (MachineReloadListener.getLoader().findByName(name) == null) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "机器文件已保存，但自动加载失败；选区已保留。请检查服务器日志，修正后执行 /reload"));
+                return 0;
+            }
+        } catch (Exception failure) {
+            Modularmachinery.LOG.error("[MMC] could not load newly registered machine {}", name, failure);
+            ctx.getSource().sendFailure(Component.literal(
+                    "机器文件已保存，但自动加载失败；选区已保留。请检查服务器日志，修正后执行 /reload"));
             return 0;
         }
         PlayerStructureSelectionHelper.purgeSelection(player);
         PlayerStructureSelectionHelper.sendSelection(player);
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "saved machine '" + name + "'; run /reload to load it"), true);
+                "机器 '" + name + "' 已保存并加载，已向在线客户端发送同步；可执行 /modularmachinery gui 编辑"), true);
         return 1;
     }
 

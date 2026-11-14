@@ -77,16 +77,16 @@ public final class MachineContext {
      */
     private List<BlockPos> componentPositions;
 
-    
-
-
-
-
-
-
-
-
- 
+    /**
+     * @param pattern <b>THE PATTERN THIS CONTEXT RESOLVES COMPONENTS FROM — THE ONE THE MACHINE WAS FORMED WITH,
+     *                NOT THE DEFINITION'S.</b> The two differ whenever the machine declares
+     *                {@code dynamic-patterns}: the formed pattern is the definition's parts with its sections
+     *                merged in (PLAN §750), and the shipped {@code assembly_line} keeps its input bus, its fluid
+     *                and ME hatches and its output bus <b>only</b> in the sections. Passing
+     *                {@code machine.getPattern()} here compiles, reads as correct, and silently hands the recipe
+     *                layer a machine with no busses — which is why the parameter is explicit rather than
+     *                defaulted.
+     */
     public MachineContext(ServerLevel level, BlockPos controllerPos, Direction facing,
                           DynamicMachine machine, MachineVariables variables, MachinePattern pattern) {
         this.level = level;
@@ -147,18 +147,18 @@ public final class MachineContext {
         return root.isolationGroupKey;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * @return the definition this machine was formed from.
+     *
+     * <p><b>KEPT BECAUSE A REQUIREMENT NEEDS IT AND HAD NO OTHER WAY TO ASK (PLAN 663, B4).</b> Upstream's
+     * {@code RequirementInterfaceNumInput} resolves its {@code SmartInterfaceType} descriptor out of the
+     * machine at CONSTRUCTION time and reads the descriptor's {@code notEqualMessage} when a value is out of
+     * range (upstream U86-U89). This port's requirement type factory receives only the requirement's own JSON
+     * (see {@code RequirementType#createRequirement}), so the machine is not available where upstream had it —
+     * but it IS available on every evaluation, because the context is built from it. Exposing it here keeps
+     * the descriptor lookup on the same object upstream read it from instead of inventing a second registry
+     * of declared types.</p>
+     */
     public DynamicMachine getMachine() {
         return machine;
     }
@@ -304,25 +304,25 @@ public final class MachineContext {
         return found;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Collects this machine's SMART INTERFACES, for the requirement that reads a published value (PLAN 663, B4).
+     *
+     * <p>The same "internal" channel {@link #internalEnergyHatches()} and {@link #internalFluidTanks()} use,
+     * and for the same reason: a capability is the <b>external</b> contract, and a smart interface's value is
+     * not a capability at all — it is state on the tile that the machine's own recipe requirements read. There
+     * is nothing to resolve through {@code getCapability}, so the tile is returned.</p>
+     *
+     * <p><b>THIS IS THE PORT'S EQUIVALENT OF "THE PROVIDER IS A MACHINE COMPONENT".</b> Upstream's
+     * {@code SmartInterfaceProvider} is a {@code MachineComponent}, so the recipe machinery hands it to a
+     * requirement and {@code RequirementInterfaceNumInput} reads
+     * {@code provider.getMachineData(type)} (upstream U76-U77). The port has no {@code MachineComponent} type,
+     * so the reachability comes from the other half of upstream's shape: the interface block entity implements
+     * {@code MachineComponentTile} and this class resolves exactly those tiles out of the pattern — which the
+     * same formation walk populated {@code setControllerPos} on. From the tile the requirement asks for
+     * {@code provideComponent()}, which is upstream's own call site in the packet handler and the screen.</p>
+     *
+     * @return the smart interfaces among this machine's components, in declaration order
+     */
     public List<hellfirepvp.modularmachinery.common.tiles.TileSmartInterface> smartInterfaces() {
         List<hellfirepvp.modularmachinery.common.tiles.TileSmartInterface> found = new ArrayList<>();
         for (BlockPos pos : getComponentPositions()) {
@@ -443,6 +443,10 @@ public final class MachineContext {
             if (!filter.accepts(component)) {
                 continue;
             }
+            // Source UpgradeBusProvider is an upgrade component, not an ItemBus component.
+            // Its public capability is for installing modules, never for recipe ingredients/products.
+            if (capability == net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER
+                    && be instanceof hellfirepvp.modularmachinery.common.tiles.TileUpgradeBus) continue;
             if (internalAccess && capability == net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY
                     && be instanceof hellfirepvp.modularmachinery.common.tiles.base.TileEnergyHatch hatch) {
                 @SuppressWarnings("unchecked") T typed = (T) internalEnergyView(hatch);

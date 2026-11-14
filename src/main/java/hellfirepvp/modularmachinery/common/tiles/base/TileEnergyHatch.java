@@ -53,12 +53,14 @@ public abstract class TileEnergyHatch extends TileMachineComponent {
 
     private final IOType ioType;
     private final EnergyStorage energy;
+    private final int machineTransferLimit;
 
     protected TileEnergyHatch(java.util.function.Supplier<? extends BlockEntityType<?>> type,
                               BlockPos pos, BlockState state, IOType ioType,
                               int capacity, int maxTransfer) {
         super(type, pos, state);
         this.ioType = ioType;
+        this.machineTransferLimit = maxTransfer;
         this.energy = createStorage(capacity, maxTransfer);
     }
 
@@ -164,6 +166,9 @@ public abstract class TileEnergyHatch extends TileMachineComponent {
     public int getCapacity() {
         return energy.getMaxEnergyStored();
     }
+
+    /** Actual limit of this loaded backing store, including configuration at construction time. */
+    public final int getMachineTransferLimit() { return machineTransferLimit; }
 
     /**
      * Draws energy for the machine's own recipe consumption.

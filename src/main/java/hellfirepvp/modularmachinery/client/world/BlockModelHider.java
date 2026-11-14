@@ -37,7 +37,8 @@ public final class BlockModelHider {
     }
 
     private static final Map<ControllerKey, Set<BlockPos>> BY_CONTROLLER = new HashMap<>();
-    private static final Map<ResourceKey<Level>, Set<BlockPos>> HIDDEN_BY_DIMENSION = new HashMap<>();
+    // Chunk workers read this without touching the main-thread ownership maps.
+    private static volatile Map<ResourceKey<Level>, Set<BlockPos>> HIDDEN_BY_DIMENSION = Map.of();
 
     private BlockModelHider() { }
 
@@ -51,36 +52,49 @@ public final class BlockModelHider {
         if (controller == null || controller.getLevel() == null || !controller.getLevel().isClientSide) return;
         Level level = controller.getLevel();
         ControllerKey key = new ControllerKey(level.dimension(), controller.getBlockPos());
-        Set<BlockPos> old = BY_CONTROLLER.remove(key);
-        if (old != null) {
-            removeHidden(level, old);
-            markDirty(level, old);
-        }
-        DynamicMachine machine = MachineReloadListener.getLoader().findByName(controller.getMachineName());
-        if (!controller.isFormed() || machine == null || !machine.isHideComponentsWhenFormed()) return;
         Set<BlockPos> next = new HashSet<>();
-        next.add(key.position());
-        controller.getHiddenPositions().forEach(position -> next.add(position.immutable()));
-        BY_CONTROLLER.put(key, next);
-        HIDDEN_BY_DIMENSION.computeIfAbsent(level.dimension(), ignored -> new HashSet<>()).addAll(next);
+        if (!controller.isRemoved() && controller.isFormed()) {
+            if (controller instanceof hellfirepvp.modularmachinery.common.estorage.TileEStorageController es) {
+                next.addAll(es.modelHiddenPositions());
+            } else if (controller instanceof hellfirepvp.modularmachinery.common.ecalculator.TileECalculatorController ec) {
+                next.addAll(ec.modelHiddenPositions());
+            } else if (controller instanceof hellfirepvp.modularmachinery.common.efabricator.TileEFabricatorController ef) {
+                next.addAll(ef.modelHiddenPositions());
+            } else {
+                DynamicMachine machine = MachineReloadListener.getLoader().findByName(controller.getMachineName());
+                if (machine != null && machine.isHideComponentsWhenFormed()) {
+                    next.add(key.position());
+                    controller.getHiddenPositions().forEach(position -> next.add(position.immutable()));
+                }
+            }
+        }
+        if (next.equals(BY_CONTROLLER.get(key))) return;
+        Set<BlockPos> old = next.isEmpty() ? BY_CONTROLLER.remove(key) : BY_CONTROLLER.put(key, Set.copyOf(next));
+        publishHiddenSnapshot();
+        if (old != null) markDirty(level, old);
         markDirty(level, next);
+    }
+
+    public static void remove(TileController controller) {
+        if (controller != null && controller.getLevel() != null && controller.getLevel().isClientSide)
+            removeController(new ControllerKey(controller.getLevel().dimension(), controller.getBlockPos()));
     }
 
     private static void removeController(ControllerKey key) {
         Set<BlockPos> old = BY_CONTROLLER.remove(key);
         if (old != null) {
             Level level = Minecraft.getInstance().level;
-            removeHidden(level, old);
-            markDirty(level, old);
+            publishHiddenSnapshot();
+            if (level != null && level.dimension().equals(key.dimension())) markDirty(level, old);
         }
     }
 
-    private static void removeHidden(Level level, Set<BlockPos> positions) {
-        if (level == null) return;
-        Set<BlockPos> hidden = HIDDEN_BY_DIMENSION.get(level.dimension());
-        if (hidden == null) return;
-        hidden.removeAll(positions);
-        if (hidden.isEmpty()) HIDDEN_BY_DIMENSION.remove(level.dimension());
+    private static void publishHiddenSnapshot() {
+        var next = new HashMap<ResourceKey<Level>, Set<BlockPos>>();
+        // Rebuild from remaining owners so overlap remains hidden until the last owner is removed.
+        BY_CONTROLLER.forEach((key, positions) -> next.computeIfAbsent(key.dimension(), ignored -> new HashSet<>()).addAll(positions));
+        next.replaceAll((dimension, positions) -> Set.copyOf(positions));
+        HIDDEN_BY_DIMENSION = Map.copyOf(next);
     }
 
     private static void markDirty(Level level, Set<BlockPos> positions) {
@@ -121,7 +135,7 @@ public final class BlockModelHider {
         Set<BlockPos> old = level == null ? Set.of()
                 : new HashSet<>(HIDDEN_BY_DIMENSION.getOrDefault(level.dimension(), Set.of()));
         BY_CONTROLLER.clear();
-        HIDDEN_BY_DIMENSION.clear();
+        HIDDEN_BY_DIMENSION = Map.of();
         if (!old.isEmpty()) markDirty(level, old);
     }
 
@@ -131,7 +145,7 @@ public final class BlockModelHider {
         ResourceKey<Level> dimension = level.dimension();
         Set<BlockPos> old = new HashSet<>(HIDDEN_BY_DIMENSION.getOrDefault(dimension, Set.of()));
         BY_CONTROLLER.keySet().removeIf(key -> key.dimension().equals(dimension));
-        HIDDEN_BY_DIMENSION.remove(dimension);
+        publishHiddenSnapshot();
         if (!old.isEmpty()) markDirty(level, old);
     }
 }

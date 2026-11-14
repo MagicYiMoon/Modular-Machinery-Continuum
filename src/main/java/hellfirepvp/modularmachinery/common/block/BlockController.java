@@ -30,20 +30,20 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.Nullable;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+/**
+ * The machine controller — the block a player right-clicks to form and run a multiblock.
+ *
+ * <p>State layout is taken verbatim from the shipped {@code blockcontroller.json}, which already
+ * keys its variants on {@code facing} (four horizontal values) and {@code formed} (boolean). On
+ * 1.12.2 the same two properties existed but the block was rotated with
+ * {@code BlockHorizontal#withRotation}/{@code withMirror}; on 1.20.1 those live on the block itself
+ * as {@link #rotate} / {@link #mirror} overrides.
+ *
+ * <p>{@code @SuppressWarnings("deprecation")} is on this class because overriding
+ * {@code rotate(BlockState, Rotation)} / {@code mirror(BlockState, Mirror)} — deprecated in 1.20.1
+ * ahead of the octahedral-group migration — is nevertheless the only way to make a directional block
+ * rotate, and is exactly what vanilla's own {@code HorizontalDirectionalBlock} does.
+ */
 @SuppressWarnings("deprecation")
 public class BlockController extends BlockMachineComponent {
 
@@ -251,6 +251,15 @@ public class BlockController extends BlockMachineComponent {
         return player.isShiftKeyDown()
                 || item instanceof hellfirepvp.modularmachinery.common.item.ItemConstructTool
                 || item instanceof hellfirepvp.modularmachinery.common.item.ItemMachineProjector;
+    }
+
+    @Override
+    public void appendHoverText(net.minecraft.world.item.ItemStack stack, net.minecraft.world.level.BlockGetter level,
+                                java.util.List<net.minecraft.network.chat.Component> lines, net.minecraft.world.item.TooltipFlag flag) {
+        super.appendHoverText(stack,level,lines,flag);
+        var loader=hellfirepvp.modularmachinery.common.machine.MachineReloadListener.getLoader();
+        var machine=loader==null||getDedicatedMachine()==null?null:loader.findByName(getDedicatedMachine());
+        if(machine!=null)hellfirepvp.modularmachinery.common.hypernet.HyperNetTooltips.append(machine,lines);
     }
 
     public static Property<?>[] stateProperties() {

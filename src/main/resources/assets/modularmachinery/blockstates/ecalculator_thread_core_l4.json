@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,status=off": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/off/l4_thread_module"
+    },
+    "facing=south,status=off": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/off/l4_thread_module",
+      "y": 180
+    },
+    "facing=west,status=off": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/off/l4_thread_module",
+      "y": 270
+    },
+    "facing=east,status=off": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/off/l4_thread_module",
+      "y": 90
+    },
+    "facing=north,status=on": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/on/l4_thread_module"
+    },
+    "facing=south,status=on": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/on/l4_thread_module",
+      "y": 180
+    },
+    "facing=west,status=on": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/on/l4_thread_module",
+      "y": 270
+    },
+    "facing=east,status=on": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/on/l4_thread_module",
+      "y": 90
+    },
+    "facing=north,status=run": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/run/l4_thread_module"
+    },
+    "facing=south,status=run": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/run/l4_thread_module",
+      "y": 180
+    },
+    "facing=west,status=run": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/run/l4_thread_module",
+      "y": 270
+    },
+    "facing=east,status=run": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/thread_module/run/l4_thread_module",
+      "y": 90
+    }
+  }
+}

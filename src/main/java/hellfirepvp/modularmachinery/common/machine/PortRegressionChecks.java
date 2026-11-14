@@ -27,12 +27,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
- 
+/** Behavioral regressions for the takeover fixes. Runs only in the opt-in in-world suite. */
 public final class PortRegressionChecks {
     private PortRegressionChecks() {}
 
     public static boolean run(ServerLevel level, BlockPos origin) {
         try {
+            hellfirepvp.modularmachinery.common.efabricator.EFabricatorRegressionChecks.run(level, origin.offset(0, 0, 2624));
+            hellfirepvp.modularmachinery.common.efabricator.EFabricatorMenuRegressionChecks.run(level, origin.offset(0, 0, 2656));
+            hellfirepvp.modularmachinery.common.efabricator.EFabricatorPatternMenuRegressionChecks.run(level, origin.offset(0, 0, 2688));
+            hellfirepvp.modularmachinery.common.ecalculator.ECalculatorHostRegressionChecks.run(level, origin.offset(0, 0, 2560));
+            hellfirepvp.modularmachinery.common.ecalculator.ECalculatorMenuRegressionChecks.run(level, origin.offset(0, 0, 2592));
+            hellfirepvp.modularmachinery.common.estorage.EStorageCellSpecChecks.run();
+            hellfirepvp.modularmachinery.common.estorage.EStorageHostRegressionChecks.run(level, origin.offset(0, 0, 2368));
+            hellfirepvp.modularmachinery.common.estorage.EStorageEnergyRegressionChecks.run(level, origin.offset(0, 0, 2400));
+            hellfirepvp.modularmachinery.common.estorage.EStorageMenuRegressionChecks.run(level, origin.offset(0, 0, 2464));
+            hellfirepvp.modularmachinery.common.estorage.EStorageAutomationRegressionChecks.run(level, origin.offset(0, 0, 2496));
+            hellfirepvp.modularmachinery.common.estorage.EStorageAppearanceRegressionChecks.run(level, origin.offset(0, 0, 2528));
+            if (net.minecraftforge.fml.ModList.get().isLoaded("ae2")) {
+                hellfirepvp.modularmachinery.integration.ae2.estorage.EStorageCellRegressionChecks.run();
+                hellfirepvp.modularmachinery.integration.ae2.estorage.EStorageConfigurationRegressionChecks.run(level, origin.offset(0, 0, 2432));
+                if (net.minecraftforge.fml.ModList.get().isLoaded("appmek"))
+                    hellfirepvp.modularmachinery.integration.appmek.estorage.EStorageGasChecks.run();
+            }
+            ControllerRegistrySyncRegressionChecks.run();
+            ConstructToolInteractionRegressionChecks.run(level, origin.offset(0, 0, 2272));
+            RegisterMachineCommandRegressionChecks.run(level, origin.offset(0, 0, 2288));
+            BlueprintSettingRegressionChecks.run(level, origin.offset(0, 0, 2304));
             hellfirepvp.modularmachinery.integration.recipes.ForeignRecipeRegressionChecks.run(level);
             EnergyOutputPortRegressionChecks.run(level, origin.offset(0, 0, 1952));
             if (net.minecraftforge.fml.ModList.get().isLoaded("embers"))
@@ -99,6 +120,10 @@ public final class PortRegressionChecks {
             RecipeCopyRegressionChecks.run(level, origin.offset(0, 0, 2112));
             PneumaticEditorRegressionChecks.run(level);
             ResourceAmountEditorRegressionChecks.run(level);
+            HyperNetEditorRegressionChecks.run(level);
+            HyperNetResearchEditorRegressionChecks.run(level);
+            ResearchGateEditorRegressionChecks.run(level);
+            hellfirepvp.modularmachinery.common.hypernet.HyperNetMonitorRegressionChecks.run(level,origin.offset(0,0,2256));
             BloodAuraEditorRegressionChecks.run(level);
             RequirementNbtEditorRegressionChecks.run(level, origin.offset(0,0,2208));
             NestedNbtEditorRegressionChecks.run(level);

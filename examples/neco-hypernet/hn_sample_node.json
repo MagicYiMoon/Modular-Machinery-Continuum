@@ -1,0 +1,12 @@
+{
+  "registryname": "hn_sample_node",
+  "localizedname": "HyperNet Example Consumer",
+  "requires-blueprint": false,
+  "parts": [
+    {"x": 0, "y": -1, "z": 0, "elements": "modularmachinery:blockenergyinputhatch"},
+    {"x": 0, "y": 1, "z": 0, "elements": "minecraft:gold_block"},
+    {"x": 0, "y": 2, "z": 0, "elements": "modularmachinery:blockinputbus"},
+    {"x": 0, "y": 3, "z": 0, "elements": "modularmachinery:blockoutputbus"}
+  ],
+  "hypernet": {"role": "node"}
+}

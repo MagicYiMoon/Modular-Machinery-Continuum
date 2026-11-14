@@ -1,0 +1,12 @@
+{
+  "id": "example:psu",
+  "item": "minecraft:repeater",
+  "type": "psu",
+  "energy-provision": 100000,
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

@@ -5,8 +5,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import hellfirepvp.modularmachinery.common.util.nbt.NbtMatchingHelper;
 import hellfirepvp.modularmachinery.common.util.nbt.NbtPattern;
+import hellfirepvp.modularmachinery.common.util.nbt.NbtCompoundPattern;
+import hellfirepvp.modularmachinery.common.util.nbt.NbtListPattern;
 import hellfirepvp.modularmachinery.common.util.nbt.RecipeNbt;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.TagParser;
 
 /** Immutable structure-part NBT: a subset pattern for matching and concrete data for preview/build. */
 public final class StructureNbt {
@@ -29,22 +34,54 @@ public final class StructureNbt {
         String matchingSource = null;
         String previewSource = null;
         if (part.has("nbt")) {
-            if (!part.get("nbt").isJsonObject())
-                throw new JsonParseException("The ComponentType 'nbt' expects a JSON object");
-            matchingSource = part.getAsJsonObject("nbt").toString();
-            JsonObject wrapper = new JsonObject();
-            wrapper.add("nbt", part.get("nbt").deepCopy());
-            matching = RecipeNbt.read(wrapper).pattern();
+            matchingSource = part.get("nbt").toString();
+            if (part.get("nbt").isJsonObject()) {
+                JsonObject wrapper = new JsonObject();
+                wrapper.add("nbt", part.get("nbt").deepCopy());
+                matching = RecipeNbt.read(wrapper).pattern();
+            } else {
+                // Older construction-tool exports use literal SNBT, not the recipe pattern language.
+                // Vanilla parsing preserves numeric types, arrays and literal strings verbatim.
+                CompoundTag literal = readLiteral(part, "nbt");
+                matching = literalPattern(literal);
+            }
         }
         if (part.has("preview-nbt")) {
-            if (!part.get("preview-nbt").isJsonObject())
-                throw new JsonParseException("The ComponentType 'preview-nbt' expects a JSON object");
-            previewSource = part.getAsJsonObject("preview-nbt").toString();
-            JsonObject wrapper = new JsonObject();
-            wrapper.add("nbt", part.get("preview-nbt").deepCopy());
-            preview = RecipeNbt.read(wrapper).output();
+            previewSource = part.get("preview-nbt").toString();
+            if (part.get("preview-nbt").isJsonObject()) {
+                JsonObject wrapper = new JsonObject();
+                wrapper.add("nbt", part.get("preview-nbt").deepCopy());
+                preview = RecipeNbt.read(wrapper).output();
+            } else preview = readLiteral(part, "preview-nbt");
         }
         return new StructureNbt(matchingSource, previewSource, matching, preview);
+    }
+
+    private static NbtPattern literalPattern(Tag expected) {
+        if (expected instanceof CompoundTag compound) {
+            var keys = new java.util.LinkedHashMap<String, NbtPattern>();
+            for (String key : compound.getAllKeys()) keys.put(key, literalPattern(compound.get(key)));
+            return new NbtCompoundPattern(keys);
+        }
+        if (expected instanceof ListTag list) {
+            var entries = new java.util.ArrayList<NbtPattern>();
+            for (Tag entry : list) entries.add(literalPattern(entry));
+            // Use the source mod's list containment rules, including wildcard empty lists and
+            // consumption of each matched entry. An exported empty bus must still accept items.
+            return new NbtListPattern(entries);
+        }
+        Tag value = expected.copy();
+        return value::equals;
+    }
+
+    private static CompoundTag readLiteral(JsonObject part, String key) {
+        var value = part.get(key);
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())
+            throw new JsonParseException("The ComponentType '" + key + "' expects a JSON object or compound SNBT string");
+        try { return TagParser.parseTag(value.getAsString()); }
+        catch (com.mojang.brigadier.exceptions.CommandSyntaxException invalid) {
+            throw new JsonParseException("Invalid structure '" + key + "' SNBT: " + invalid.getMessage(), invalid);
+        }
     }
 
     public NbtPattern matching() { return matching; }

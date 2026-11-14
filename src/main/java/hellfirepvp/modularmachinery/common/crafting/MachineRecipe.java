@@ -60,22 +60,22 @@ public record MachineRecipe(
         int recipeTime,
         List<Requirement> requirements,
         ResourceLocation adapter,
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+        /**
+         * Whether a per-tick failure should DESTROY the in-flight recipe rather than let it retry.
+         *
+         * <p>RULE A0 -- upstream MachineRecipe:227 exposes this as {@code doesCancelRecipeOnPerTickFailure()}
+         * over a field it calls {@code voidPerTickFailure}, and TileMachineController:290 passes it to
+         * RecipeFailureEvent as the DEFAULT destructRecipe. THE FIELD NAME CARRIES THE DEFAULT: a recipe does
+         * NOT void its inputs on a per-tick failure unless it SAYS SO, so this is false unless declared.</p>
+         *
+         * <p>ON A RECORD THE ACCESSOR IS GENERATED, so {@code cancelOnPerTickFailure()} is the whole getter.
+         * The compact constructor below is deliberately NOT touched: it only defensively copies the
+         * requirements list and validates nothing else, so a sixth component needs no constructor change.</p>
+         *
+         * <p><b>OWED: the JSON key is not read yet</b> (PLAN 531). Every recipe therefore gets false, WHICH IS
+         * UPSTREAM OWN DEFAULT, so no existing pack changes behaviour -- but a pack that declares the flag
+         * would be ignored until RecipeLoader reads it beside the single construction site.</p>
+         */
         boolean cancelOnPerTickFailure,
 
         /**

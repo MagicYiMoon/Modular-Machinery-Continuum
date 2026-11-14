@@ -1,0 +1,12 @@
+{
+  "registryname": "extendable_fabricator_subsystem_l4",
+  "localizedname": "EF persistence fixture",
+  "requires-blueprint": false,
+  "has-factory": false,
+  "parts": [
+    {"x": 1, "y": 0, "z": 0, "elements": "modularmachinery:efabricator_casing"},
+    {"x": 258, "y": 0, "z": 0, "elements": "modularmachinery:efabricator_worker"},
+    {"x": 259, "y": 0, "z": 0, "elements": "modularmachinery:efabricator_pattern_bus"},
+    {"x": 0, "y": 0, "z": 1, "elements": "modularmachinery:efabricator_me_channel"}
+  ]
+}

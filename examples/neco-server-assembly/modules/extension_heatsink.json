@@ -1,0 +1,11 @@
+{
+  "id": "example:extension_heatsink",
+  "item": "minecraft:charcoal",
+  "type": "extension_heatsink",
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

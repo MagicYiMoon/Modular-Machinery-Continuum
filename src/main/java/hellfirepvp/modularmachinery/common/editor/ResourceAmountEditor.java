@@ -15,12 +15,16 @@ public final class ResourceAmountEditor {
     public static boolean isLife(JsonObject j) { return type(j).equals("modularmachinery:lifeessence"); }
     public static boolean isWill(JsonObject j) { return type(j).equals("modularmachinery:will"); }
     public static boolean isAura(JsonObject j) { return type(j).equals("modularmachinery:aura"); }
-    public static boolean isResource(JsonObject j) { return isMana(j) || isEmber(j) || isLife(j) || isWill(j) || isAura(j); }
+    public static boolean isComputation(JsonObject j){return type(j).equals("modularmachinery:computation");}
+    public static boolean isCooling(JsonObject j){return type(j).equals("modularmachinery:hypernet_cooling");}
+    public static boolean isRepair(JsonObject j){return type(j).equals("modularmachinery:hypernet_circuit_repair");}
+    public static boolean isHyperNet(JsonObject j){return isComputation(j)||isCooling(j)||isRepair(j);}
+    public static boolean isResource(JsonObject j) { return isMana(j) || isEmber(j) || isLife(j) || isWill(j) || isAura(j) || isHyperNet(j); }
     public static String label(JsonObject j) {
-        return isMana(j) ? "Botania 魔力" : isEmber(j) ? "Embers 余烬" : isLife(j) ? "生命源质 LP" : isWill(j) ? "恶魔意志" : "自然灵气";
+        return isComputation(j)?"持续算力":isCooling(j)?"主动冷却":isRepair(j)?"电路维修":isMana(j) ? "Botania 魔力" : isEmber(j) ? "Embers 余烬" : isLife(j) ? "生命源质 LP" : isWill(j) ? "恶魔意志" : "自然灵气";
     }
     public static String unit(JsonObject j) {
-        return isMana(j) ? "Mana" : isEmber(j) ? "Ember" : isLife(j) ? "LP" : isWill(j) ? "Will" : "Aura";
+        return isComputation(j)?"算力/t":isCooling(j)?"HU":isRepair(j)?"耐久":isMana(j) ? "Mana" : isEmber(j) ? "Ember" : isLife(j) ? "LP" : isWill(j) ? "Will" : "Aura";
     }
     public static String amountText(JsonObject j) {
         var clean = validate(j);
@@ -30,7 +34,7 @@ public final class ResourceAmountEditor {
     public static final java.util.List<String> WILL_TYPES = java.util.List.of("raw", "corrosive", "destructive", "vengeful", "steadfast");
     public static String modId(JsonObject j) {
         if (!isResource(j)) throw new IllegalArgumentException("资源类型无效");
-        return isMana(j) ? "botania" : isEmber(j) ? "embers" : isAura(j) ? "naturesaura" : "bloodmagic";
+        return isHyperNet(j)?"modularmachinery":isMana(j) ? "botania" : isEmber(j) ? "embers" : isAura(j) ? "naturesaura" : "bloodmagic";
     }
     private static boolean bool(JsonObject j, String key) {
         if (!j.has(key)) return false;
@@ -89,6 +93,21 @@ public final class ResourceAmountEditor {
         if (j.has("chance")) throw new IllegalArgumentException("此资源不支持概率，请先检查源文件中的 chance");
         bool(j, "parallelizeUnaffected");
         boolean rate = bool(j, "perTick"); boolean out = io.equals("output");
+        if(isHyperNet(j)) {
+            if(out||rate)throw new IllegalArgumentException("算力／维护仅支持输入，无 perTick 开关");
+            for(String k:java.util.List.of("selector-tag","triggerTime","triggerRepeatable","ignoreOutputCheck"))
+                if(j.has(k)&&!(k.equals("selector-tag")&&j.get(k).getAsString().isEmpty())
+                        && !(k.equals("triggerTime")&&integer(j,k,0)==0)
+                        && !((k.equals("triggerRepeatable")||k.equals("ignoreOutputCheck"))&&!bool(j,k)))
+                    throw new IllegalArgumentException("算力／维护不支持 "+k);
+            var clean=new JsonObject();clean.addProperty("type",type(j));clean.addProperty("io-type","input");
+            if(isComputation(j)) {
+                double amount=number(j,"amount",null);
+                if(j.get("amount").getAsBigDecimal().signum()>0&&amount==0)throw new IllegalArgumentException("算力过小");
+                clean.addProperty("amount",amount);clean.addProperty("triggerFailure",bool(j,"triggerFailure"));
+            }else{int amount=integer(j,"amount",null);if(amount<0)throw new IllegalArgumentException("维护数量须为非负整数");clean.addProperty("amount",amount);}
+            return clean;
+        }
         if (isMana(j)) return mana(out, integer(j,"amount",null),rate);
         if (isLife(j)) return life(out, integer(j,"amount",null),rate);
         if (rate) throw new IllegalArgumentException("余烬、意志和灵气仅支持单次处理");
@@ -107,7 +126,8 @@ public final class ResourceAmountEditor {
         if (!validate(source).get("type").equals(clean.get("type")) || !source.get("io-type").equals(clean.get("io-type")))
             throw new IllegalArgumentException("不能改变资源类型或输入输出方向，请另建需求");
         var result = source.deepCopy();
-        if (isMana(clean) || isLife(clean)) { result.add("amount", clean.get("amount")); result.add("perTick", clean.get("perTick")); }
+        if(isHyperNet(clean)){result.add("amount",clean.get("amount"));if(isComputation(clean))result.add("triggerFailure",clean.get("triggerFailure"));}
+        else if (isMana(clean) || isLife(clean)) { result.add("amount", clean.get("amount")); result.add("perTick", clean.get("perTick")); }
         else if (isEmber(clean)) result.add("ember", clean.get("ember"));
         else {
             result.add("amount", clean.get("amount"));

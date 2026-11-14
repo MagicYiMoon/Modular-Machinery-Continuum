@@ -37,8 +37,9 @@ import java.util.List;
 
 /**
  * One source-compatible survival assembly job.  The original MMCE places one missing part every few
- * ticks and consumes the player's inventory; it does not replace occupied blocks or silently create
- * components.  The queue is server-side and is deliberately independent from machine formation.
+ * ticks and consumes materials from the player's inventory, optionally through a carried AE terminal.
+ * It does not replace occupied blocks or create unpaid components. The server-side queue is
+ * independent from machine formation; optional AE crafting calculations are polled without blocking.
  */
 public final class MachineAssembly {
     /** A placement may be paid with a normal block item or with a filled fluid container. */
@@ -50,12 +51,19 @@ public final class MachineAssembly {
     private final ServerPlayer player;
     private final java.util.Deque<Task> tasks = new java.util.ArrayDeque<>();
     private boolean paidWithFluid;
+    private AssemblyNetwork network;
+    private AssemblyNetwork.Payment networkPayment;
+    private boolean awaitingMaterials;
+    private long lastProgress;
+    private long nextMaterialCheck;
+    private long nextWaitingMessage;
     private int ticks;
 
     private MachineAssembly(ServerLevel level, BlockPos controllerPos, ServerPlayer player) {
         this.level = level;
         this.controllerPos = controllerPos;
         this.player = player;
+        this.lastProgress = level.getGameTime();
     }
 
     /** Starts a job, or reports why it cannot start. */
@@ -81,6 +89,7 @@ public final class MachineAssembly {
         }
         MachinePattern pattern = BlueprintPreviewState.buildPattern(machine, dynamicPatternSize);
         MachineAssembly assembly = new MachineAssembly(level, controllerPos, player);
+        if (!creative) assembly.network = AssemblyNetwork.open(player);
         MachineVariables variables = loader.getVariables();
         BlockStateResolver resolver = loader.getResolver();
 
@@ -136,6 +145,7 @@ public final class MachineAssembly {
         }
 
         if (assembly.tasks.isEmpty()) {
+            assembly.close();
             player.displayClientMessage(Component.translatable("message.assembly.tip.success"), false);
             return null;
         }
@@ -145,8 +155,24 @@ public final class MachineAssembly {
             List<Task> missing = assembly.missingMaterials();
             if (!missing.isEmpty()) {
                 assembly.reportMaterials(missing);
-                if (Config.autoAssemblyNeedAll()) return null;
-                player.displayClientMessage(Component.translatable("message.assembly.tip.partial_assembly"), false);
+                int craftable = 0;
+                if (assembly.network != null) {
+                    for (Task task : missing) {
+                        for (Candidate candidate : task.candidates()) {
+                            if (assembly.network.request(candidate.material(), candidate.fluid())) {
+                                craftable++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (Config.autoAssemblyNeedAll() && craftable != missing.size()) {
+                    assembly.close(); // No calculation or AE order has been started yet.
+                    return null;
+                }
+                assembly.awaitingMaterials = Config.autoAssemblyNeedAll();
+                if (craftable > 0) player.displayClientMessage(Component.translatable("message.assembly.ae.preparing"), false);
+                else player.displayClientMessage(Component.translatable("message.assembly.tip.partial_assembly"), false);
             }
         }
         return assembly;
@@ -184,16 +210,56 @@ public final class MachineAssembly {
     public BlockPos controllerPos() { return controllerPos; }
 
     public boolean controllerValid() {
-        return level.getBlockEntity(controllerPos) instanceof TileController;
+        return player.level() == level && level.hasChunkAt(controllerPos)
+                && level.getBlockEntity(controllerPos) instanceof TileController;
+    }
+
+    public void close() {
+        if (network != null) network.close();
+    }
+
+    private boolean waitForMaterials() {
+        long now = level.getGameTime();
+        if (now - lastProgress >= Config.autoAssemblyWaitTimeout()) {
+            player.displayClientMessage(Component.translatable("message.assembly.ae.timeout"), false);
+            tasks.clear();
+            close();
+            return false;
+        }
+        if (now >= nextWaitingMessage) {
+            player.displayClientMessage(Component.translatable("message.assembly.ae.waiting"), true);
+            nextWaitingMessage = now + 100;
+        }
+        return true;
     }
 
     /** Places at most one block, matching the source's tick-by-tick queue. */
     public void tick() {
+        if (network != null) network.tick();
+        if (awaitingMaterials) {
+            if (level.getGameTime() < nextMaterialCheck) return;
+            nextMaterialCheck = level.getGameTime() + 20;
+            if (!missingMaterials().isEmpty()) {
+                if (network == null || !network.waiting()) {
+                    player.displayClientMessage(Component.translatable("message.assembly.ae.stopped"), false);
+                    tasks.clear();
+                    close();
+                } else waitForMaterials();
+                return;
+            }
+            awaitingMaterials = false;
+            lastProgress = level.getGameTime();
+        }
         if (++ticks < Config.autoAssemblyInterval()) return;
         ticks = 0;
         if (tasks.isEmpty()) return;
 
         Task task = tasks.removeFirst();
+        if (!level.hasChunkAt(task.pos())) {
+            tasks.addFirst(task);
+            waitForMaterials();
+            return;
+        }
         if (level.isOutsideBuildHeight(task.pos())) {
             player.displayClientMessage(Component.translatable("message.assembly.tip.too_high",
                     task.pos().toShortString()), false);
@@ -209,15 +275,16 @@ public final class MachineAssembly {
             } else if (consume(candidate)) {
                 BlockState previous = current;
                 BlockSnapshot snapshot = BlockSnapshot.create(level.dimension(), level, task.pos());
-                level.setBlock(task.pos(), candidate.state(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+                boolean placed = level.setBlock(task.pos(), candidate.state(), net.minecraft.world.level.block.Block.UPDATE_ALL);
                 BlockEvent.EntityPlaceEvent placeEvent = new BlockEvent.EntityPlaceEvent(snapshot, previous, player);
-                if (MinecraftForge.EVENT_BUS.post(placeEvent)) {
+                if (!placed || MinecraftForge.EVENT_BUS.post(placeEvent)) {
                     // The current block is the new placement. Forge's non-forced restore refuses
                     // a changed state, leaving a free block behind while its payment is refunded.
                     snapshot.restore(true);
                     refund(candidate);
                     reportSkipped(task.pos(), "placement event cancelled");
                 } else {
+                    lastProgress = level.getGameTime();
                     CompoundNbt.apply(level, task.pos(), task.part().previewNbt());
                     returnContainer(candidate);
                     level.playSound(null, task.pos(), candidate.fluid() == null
@@ -225,6 +292,11 @@ public final class MachineAssembly {
                             SoundSource.BLOCKS, 1.0F, 1.0F);
                 }
             } else {
+                if (network != null && (network.waiting() || !network.available())) {
+                    tasks.addLast(task);
+                    waitForMaterials();
+                    return;
+                }
                 reportMissing(task);
             }
         } else {
@@ -240,6 +312,9 @@ public final class MachineAssembly {
         for (Candidate candidate : candidates) {
             if (canConsume(candidate)) return candidate;
         }
+        if (network != null) for (Candidate candidate : candidates) {
+            if (network.canExtract(candidate.material(), candidate.fluid())) return candidate;
+        }
         return candidates.get(0);
     }
 
@@ -247,27 +322,47 @@ public final class MachineAssembly {
         List<ItemStack> simulated = new ArrayList<>();
         for (ItemStack stack : player.getInventory().items) simulated.add(stack.copy());
         List<Task> missing = new ArrayList<>();
+        AssemblyNetwork.Budget budget = network == null ? null : network.snapshot();
         for (Task task : tasks) {
-            if (!consumeFrom(simulated, task.candidates())) missing.add(task);
+            if (consumeFrom(simulated, task.candidates())) continue;
+            boolean found = false;
+            if (budget != null) for (Candidate candidate : task.candidates()) {
+                if (budget.take(candidate.material(), candidate.fluid())) { found = true; break; }
+            }
+            if (!found) missing.add(task);
         }
         return missing;
     }
 
     private boolean consume(Candidate candidate) {
         paidWithFluid = false;
+        networkPayment = null;
         if (!candidate.material().isEmpty() && consumeItem(candidate.material(), player.getInventory().items)) {
             player.getInventory().setChanged();
             return true;
         }
         paidWithFluid = candidate.fluid() != null && consumeFluid(candidate.fluid(), player.getInventory().items);
         if (paidWithFluid) player.getInventory().setChanged();
+        if (!paidWithFluid && network != null) {
+            networkPayment = network.extract(candidate.material(), candidate.fluid());
+            if (networkPayment != null) {
+                paidWithFluid = networkPayment.fluid();
+                return true;
+            }
+        }
         return paidWithFluid;
     }
 
     /** Restores a consumed ingredient when a Forge placement protection event rejects the block. */
     private void refund(Candidate candidate) {
+        if (networkPayment != null) {
+            networkPayment.refund().run();
+            networkPayment = null;
+            return;
+        }
         if (!paidWithFluid && !candidate.material().isEmpty()) {
-            player.getInventory().add(candidate.material().copy());
+            ItemStack returned = candidate.material().copy();
+            if (!player.getInventory().add(returned)) player.drop(returned, false);
             return;
         }
         if (candidate.fluid() != null) fillFluid(candidate.fluid(), player.getInventory().items);
@@ -300,7 +395,7 @@ public final class MachineAssembly {
     }
 
     /** Flattened component tiers replace source metadata; an untagged base-tier item is still valid. */
-    private static boolean matchesMaterial(ItemStack supplied, ItemStack wanted) {
+    public static boolean matchesMaterial(ItemStack supplied, ItemStack wanted) {
         if (!supplied.is(wanted.getItem())) return false;
         if (!(net.minecraft.world.level.block.Block.byItem(wanted.getItem()) instanceof
                 hellfirepvp.modularmachinery.common.block.BlockMachineComponent block))

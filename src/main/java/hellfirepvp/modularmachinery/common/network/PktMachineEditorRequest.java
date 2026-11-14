@@ -43,6 +43,9 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
         else if (packet.mutation instanceof PktMachineEditorEnvironment edit) { buffer.writeByte(18); PktMachineEditorEnvironment.encode(edit, buffer); }
         else if (packet.mutation instanceof PktMachineEditorItem edit) { buffer.writeByte(19); PktMachineEditorItem.encode(edit, buffer); }
         else if (packet.mutation instanceof PktMachineEditorTemplate edit) { buffer.writeByte(20); PktMachineEditorTemplate.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorHyperNet edit) { buffer.writeByte(21); PktMachineEditorHyperNet.encode(edit, buffer); }
+        else if (packet.mutation instanceof PktMachineEditorResearch edit) { buffer.writeByte(22); PktMachineEditorResearch.encode(edit, buffer); }
+        else if(packet.mutation instanceof PktMachineEditorResearchGate edit){buffer.writeByte(23);PktMachineEditorResearchGate.encode(edit,buffer);}
         else throw new IllegalArgumentException("Unknown editor operation");
     }
     public static PktMachineEditorRequest decode(FriendlyByteBuf buffer) {
@@ -71,6 +74,9 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
             case 18 -> PktMachineEditorEnvironment.decode(buffer);
             case 19 -> PktMachineEditorItem.decode(buffer);
             case 20 -> PktMachineEditorTemplate.decode(buffer);
+            case 21 -> PktMachineEditorHyperNet.decode(buffer);
+            case 22 -> PktMachineEditorResearch.decode(buffer);
+            case 23 -> PktMachineEditorResearchGate.decode(buffer);
             default -> throw new IllegalArgumentException("Unknown editor operation");
         };
         return new PktMachineEditorRequest(window, id, revision, mutation);
@@ -100,6 +106,9 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
                 return failure(packet, "机器或配方已发生变化，请重新打开编辑器后再修改");
             String error;
             if (packet.mutation instanceof PktMachineEditorControllerSettings edit) error = PktMachineEditorControllerSettings.apply(player, edit);
+            else if(packet.mutation instanceof PktMachineEditorResearchGate edit) error=PktMachineEditorResearchGate.apply(player,edit);
+            else if (packet.mutation instanceof PktMachineEditorResearch edit) error = PktMachineEditorResearch.apply(player, edit);
+            else if (packet.mutation instanceof PktMachineEditorHyperNet edit) error = PktMachineEditorHyperNet.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorMachineEdit edit) error = PktMachineEditorMachineEdit.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorRecipeEdit edit) error = PktMachineEditorRecipeEdit.apply(player, edit);
             else if (packet.mutation instanceof PktMachineEditorEdit edit) error = PktMachineEditorEdit.apply(player, edit);
@@ -134,6 +143,7 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
                     : packet.mutation instanceof PktMachineEditorFuel edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorSelector edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorSmartInterface edit ? edit.recipeId()
+                    : packet.mutation instanceof PktMachineEditorResearchGate edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorResourceAmount edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorPneumatic edit ? edit.recipeId()
                     : packet.mutation instanceof PktMachineEditorFluidTick edit ? edit.recipeId()
@@ -151,7 +161,8 @@ public record PktMachineEditorRequest(int containerId, UUID requestId, String re
                 return failure(packet, "文件已写入，但配方重新加载失败，请检查服务器日志");
             if (packet.mutation instanceof PktMachineEditorControllerSettings edit) {
                 var loaded = MachineReloadListener.getLoader().findByName(edit.machine());
-                if (loaded == null || (loaded.getDefinedColor() & 0xFFFFFF) != edit.color() || loaded.isHasFactory() != edit.factory())
+                if (loaded == null || (loaded.getDefinedColor() & 0xFFFFFF) != edit.color() || loaded.isHasFactory() != edit.factory()
+                        || loaded.isRequiresBlueprint() != edit.requiresBlueprint())
                     return failure(packet, "文件已写入，但控制器设置重新加载失败，请检查服务器日志");
             }
             if (packet.mutation instanceof PktMachineEditorMachineEdit edit

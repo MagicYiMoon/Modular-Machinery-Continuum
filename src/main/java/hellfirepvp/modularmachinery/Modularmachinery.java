@@ -68,7 +68,7 @@ public class Modularmachinery {
         modBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) -> event.enqueueWork(
                 hellfirepvp.modularmachinery.common.machine.component.MachineComponentProxyRegistry.INSTANCE::initialize));
 
-         
+        // THE CONFIG SPEC, before anything that reads it (PLAN section 291).
         //
         // Registered here rather than in a client setup, because the spec is COMMON: a dedicated server needs it
         // to exist even though only the client reads the colour today. `Config.SPEC` also BUILDS the spec in its
@@ -102,6 +102,9 @@ public class Modularmachinery {
         RegistryItems.ITEMS.register(modBus);
         RegistryBlockEntities.BLOCK_ENTITIES.register(modBus);
         RegistryCreativeTabs.CREATIVE_TABS.register(modBus);
+        hellfirepvp.modularmachinery.common.estorage.EStorageRegistration.register(modBus);
+        hellfirepvp.modularmachinery.common.ecalculator.ECalculatorRegistration.register(modBus);
+        hellfirepvp.modularmachinery.common.efabricator.EFabricatorRegistration.register(modBus);
 
         // ModularMagic provider placeholders. These register under the *modularmagic* namespace (see
         // RegistryModularMagicBlocks) so that addon and structure JSONs naming
@@ -115,7 +118,7 @@ public class Modularmachinery {
         // blocks stay itemless and unplaceable -- which is exactly the state §169 found them in.
         RegistryMEBlocks.ITEMS.register(modBus);
 
-         
+        // THE AE2 BLOCK ENTITY TYPES, GUARDED IN THE CALLER (PLAN section 405).
         //
         // These CANNOT go in RegistryBlockEntities: that register is subscribed unconditionally, its class would then be loaded
         // on every server, and loading it would reach an ME tile whose hierarchy includes AE2's IInWorldGridNodeHost. On a server
@@ -125,10 +128,11 @@ public class Modularmachinery {
         // it. The JVM resolves a class reference at the instruction that uses it, so an untaken branch never loads it.
         // RegistryMEBlockEntities.register() repeats the check as a second line of defence.
         if (net.minecraftforge.fml.ModList.get().isLoaded("ae2")) {
+            hellfirepvp.modularmachinery.integration.ae2.estorage.EStorageCells.register(modBus);
             hellfirepvp.modularmachinery.common.registry.RegistryMEBlockEntities.register(modBus);
             if (hellfirepvp.modularmachinery.common.block.BlockMEGasBus.available())
                 hellfirepvp.modularmachinery.integration.appmek.GasBusRegistration.register(modBus);
-             
+            // The SAME guard, for the THIRD firewall boundary (PLAN section 478): a MENU whose constructor names an
             // AE2 type. RegistryMenus is loaded unconditionally, so the pattern provider's menu cannot live there --
             // registering it there would put an AE2-adjacent type in an always-loaded class and kill a server without
             // AE2 at REGISTRY time, which is exactly what sections 404 and 411 already cost.

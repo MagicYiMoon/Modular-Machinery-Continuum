@@ -1,0 +1,16 @@
+{
+  "id": "basic_materials",
+  "display-name": "基础材料学",
+  "tech-level": 1,
+  "required-points": 10000,
+  "minimum-per-tick": 5,
+  "dependencies": [],
+  "descriptions": [
+    "示例研究，参数由整合包作者决定。"
+  ],
+  "unlock-descriptions": [
+    "允许使用示例研究配方。"
+  ],
+  "hidden": false,
+  "preview-item": "minecraft:iron_ingot"
+}

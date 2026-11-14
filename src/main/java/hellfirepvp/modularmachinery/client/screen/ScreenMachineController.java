@@ -62,6 +62,7 @@ public class ScreenMachineController extends AbstractContainerScreen<MenuMachine
             new ResourceLocation(Modularmachinery.MODID, "textures/gui/guicontroller_large.png");
     private static final int COLOR_WHITE = 0xFFFFFFFF;
     private final MachineStatusViewport statusViewport = new MachineStatusViewport();
+    private net.minecraft.client.gui.components.Button hypernetButton;
 
     public ScreenMachineController(MenuMachineController menu, Inventory playerInventory,
                                    Component title) {
@@ -72,6 +73,11 @@ public class ScreenMachineController extends AbstractContainerScreen<MenuMachine
         this.inventoryLabelY = MenuMachineController.PLAYER_INV_Y - 12;
     }
 
+    @Override protected void init(){
+        super.init();hypernetButton=addRenderableWidget(HyperNetMonitorButton.create(menu,leftPos+imageWidth-25,topPos+30));
+        HyperNetMonitorButton.update(hypernetButton,menu.getControllerPos());
+    }
+    @Override public void containerTick(){super.containerTick();HyperNetMonitorButton.update(hypernetButton,menu.getControllerPos());}
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         // The mod's own controller art, drawn at the panel origin exactly as upstream does.

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "modularmachinery:block/neco/efabricator/module_molecular_assembly_matrix/efabricator_casing"
+    }
+  }
+}

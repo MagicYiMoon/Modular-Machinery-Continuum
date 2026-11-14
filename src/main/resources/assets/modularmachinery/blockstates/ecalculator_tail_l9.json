@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,formed=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_off"
+    },
+    "facing=south,formed=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_off",
+      "y": 180
+    },
+    "facing=west,formed=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_off",
+      "y": 270
+    },
+    "facing=east,formed=false": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_off",
+      "y": 90
+    },
+    "facing=north,formed=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_run"
+    },
+    "facing=south,formed=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_run",
+      "y": 180
+    },
+    "facing=west,formed=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_run",
+      "y": 270
+    },
+    "facing=east,formed=true": {
+      "model": "modularmachinery:block/neco/ec_modular_synthetic_memory/tail_management_bus/l9_tail_management_bus_run",
+      "y": 90
+    }
+  }
+}

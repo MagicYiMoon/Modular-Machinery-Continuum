@@ -1,0 +1,23 @@
+{
+  "registryname": "hypernet_terminal",
+  "localizedname": "HyperNet Terminal",
+  "requires-blueprint": false,
+  "has-factory": false,
+  "parts": [
+    {
+      "x": 0,
+      "y": -1,
+      "z": 0,
+      "elements": "modularmachinery:blockenergyinputhatch"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "elements": "modularmachinery:blockcasing"
+    }
+  ],
+  "hypernet": {
+    "role": "terminal"
+  }
+}

@@ -88,7 +88,7 @@ public final class StructurePreviewCategory implements IRecipeCategory<Structure
         builder.addSlot(RecipeIngredientRole.OUTPUT, 124, 2).addItemStack(blueprint);
         builder.addSlot(RecipeIngredientRole.OUTPUT, 142, 2)
                 .addItemStack(hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stackOrGeneric(entry.machine().getRegistryName(), false));
-        builder.addSlot(RecipeIngredientRole.OUTPUT, 160, 2)
+        if(!entry.machine().getRegistryName().equals("hypernet_terminal"))builder.addSlot(RecipeIngredientRole.OUTPUT, 160, 2)
                 .addItemStack(hellfirepvp.modularmachinery.common.registry.DedicatedControllers.stackOrGeneric(entry.machine().getRegistryName(), true));
         // R finds the visible outputs. U also needs this per-entry catalyst index, like machine recipes.
         // Global category catalysts would incorrectly associate every controller with every machine.

@@ -298,7 +298,24 @@ public final class RecipePrimer {
     @ZenCodeType.Method public RecipePrimer addCompressedAirPerTickInput(float pressure, int air) { return compressedAir(pressure, air, true, true); }
     @ZenCodeType.Method public RecipePrimer addCompressedAirPerTickOutput(int air) { return compressedAir(0, air, false, true); }
     @ZenCodeType.Method public RecipePrimer addEnergyPerTickInput(long value) { return energy(value, true); }
+    @ZenCodeType.Method public RecipePrimer requireResearch(String... names) {
+        var gate = new hellfirepvp.modularmachinery.common.crafting.requirement.RequirementResearch(java.util.Arrays.asList(names));
+        var entry = append("research",true); var ids = new com.google.gson.JsonArray();
+        gate.research().forEach(ids::add); entry.add("research",ids); return this;
+    }
+    @ZenCodeType.Method public RecipePrimer requireComputationPoint(double amount) { return requireComputationPoint(amount, false); }
+    @ZenCodeType.Method public RecipePrimer requireComputationPoint(double amount, boolean triggerFailure) {
+        new hellfirepvp.modularmachinery.common.crafting.requirement.RequirementComputation(amount, triggerFailure);
+        JsonObject entry = append("computation", true); entry.addProperty("amount", amount);
+        entry.addProperty("triggerFailure", triggerFailure); return this;
+    }
     @ZenCodeType.Method public RecipePrimer addEnergyPerTickOutput(long value) { return energy(value, false); }
+    @ZenCodeType.Method public RecipePrimer addHyperNetCooling(int heat) { return hypernetMaintenance("hypernet_cooling",heat); }
+    @ZenCodeType.Method public RecipePrimer addHyperNetCircuitRepair(int durability) { return hypernetMaintenance("hypernet_circuit_repair",durability); }
+    private RecipePrimer hypernetMaintenance(String type,int amount) {
+        if(amount<0)throw new IllegalArgumentException("Maintenance amount must be nonnegative");
+        append(type,true).addProperty("amount",amount);return this;
+    }
     @ZenCodeType.Method public RecipePrimer addFuelItemInput(int ticks) {
         JsonObject entry = append("item", true); entry.addProperty("item", "any:fuel");
         entry.addProperty("time", amount(ticks)); entry.addProperty("chance", 1F); return this;

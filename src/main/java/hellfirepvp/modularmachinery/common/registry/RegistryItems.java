@@ -60,6 +60,9 @@ public final class RegistryItems {
     public static final RegistryObject<Item> itemMachineProjector =
             ITEMS.register("machine_projector",
                     hellfirepvp.modularmachinery.common.item.ItemMachineProjector::new);
+    /** Pack-independent counterpart of NECO's script-selected, single-stack network card. */
+    public static final RegistryObject<Item> HYPERNET_CONNECT_CARD =
+            ITEMS.register("hypernet_connect_card", () -> new Item(new Item.Properties().stacksTo(1)));
     /** The blueprint item. One per machine is offered in the creative tab by {@link #blueprintVariants()}. */
     public static final RegistryObject<Item> BLUEPRINT =
             // "itemblueprint", not "blueprint". The asset conversion produced models/item/itemblueprint.json
@@ -107,6 +110,8 @@ public final class RegistryItems {
     public static final RegistryObject<BlockItem> blockController =
             ITEMS.register("blockcontroller", () -> new BlockItem(
                     RegistryBlocks.blockController.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> hypernetTerminal =
+            ITEMS.register("hypernet_terminal_controller",()->new BlockItem(RegistryBlocks.hypernetTerminal.get(),new Item.Properties()));
 
     public static final RegistryObject<BlockItem> blockCasing =
             ITEMS.register("blockcasing", () -> new hellfirepvp.modularmachinery.common.item.ItemBlockMachineComponent(
@@ -161,22 +166,22 @@ public final class RegistryItems {
             ITEMS.register("blocksmartinterface", () -> new BlockItem(
                     RegistryBlocks.smartInterface.get(), new Item.Properties()));
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The parallel controller and the upgrade bus: the last two TIERED block items, and they were bare
+     * {@link BlockItem}s (PLAN 731).
+     *
+     * <p>Both blocks carry a five-constant {@code type=} variant ({@code ParallelControllerData} and
+     * {@code UpgradeBusData}), both have five language keys each, five blockstates, five block models and five
+     * item models -- and neither item could NAME its tier, because the naming reads a stack's
+     * {@code BlockStateTag} and only {@link hellfirepvp.modularmachinery.common.item.ItemBlockMachineComponent}
+     * does that. Every sibling family ({@link #blockCasing}, the four hatches, the two buses) already used it;
+     * these two did not, and a bare {@code BlockItem} cannot be a tier at all -- which is why the creative tab
+     * could only ever offer the default one and the user reported the tiers as missing.
+     *
+     * <p>Registered through the same {@code () -> new …} supplier as the rest of this class: the Item constructor
+     * touches {@code BuiltInRegistries.ITEM}, so constructing one after the registry is frozen throws, and the
+     * deferred supplier is what keeps construction at the registry event rather than at class initialisation.
+     */
     public static final RegistryObject<BlockItem> parallelController =
             ITEMS.register("blockparallelcontroller", () -> new hellfirepvp.modularmachinery.common.item.ItemBlockMachineComponent(
                     RegistryBlocks.parallelController.get(), new Item.Properties()));

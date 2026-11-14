@@ -44,6 +44,8 @@ public final class DefinitionSync {
         json.add("definitions", definitions.machines().snapshot());
         json.add("recipes", definitions.recipes().snapshot());
         json.add("geoModels", GeoMachineModelRegistry.snapshot());
+        json.add("controllerRegistry", hellfirepvp.modularmachinery.common.registry.ControllerRegistryCache.encode(
+                hellfirepvp.modularmachinery.common.registry.DedicatedControllers.registrationDefinitions()));
         return json;
     }
 

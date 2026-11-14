@@ -90,9 +90,9 @@ public final class ClientVisualEditorOptional {
     private static void availability(boolean output){
         invoke("openTypePicker",boolean.class,output);
         require(visible("气动／温度")==pnc,"PNC entry availability");
-        require(visible("魔法资源")== (mana||blood||aura||ember&&!output),"resource entry availability");
-        if(visible("魔法资源")){
-            press("魔法资源");
+        require(visible("资源／算力")== (!output||mana||blood||aura),"resource entry availability");
+        if(visible("资源／算力")){
+            press("资源／算力");
             for(var option:Map.of("Botania 魔力",mana,"Embers 余烬",ember&&!output,"生命源质 LP",blood,"恶魔意志",blood,"自然灵气",aura).entrySet())require(visible(option.getKey())==option.getValue(),"resource tab availability: "+option.getKey());
             bounds();
         }
@@ -105,7 +105,7 @@ public final class ClientVisualEditorOptional {
             if(spec.id.equals("temperature")){press("持续温度条件");field("最低温度 K").setValue("300");field("最高温度 K").setValue("900");}
             else{field("空气用量").setValue("19");if(!spec.output)field("压力阈值 bar").setValue("-0.5");else require(!visibleField("压力阈值 bar"),"air output pressure exposed");pressPrefix("单次：");}
         }else{
-            press("魔法资源");if(button(spec.label).active)press(spec.label);
+            press("资源／算力");if(button(spec.label).active)press(spec.label);
             String title=switch(spec.id){case "mana"->"魔力用量";case "ember"->"余烬用量";case "lifeessence"->"LP 用量";case "will"->"意志用量";default->"灵气用量";};
             field(title).setValue(spec.id.equals("ember")||spec.id.equals("will")?"2.125":"17");
             if(spec.id.equals("mana")||spec.id.equals("lifeessence"))pressPrefix("单次：");
@@ -135,7 +135,7 @@ public final class ClientVisualEditorOptional {
     private static EditBox field(String text){return s().children().stream().filter(w->w instanceof EditBox b&&b.visible&&b.getMessage().getString().equals(text)).map(w->(EditBox)w).findFirst().orElseThrow(()->new AssertionError("missing field: "+text));}
     private static boolean visibleField(String text){return s().children().stream().anyMatch(w->w instanceof EditBox b&&b.visible&&b.getMessage().getString().equals(text));}
     private static void pressPrefix(String prefix){var b=s().children().stream().filter(w->w instanceof Button btn&&btn.visible&&btn.getMessage().getString().startsWith(prefix)).map(w->(Button)w).findFirst().orElseThrow();press(b);}
-    private static void press(String text){press(button(text));}private static void press(Button b){require(b.active,"inactive button: "+b.getMessage().getString());s().mouseClicked(b.getX()+b.getWidth()/2d,b.getY()+b.getHeight()/2d,0);s().mouseReleased(b.getX()+1,b.getY()+1,0);}
+    private static void press(String text){press(button(text));}private static void press(Button b){require(b.active,"inactive button: "+b.getMessage().getString());s().mouseClicked(s().editorScreenX(b.getX()+b.getWidth()/2d),s().editorScreenY(b.getY()+b.getHeight()/2d),0);s().mouseReleased(s().editorScreenX(b.getX()+1),s().editorScreenY(b.getY()+1),0);}
     private static void bounds(){for(var child:s().children())if(child instanceof AbstractWidget w&&w.visible)require(w.getX()>=0&&w.getY()>=0&&w.getX()+w.getWidth()<=s().width&&w.getY()+w.getHeight()<=s().height,"widget outside viewport: "+w.getMessage().getString());}
     private static Path file(String name){return hellfirepvp.modularmachinery.common.data.ModDataHolder.INSTANCE.getRecipeDirectory().toPath().resolve(name);}
     private static JsonObject read(String name){try{return JsonParser.parseString(Files.readString(file(name))).getAsJsonObject();}catch(Exception e){throw new IllegalStateException(e);}}

@@ -40,14 +40,14 @@ public final class ClientVisualEditorBloodAura {
                 case 320 -> {bounds();require(field("灵气用量").getValue().equals("999"),"scale lost draft");shot("blood-aura-05-scale2.png");}
                 case 330 -> {press("取消");require(req(3).get("amount").getAsInt()==321,"cancel saved draft");mc.options.guiScale().set(3);mc.resizeDisplay();press("批量设置");pressPrefix("随批量放大：");press("保存");}
                 case 360 -> {if(pending())return;require(!req(3).get("parallelizeUnaffected").getAsBoolean(),"aura batch follow");press("批量设置");pressPrefix("不随批量放大：");press("保存");}
-                case 400 -> {if(pending())return;require(req(3).get("parallelizeUnaffected").getAsBoolean(),"aura batch exempt");click(420,119);press("魔法资源");field("LP 用量").setValue("42");pressPrefix("单次：");shot("blood-aura-06-lp-output.png");}
+                case 400 -> {if(pending())return;require(req(3).get("parallelizeUnaffected").getAsBoolean(),"aura batch exempt");click(420,119);press("资源／算力");field("LP 用量").setValue("42");pressPrefix("单次：");shot("blood-aura-06-lp-output.png");}
                 case 410 -> {press("保存");}
-                case 440 -> {if(pending())return;require(req(4).get("amount").getAsInt()==42 && req(4).get("perTick").getAsBoolean(),"LP output");click(420,119);press("魔法资源");press("恶魔意志");field("意志用量").setValue("0.5");pressPrefix("意志类型：");pressPrefix("意志类型：");field("资源阈值").setValue("50");shot("blood-aura-07-will-output.png");}
+                case 440 -> {if(pending())return;require(req(4).get("amount").getAsInt()==42 && req(4).get("perTick").getAsBoolean(),"LP output");click(420,119);press("资源／算力");press("恶魔意志");field("意志用量").setValue("0.5");pressPrefix("意志类型：");pressPrefix("意志类型：");field("资源阈值").setValue("50");shot("blood-aura-07-will-output.png");}
                 case 450 -> {press("保存");}
-                case 480 -> {if(pending())return;require(req(5).get("amount").getAsDouble()==.5 && req(5).get("max").getAsDouble()==50 && req(5).get("will-type").getAsString().equals("destructive"),"will output type/max");click(420,119);press("魔法资源");press("自然灵气");field("灵气用量").setValue("12");field("资源阈值").setValue("-100");shot("blood-aura-08-aura-output.png");}
+                case 480 -> {if(pending())return;require(req(5).get("amount").getAsDouble()==.5 && req(5).get("max").getAsDouble()==50 && req(5).get("will-type").getAsString().equals("destructive"),"will output type/max");click(420,119);press("资源／算力");press("自然灵气");field("灵气用量").setValue("12");field("资源阈值").setValue("-100");shot("blood-aura-08-aura-output.png");}
                 case 490 -> {press("保存");}
                 case 520 -> {if(pending())return;require(req(6).get("amount").getAsInt()==12 && req(6).get("max-aura").getAsInt()==-100,"aura output signed max");shot("blood-aura-09-saved.png");}
-                case 530 -> {click(420,27);press("魔法资源");press("恶魔意志");field("意志用量").setValue("1e400");require(!button("保存").active,"infinity accepted");shot("blood-aura-10-invalid.png");}
+                case 530 -> {click(420,27);press("资源／算力");press("恶魔意志");field("意志用量").setValue("1e400");require(!button("保存").active,"infinity accepted");shot("blood-aura-10-invalid.png");}
                 case 540 -> {press("取消");click(320,46);field("LP 用量").setValue("2147483648");require(!button("保存").active,"LP overflow accepted");press("取消");}
                 case 560 -> {Modularmachinery.LOG.info("[MMC][blood-aura-editor-client] PASS: actual LP rate IO, decimal will type/min/max and no batch, signed aura bound IO and server type options, family lock, pending saves and acknowledgements, invalid non-finite/int-overflow, cancel, scale3/2 draft, aura batch follow/exempt; inspect screenshots separately");}
                 case 590 -> mc.stop();
@@ -60,10 +60,10 @@ public final class ClientVisualEditorBloodAura {
     private static EditBox field(String text){return screen().children().stream().filter(w->w instanceof EditBox b && b.visible && b.getMessage().getString().equals(text)).map(w->(EditBox)w).findFirst().orElseThrow();}
     private static void pressPrefix(String prefix){var b=screen().children().stream().filter(w->w instanceof Button btn && btn.visible && btn.getMessage().getString().startsWith(prefix)).map(w->(Button)w).findFirst().orElseThrow();pressButton(b);}
     private static void press(String text){pressButton(button(text));}
-    private static void pressButton(Button b){require(b.active,"inactive: "+b.getMessage().getString());screen().mouseClicked(b.getX()+b.getWidth()/2d,b.getY()+b.getHeight()/2d,0);screen().mouseReleased(b.getX()+1,b.getY()+1,0);}
-    private static void click(int x,int y){var s=screen();s.mouseClicked(s.getGuiLeft()+x,s.getGuiTop()+y,0);s.mouseReleased(s.getGuiLeft()+x,s.getGuiTop()+y,0);}
+    private static void pressButton(Button b){require(b.active,"inactive: "+b.getMessage().getString());screen().mouseClicked(screen().editorScreenX(b.getX()+b.getWidth()/2d),screen().editorScreenY(b.getY()+b.getHeight()/2d),0);screen().mouseReleased(screen().editorScreenX(b.getX()+1),screen().editorScreenY(b.getY()+1),0);}
+    private static void click(int x,int y){var s=screen();s.mouseClicked(s.editorScreenX(s.getGuiLeft()+x),s.editorScreenY(s.getGuiTop()+y),0);s.mouseReleased(s.editorScreenX(s.getGuiLeft()+x),s.editorScreenY(s.getGuiTop()+y),0);}
     private static JsonObject req(int i){var root=JsonParser.parseString(screen().getMenu().snapshot()).getAsJsonObject();for(var m:root.getAsJsonArray("machines"))for(var r:m.getAsJsonObject().getAsJsonArray("recipes"))if(r.getAsJsonObject().get("name").getAsString().equals("000_blood_aura_visual_recipe"))return r.getAsJsonObject().getAsJsonArray("requirements").get(i).getAsJsonObject();throw new AssertionError("missing fixture");}
-    private static void bounds(){var s=screen();for(var child:s.children())if(child instanceof AbstractWidget w && w.visible)require(w.getX()>=0 && w.getY()>=0 && w.getX()+w.getWidth()<=s.width && w.getY()+w.getHeight()<=s.height,"widget outside screen");}
+    private static void bounds(){var s=screen();for(var child:s.children())if(child instanceof AbstractWidget w && w.visible)require(s.editorScreenX(w.getX())>=0 && s.editorScreenY(w.getY())>=0 && s.editorScreenX(w.getX()+w.getWidth())<=s.width && s.editorScreenY(w.getY()+w.getHeight())<=s.height,"widget outside screen");}
     private static void shot(String name){capture=name;captureTicks=3;}
     private static void require(boolean ok,String message){if(!ok)throw new AssertionError(message);}
 }

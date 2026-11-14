@@ -81,19 +81,19 @@ public final class ModularmachineryNetwork {
     private ModularmachineryNetwork() {
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Protocol version. Mismatched versions refuse the connection rather than mis-decoding packets, which
+     * is the failure mode that produces silent corruption instead of a clear disconnect.
+     *
+     * <p>Version 3 adds server-to-client machine/recipe definition snapshots. Both ends must update.
+     * Version 2 changed {@link PktSyncSelection}'s payload to two corners (PLAN 655.2). The
+     * id did not move — the rule below about appending rather than inserting is unchanged — but the bytes
+     * of packet 3 did: an older half would read a corner count where a corner's boolean now sits and
+     * decode a plausible, wrong box. That is precisely the "silent desync against any older half" the
+     * append rule exists to prevent, and the version handshake is the mechanism that turns it into a
+     * refusal instead. Cheap here because both halves ship in one jar; recorded because the next payload
+     * change has the same choice to make.
+     */
     // Version 6 preserves item durability-use semantics in snapshots.
     // Version 5 adds the fluid_pertick requirement to client snapshots.
     // Version 4 requires clients to preserve object NBT, output tags and display tags in snapshots.
@@ -112,7 +112,21 @@ public final class ModularmachineryNetwork {
     // MMC 1.1 adds controller settings to the editor envelope.
     // Version 33 adds editor operations 18..20 (environment, complete items and adapter templates).
     // Older servers reject these envelope operations, so refuse mixed versions during login.
-    private static final String PROTOCOL = "33";
+    // Version 34 requires structure-part literal SNBT support on clients as well as the server.
+    // Version 35 adds requiresBlueprint to the machine controller-settings editor operation.
+    // Version 37 adds HyperNet settings to the revision-bound editor envelope.
+    // Version 38 adds the separate HyperNet monitor menu and bounded server-to-client page.
+    // Version 39 adds active demand/consumer counts to monitor snapshots.
+    // Version 40 requires the optional fair-scheduling field in strict machine definition snapshots.
+    // Version 41 requires database roles/storage-capacity and research requirement snapshots.
+    // Version 42 requires research_station roles and max-tech-level in strict machine snapshots.
+    // Version 43 adds the session-bound research page and authenticated task requests.
+    // Version 44 adds paged research definition editing and its revision-bound save operation.
+    // Version 45 adds research requirement edits, summary lookups and their bounded uploads.
+    // Version 46 adds a player-targeted research completion notice independent of terminal menus.
+    // Version 47 adds bounded completed-tick network statistics to research terminal snapshots.
+    // 49 carries bounded full preview stacks in research pages and completion notices.
+    private static final String PROTOCOL = "49";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(Modularmachinery.MODID, "main"),
@@ -134,7 +148,7 @@ public final class ModularmachineryNetwork {
         // client<->server protocol and a renumbering is a silent desync against any older half.
         CHANNEL.registerMessage(id++, PktSyncSelection.class,
                 PktSyncSelection::encode, PktSyncSelection::decode, PktSyncSelection::handle);
-         
+        // PLAN 663: the smart interface's value write, upstream's PktSmartInterfaceUpdate. Appended for the
         // same reason as the packet above, and it is a NEW payload rather than a changed one -- so PROTOCOL
         // does not move for it (an older half simply has no handler for id 4 and never receives it, because
         // nothing sends it unless the screen exists on both sides in the same jar).
@@ -151,7 +165,7 @@ public final class ModularmachineryNetwork {
         CHANNEL.registerMessage(id++, PktMEFluidInputBusConfig.class,
                 PktMEFluidInputBusConfig::encode, PktMEFluidInputBusConfig::decode,
                 PktMEFluidInputBusConfig::handle);
-         
+        // PLAN 737: the ME pattern provider's two top-left buttons, upstream's PktMEPatternProviderAction
         // (upstream L12-L60). Appended for the reason the line above gives, and it is a NEW payload rather than a
         // changed one, so PROTOCOL does not move for it.
         //
@@ -216,6 +230,48 @@ public final class ModularmachineryNetwork {
                 java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, PktMachineEditorResult.class,
                 PktMachineEditorResult::encode, PktMachineEditorResult::decode, PktMachineEditorResult::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.messageBuilder(PktControllerRegistryLogin.class, id++, net.minecraftforge.network.NetworkDirection.LOGIN_TO_CLIENT)
+                .encoder(PktControllerRegistryLogin::encode).decoder(PktControllerRegistryLogin::decode)
+                .buildLoginPacketList(PktControllerRegistryLogin::packets).noResponse()
+                .consumerNetworkThread(PktControllerRegistryLogin::handle).add();
+        CHANNEL.registerMessage(id++, ECalculatorMonitorPackets.Update.class,
+                ECalculatorMonitorPackets.Update::encode, ECalculatorMonitorPackets.Update::decode, ECalculatorMonitorPackets.Update::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ECalculatorMonitorPackets.Cancel.class,
+                ECalculatorMonitorPackets.Cancel::encode, ECalculatorMonitorPackets.Cancel::decode, ECalculatorMonitorPackets.Cancel::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, ECalculatorMonitorPackets.Statistics.class,
+                ECalculatorMonitorPackets.Statistics::encode, ECalculatorMonitorPackets.Statistics::decode, ECalculatorMonitorPackets.Statistics::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, EFabricatorMonitorPackets.Update.class,
+                EFabricatorMonitorPackets.Update::encode, EFabricatorMonitorPackets.Update::decode, EFabricatorMonitorPackets.Update::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, EFabricatorMonitorPackets.Action.class,
+                EFabricatorMonitorPackets.Action::encode, EFabricatorMonitorPackets.Action::decode, EFabricatorMonitorPackets.Action::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, EFabricatorPatternPackets.Update.class,
+                EFabricatorPatternPackets.Update::encode, EFabricatorPatternPackets.Update::decode, EFabricatorPatternPackets.Update::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, EFabricatorPatternPackets.Query.class,
+                EFabricatorPatternPackets.Query::encode, EFabricatorPatternPackets.Query::decode, EFabricatorPatternPackets.Query::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, EFabricatorPatternPackets.Action.class,
+                EFabricatorPatternPackets.Action::encode, EFabricatorPatternPackets.Action::decode, EFabricatorPatternPackets.Action::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, PktHyperNetMonitor.class,PktHyperNetMonitor::encode,PktHyperNetMonitor::decode,PktHyperNetMonitor::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, HyperNetResearchPackets.Update.class,HyperNetResearchPackets.Update::encode,HyperNetResearchPackets.Update::decode,HyperNetResearchPackets.Update::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, HyperNetResearchPackets.Request.class,HyperNetResearchPackets.Request::encode,HyperNetResearchPackets.Request::decode,HyperNetResearchPackets.Request::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, HyperNetResearchEditorPackets.Query.class,HyperNetResearchEditorPackets.Query::encode,HyperNetResearchEditorPackets.Query::decode,HyperNetResearchEditorPackets.Query::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, HyperNetResearchEditorPackets.Update.class,HyperNetResearchEditorPackets.Update::encode,HyperNetResearchEditorPackets.Update::decode,HyperNetResearchEditorPackets.Update::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, HyperNetResearchUpload.class,HyperNetResearchUpload::encode,HyperNetResearchUpload::decode,HyperNetResearchUpload::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, HyperNetResearchPackets.Complete.class,HyperNetResearchPackets.Complete::encode,HyperNetResearchPackets.Complete::decode,HyperNetResearchPackets.Complete::handle,
                 java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
         Modularmachinery.LOG.info("[MMCE] network channel registered ({} packet type(s))", id);
     }
@@ -677,21 +733,21 @@ public final class ModularmachineryNetwork {
             this.value = value;
         }
 
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+        /**
+         * Clamps a requested parallelism to what the controller actually permits.
+         *
+         * <p>Extracted and made static so it can be asserted directly. The rule is the security-relevant
+         * one in this packet — a modified client sending an out-of-range value must be corrected, not
+         * obeyed — and a rule that can only be exercised by connecting a real client is a rule nobody
+         * will ever test.
+         *
+         * @return the requested value, held within {@code [1, max]}
+         *
+         * <p><b>The floor is 1, not 0</b> (PLAN section 250). Zero is not a usable parallelism: the
+         * controller would exist and be unable to run anything. The client reported the value reaching 0 and
+         * below, which is a state the block cannot meaningfully be in -- so 0 is treated as out of range, the
+         * same way a negative is.
+         */
         public static int clampParallelism(int requested, int max) {
             // The ceiling is at least 1 even if max is 0, so the floor and the ceiling cannot cross and the
             // result is always inside [1, ceiling].
@@ -912,34 +968,34 @@ public final class ModularmachineryNetwork {
         }
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Server-to-client: the authoring player's two selection corners, so their client can draw the box
+     * between them, or outline the one corner marked so far.
+     *
+     * <p>Port of upstream's {@code PktSyncSelection} (64 lines, upstream L28-L64). Upstream's own
+     * {@code fromBytes} wrote a count and then three ints per position and its {@code toBytes} read them
+     * back the same way; this is that shape over {@link FriendlyByteBuf}, with the payload changed from a
+     * position list to <b>two nullable corners</b> when the selection became a box (PLAN 655.2, and see
+     * {@link ModularmachineryNetwork#PROTOCOL} for why the version moved with it). Two nullable positions
+     * are strictly less than the list they replace and cannot express a volume the server did not mean:
+     * the client derives the same cuboid from the same pair, through
+     * {@link hellfirepvp.modularmachinery.common.selection.PlayerStructureSelectionHelper#boxPositions}.
+     *
+     * <p><b>This is the channel's only SERVER-TO-CLIENT packet</b>, and it is the one place this class's
+     * server-authority rule does not apply — not because the rule is suspended, but because it is
+     * satisfied differently. The other three re-derive the target from the world and validate before
+     * applying because they CHANGE the world, so a modified client could otherwise use them as a
+     * remote-control for other players' machines. This one changes nothing: it writes one static value on
+     * the client that asked for it, the server computes it from its own view of the world, and the client
+     * has no way to put anything into it. There is no position to validate and no range to check, and the
+     * recipient is chosen with {@code PacketDistributor.PLAYER} rather than broadcast: a selection is one
+     * player's private sketch, not a state of the world.
+     *
+     * <p>Upstream's handler (upstream L59-L62) replaced the client's selection with a new one from the
+     * packet, and this does the same — the pair is the whole state, so a merge would be a second
+     * representation of it. <b>A null corner is a value, not an absence</b>: "no second corner yet" is the
+     * normal state after one click, and the packet has to be able to say it.
+     */
     public static final class PktSyncSelection {
 
         private final @Nullable BlockPos firstCorner;
@@ -1030,7 +1086,7 @@ public final class ModularmachineryNetwork {
 
         public static void encode(PktSmartInterfaceUpdate msg, FriendlyByteBuf buf) {
             // The buffer is the FIRST parameter: Forge declares Writer<T> extends BiConsumer<FriendlyByteBuf, T>
-             
+            // (PLAN 655.2(b)), so a method reference binds the buffer as its receiver.
             buf.writeBlockPos(msg.interfacePos);
             buf.writeUtf(msg.type);
             buf.writeFloat(msg.value);
@@ -1111,45 +1167,45 @@ public final class ModularmachineryNetwork {
         }
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Client-to-server: configure one tank of the ME fluid input bus the player has open.
+     *
+     * <p><b>Why this packet is the port's own rather than a port of upstream's.</b> Upstream does not have one: AE2 1.12.2's
+     * fluid-config containers move a config slot's contents down AE2's own channel ({@code FluidSyncHelper} over
+     * {@code IFluidSyncContainer}), and that whole package is gone from AE2 15.4.11 — see {@code MenuMEFluidInputBus}'s rule A0
+     * record. The port's equivalent of "AE2's own channel" is <b>this channel</b>, so the write is a packet here, following
+     * {@link PktSmartInterfaceUpdate} for shape and {@link PktSetParallelism} for the server-authority rules.</p>
+     *
+     * <h2>The payload, and which half of it is authoritative</h2>
+     *
+     * <p>Three fields: the bus position, the config slot index, and the fluid the client claims it is configuring. <b>The fluid
+     * is the only field that could have been dropped, and the reason it is kept is that the packet must be able to express
+     * say <b>"clear this slot"</b>.</p>
+     *
+     * <p><b>THE TWO ENTRY POINTS SHARE ONE WRITE PATH BUT NOT ONE VALUE RULE, AND AN EARLIER VERSION OF THIS COMMENT
+     * CLAIMED OTHERWISE (PLAN 671).</b> {@code ConfigSlot} has two {@code configureFrom} arities and each entry point uses
+     * exactly one of them:</p>
+     *
+     * <pre>
+     *   MenuMEFluidInputBus.clicked  ->  configureFrom(Player)             RE-DERIVES the fluid from what the player is
+     *                                                                      carrying, which is what a screen click means
+     *   this packet apply            ->  configureFrom(Player, FluidStack) USES THE PAYLOAD, and never looks at the
+     *                                                                      carried item at all
+     * </pre>
+     *
+     * <p>SO IT IS NOT "re-derive first, fall back to the claim". The payload is the whole story on this path, and that is
+     * deliberate: if {@code apply} also consulted the carried container, the payload field would NEVER TAKE EFFECT, and it
+     * is the only source that write has. <b>WHAT THE TWO ARITIES DO SHARE IS WHERE THE WRITE LANDS</b> -- the same
+     * {@code setConfiguredFluid} call, the same slot resolution, the same distance and open-menu guards -- WHICH IS WHAT
+     * KEEPS THEM FROM DISAGREEING ABOUT WHAT A CONFIGURATION IS.</p>
+     *
+     * <p><b>What a modified client can and cannot do.</b> It cannot touch another player's bus (the position must be the one the
+     * player's own open menu names, re-derived through {@code MenuMEFluidInputBus.isOpenFor(...)}, not taken from the payload),
+     * cannot reach past its own screen's range (the 64-block check every packet in this channel makes), cannot configure a slot
+     * that is not a ghost config slot, and cannot choose an amount (the tile normalises it to the tank's capacity). What it CAN
+     * do is name a fluid it is not holding, which is exactly the capability it already has by holding a bucket of that fluid —
+     * this is a filter on the player's own machine, not a privilege.</p>
+     */
     public static final class PktMEFluidInputBusConfig {
 
         /** Sentinel for "no fluid" on the wire. Zero is a valid registry id, so zero cannot mean absence. */
@@ -1172,7 +1228,7 @@ public final class ModularmachineryNetwork {
 
         public static void encode(PktMEFluidInputBusConfig msg, FriendlyByteBuf buf) {
             // The buffer is the FIRST parameter: Forge declares Writer<T> extends BiConsumer<FriendlyByteBuf, T>
-             
+            // (PLAN 655.2(b)), so a method reference binds the buffer as its receiver.
             buf.writeBlockPos(msg.pos);
             buf.writeVarInt(msg.slot);
             writeFluid(buf, msg.fluid);

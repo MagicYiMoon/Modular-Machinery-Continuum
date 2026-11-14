@@ -1,0 +1,9 @@
+{
+    "parent": "modularmachinery:block/blockmodel_overlay_orientable_all",
+    "textures": {
+        "bg_all": "modularmachinery:block/blockcasing_plain",
+        "ov_top": "modularmachinery:block/overlay_transparent",
+        "ov_side": "modularmachinery:block/overlay_transparent",
+        "ov_front": "modularmachinery:block/overlay_factory_controller"
+    }
+}

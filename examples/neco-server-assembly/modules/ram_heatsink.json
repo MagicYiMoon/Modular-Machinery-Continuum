@@ -1,0 +1,11 @@
+{
+  "id": "example:ram_heatsink",
+  "item": "minecraft:gold_ingot",
+  "type": "ram_heatsink",
+  "display-info": {
+    "tier": "&bT1",
+    "tooltips": [
+      "装配示例：请按整合包需要调整。"
+    ]
+  }
+}

@@ -22,24 +22,24 @@ final class ResourceAmountPanel {
     private EditBox limit;
     private String selected = "mana", willKind = "raw", auraKind = "";
     private String willLimit = "0", auraLimit = "-2147483648";
-    private boolean output, rate, editing, visible, pending;
-    private static final List<String> IDS = List.of("mana", "ember", "lifeessence", "will", "aura");
-    private static final List<String> LABELS = List.of("Botania 魔力", "Embers 余烬", "生命源质 LP", "恶魔意志", "自然灵气");
+    private boolean output, rate, failure, editing, visible, pending;
+    private static final List<String> IDS = List.of("mana", "ember", "lifeessence", "will", "aura", "computation", "hypernet_cooling", "hypernet_circuit_repair");
+    private static final List<String> LABELS = List.of("Botania 魔力", "Embers 余烬", "生命源质 LP", "恶魔意志", "自然灵气", "持续算力", "主动冷却", "电路维修");
     void init(Font font, int left, int top, Consumer<AbstractWidget> adder, Consumer<JsonObject> apply, Runnable cancel) {
         var drafts = new HashMap<String,String>(); amounts.forEach((id, box) -> drafts.put(id,box.getValue())); rememberLimit();
         this.font = font; save = null; widgets.clear(); amounts.clear(); tabs.clear();
         for (int i=0;i<IDS.size();i++) {
             String id=IDS.get(i);
-            int x=i<2 ? 74+i*152 : 74+(i-2)*100, y=i<2 ? 46 : 70, width=i<2 ? 140 : 92;
+            int x=66+i%4*78, y=46+i/4*24, width=74;
             var tab=Button.builder(Component.literal(LABELS.get(i)), b -> { rememberLimit(); selected=id; restoreLimit(); update(); })
                     .bounds(left+x,top+y,width,20).build(); tabs.put(id,tab); widgets.add(tab);
             var box=new EditBox(font,left+74,top+116,292,18,Component.literal(amountTitle(id)));
-            box.setMaxLength(128); boolean decimal=id.equals("ember") || id.equals("will");
+            box.setMaxLength(128); boolean decimal=id.equals("ember") || id.equals("will") || id.equals("computation");
             box.setFilter(s -> s.chars().allMatch(c -> c>='0' && c<='9' || decimal && ".eE+-".indexOf(c)>=0));
             box.setValue(drafts.getOrDefault(id,"1000")); amounts.put(id,box); widgets.add(box);
             box.setResponder(s -> update());
         }
-        mode=Button.builder(Component.empty(),b -> {rate=!rate;update();}).bounds(left+74,top+146,292,20).build();
+        mode=Button.builder(Component.empty(),b -> {if(selected.equals("computation"))failure=!failure;else rate=!rate;update();}).bounds(left+74,top+146,292,20).build();
         mode.setTooltip(Tooltip.create(Component.literal("单次：开工输入、完工输出\n逐 tick：每个成功推进的加工 tick 处理\n倍率在保存后的批量设置中修改")));widgets.add(mode);
         kind=Button.builder(Component.empty(),b -> {
             if(selected.equals("will")) willKind=next(ResourceAmountEditor.WILL_TYPES,willKind);
@@ -53,11 +53,11 @@ final class ResourceAmountPanel {
         widgets.forEach(adder);update();
     }
     private static String amountTitle(String id) { return switch(id) {
-        case "mana" -> "魔力用量"; case "ember" -> "余烬用量"; case "lifeessence" -> "LP 用量"; case "will" -> "意志用量"; default -> "灵气用量";
+        case "computation" -> "算力 /t"; case "hypernet_cooling" -> "完成时冷却 HU"; case "hypernet_circuit_repair" -> "完成时修复耐久"; case "mana" -> "魔力用量"; case "ember" -> "余烬用量"; case "lifeessence" -> "LP 用量"; case "will" -> "意志用量"; default -> "灵气用量";
     }; }
     private static String next(List<String> list,String current) { return list.isEmpty() ? "" : list.get((list.indexOf(current)+1)%list.size()); }
     private boolean bounded() {return selected.equals("will") || selected.equals("aura");}
-    private boolean rateable() {return selected.equals("mana") || selected.equals("lifeessence");}
+    private boolean rateable() {return selected.equals("mana") || selected.equals("lifeessence") || selected.equals("computation");}
     private void rememberLimit() {if(limit==null)return;if(selected.equals("will"))willLimit=limit.getValue();if(selected.equals("aura"))auraLimit=limit.getValue();}
     private void restoreLimit() {if(limit!=null)limit.setValue(selected.equals("will")?willLimit:auraLimit);}
     void open(JsonObject existing, boolean output, JsonObject document) {
@@ -68,11 +68,13 @@ final class ResourceAmountPanel {
         var types=new ArrayList<String>();
         if(document.has("editorAuraTypes"))document.getAsJsonArray("editorAuraTypes").forEach(e -> types.add(e.getAsString()));
         auraTypes=List.copyOf(types);if(flag(document,"auraEditorAvailable") && !auraTypes.isEmpty())available.add("aura");
+        if(!output){available.add("computation");available.add("hypernet_cooling");available.add("hypernet_circuit_repair");}
         editing=existing!=null;
         selected=editing?ResourceAmountEditor.validate(existing).get("type").getAsString().substring("modularmachinery:".length())
                 : IDS.stream().filter(available::contains).findFirst().orElse("mana");
         var clean=editing?ResourceAmountEditor.validate(existing):null;
-        rate=clean!=null && clean.has("perTick") && clean.get("perTick").getAsBoolean();
+        rate=clean!=null&&clean.has("perTick")&&clean.get("perTick").getAsBoolean();
+        failure=clean!=null&&selected.equals("computation")&&clean.get("triggerFailure").getAsBoolean();
         willKind=editing && selected.equals("will") ? clean.get("will-type").getAsString():"raw";
         auraKind=editing && selected.equals("aura") ? clean.get("aura-type").getAsString():auraTypes.contains("naturesaura:overworld")?"naturesaura:overworld":auraTypes.isEmpty()?"":auraTypes.get(0);
         willLimit=editing && selected.equals("will")?clean.get(output?"max":"min").getAsString():output?"100":"0";
@@ -86,6 +88,11 @@ final class ResourceAmountPanel {
         if(!available.contains(selected))throw new IllegalArgumentException("服务器未提供此资源方向");
         String amount=amounts.get(selected).getValue();
         return switch(selected){
+            case "computation", "hypernet_cooling", "hypernet_circuit_repair" -> {
+                var j=new JsonObject();j.addProperty("type","modularmachinery:"+selected);j.addProperty("io-type","input");
+                j.addProperty("amount",new java.math.BigDecimal(amount));if(selected.equals("computation"))j.addProperty("triggerFailure",failure);
+                yield ResourceAmountEditor.validate(j);
+            }
             case "mana" -> ResourceAmountEditor.mana(output,Integer.parseInt(amount),rate);
             case "ember" -> ResourceAmountEditor.ember(Double.parseDouble(amount));
             case "lifeessence" -> ResourceAmountEditor.life(output,Integer.parseInt(amount),rate);
@@ -105,6 +112,8 @@ final class ResourceAmountPanel {
         amounts.forEach((id,b)->{b.visible &= selected.equals(id);b.active &= b.visible;});
         mode.visible &= rateable();mode.active &= mode.visible;
         mode.setMessage(Component.literal((rate?"逐 tick：":"单次：")+(selected.equals("lifeessence")?"LP":"Mana")+(rate?"/t":"")+"（单击切换）"));
+        mode.setTooltip(Tooltip.create(Component.literal("单次：开工输入、完工输出\n逐 tick：每个成功推进的加工 tick 处理\n倍率在保存后的批量设置中修改")));
+        if(selected.equals("computation")){mode.setMessage(Component.literal(failure?"算力不足：触发失败并取消":"算力不足：暂停并保留进度"));mode.setTooltip(Tooltip.create(Component.literal("每个成功推进的 tick 消耗算力；默认断网或短缺时暂停\n开启失败策略后取消配方，已投入材料不退还")));}
         kind.visible &= bounded();kind.active &= kind.visible;
         String current=selected.equals("will")?willKind:auraKind;
         kind.setMessage(Component.literal(font.plainSubstrByWidth((selected.equals("will")?"意志":"灵气")+"类型："+current+"（切换）",270)));
@@ -117,8 +126,15 @@ final class ResourceAmountPanel {
         update();g.fill(0,0,440,260,0xE0101216);g.fill(58,18,382,252,0xFF242A31);
         String label=LABELS.get(IDS.indexOf(selected));
         line(g,(editing?"编辑":"添加")+(output?"输出":"输入")+" · "+label,28,0xFFFFFF);
-        line(g,amountTitle(selected)+"（"+(selected.equals("ember")?"Ember，小数":selected.equals("will")?"Will，小数，整批一份":selected.equals("lifeessence")?rate?"LP/t，整数":"LP，整数":selected.equals("mana")?rate?"Mana/t，整数":"Mana，整数":"Aura，原生整数")+"）",103,0xDDDDDD);
-        if(bounded())line(g,output?"产出后上限（"+(selected.equals("will")?"max":"max-aura")+"）":"消耗后至少保留（"+(selected.equals("will")?"min":"min-aura")+"）",172,0xDDDDDD);
+        line(g,amountTitle(selected)+"（"+(selected.equals("computation")?"算力/t，小数":selected.startsWith("hypernet_")?"非负整数":selected.equals("ember")?"Ember，小数":selected.equals("will")?"Will，小数，整批一份":selected.equals("lifeessence")?rate?"LP/t，整数":"LP，整数":selected.equals("mana")?rate?"Mana/t，整数":"Mana，整数":"Aura，原生整数")+"）",103,0xDDDDDD);
+        if(selected.equals("computation")){
+            line(g,"持续网络输入；不使用实体输入口或接口分组",174,0xB5C5D5);
+            line(g,"默认随实际批量放大，保存后可设批量豁免",187,0xD9C98E);
+        }else if(selected.startsWith("hypernet_")){
+            line(g,selected.equals("hypernet_cooling")?"本机需为启用热量的处理器":"本机需为启用电路耐久的网络中心",151,0xB5C5D5);
+            line(g,"材料开工扣除；冷却／修复在完工时生效",166,0xB5C5D5);
+            line(g,"取消或输出堵塞期间不生效，无概率",184,0xD9C98E);
+        }else if(bounded())line(g,output?"产出后上限（"+(selected.equals("will")?"max":"max-aura")+"）":"消耗后至少保留（"+(selected.equals("will")?"min":"min-aura")+"）",172,0xDDDDDD);
         else if(rateable()){
             line(g,rate?"每个成功推进的加工 tick 处理":output?"完工时输出到所选接口":"开工时从所选接口扣除",174,0xB5C5D5);
             line(g,selected.equals("mana")?"普通／火花魔力仓共用需求，无概率":"绑定血球所有者的灵魂网络，无概率",187,0xB5C5D5);

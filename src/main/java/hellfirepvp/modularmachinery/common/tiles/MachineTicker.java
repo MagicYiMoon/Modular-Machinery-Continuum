@@ -101,7 +101,10 @@ public final class MachineTicker {
             tickController(level, pos, controller);
             controller.countControllerTick();
         }
-        finally { controller.recordPerformanceNanos(System.nanoTime() - started); }
+        finally {
+            hellfirepvp.modularmachinery.common.hypernet.HyperNetNode.tickController(controller);
+            controller.recordPerformanceNanos(System.nanoTime() - started);
+        }
     }
 
     private static void tickController(Level level, BlockPos pos, TileController controller) {
@@ -110,7 +113,7 @@ public final class MachineTicker {
             return;
         }
         // A FACTORY CONTROLLER IS NOT DRIVEN BY THIS ENGINE, and the guard is here rather than only in the block
-         
+        // that hands out tickers (PLAN 662): if that wiring were ever lost, a factory tile would be ticked as a
         // single-craft controller -- and because a factory tile reports its state from its THREADS, every tick
         // would find "no active recipe", start a craft, consume its inputs into the inherited single-craft
         // fields, and do it again. A machine that eats a bus per tick and never crafts is worse than a machine
@@ -130,7 +133,7 @@ public final class MachineTicker {
             return;
         }
 
-         
+        // REDSTONE STOPS A MACHINE (PLAN section 361).
         //
         // Upstream's TileMachineController#doControllerTick returns early on a strong signal. The port HAD
         // isRedstoneStopped() -- TileController:231 -- and it was read only by MenuMachineController's data slot
@@ -151,7 +154,7 @@ public final class MachineTicker {
             return;
         }
 
-         
+        // COMPONENT RE-BIND AFTER A WORLD LOAD (PLAN 627). The controller own flag is persisted and its
         // BOUND POSITIONS ARE NOT, so a reloaded machine reported itself formed with zero components and
         // could not run until the player shift-clicked it. UPSTREAM HAS NO SUCH HOLE: doStructureCheck
         // (TileMultiblockMachineController U533-U559) calls updateComponents() at U556 on every structure
@@ -175,7 +178,7 @@ public final class MachineTicker {
                         hellfirepvp.modularmachinery.common.block.BlockController.FACING)
                 : Direction.NORTH;
 
-         
+        // THE DYNAMIC PATTERNS ARE RE-CHECKED PERIODICALLY (PLAN section 338).
         //
         // Upstream re-asks in the controller's own update (`T690`'s `!matchesDynamicPattern(foundMachine)`), so a
         // machine whose line is broken AFTER formation stops working. The port had only the formation gate
@@ -188,7 +191,7 @@ public final class MachineTicker {
         //
         // A broken line calls setFormed(false); the branch at the top of this method then abandons any active
         // recipe on the NEXT tick, which is the same path a player breaking a casing has always taken.
-         
+        // THE WHOLE STRUCTURE IS RE-CHECKED ON UPSTREAM'S OWN CADENCE (PLAN 683, DEFECT A), BEFORE the narrower
         // dynamic-pattern check, because a full re-check SUBSUMES it: MachineFormation.tryForm re-asks every
         // dynamic pattern itself. The 20-tick check stays because it is finer-grained than the 50-tick one, and
         // removing it to avoid an overlap would WEAKEN a shipped behaviour -- upstream runs both inside one
@@ -210,7 +213,7 @@ public final class MachineTicker {
             return;
         }
 
-         
+        // THE MACHINE TICK BRACKET (PLAN sections 498.2, 403).
         //
         // Upstream brackets ONE TICK OF WORK with an event pair -- TileMachineController.doSyncStep
         // calls onMachineTick(Phase.START) at U123, does the work, and calls onMachineTick(Phase.END) at
@@ -242,7 +245,7 @@ public final class MachineTicker {
                 controller.getFormedPattern(machine));
         if (!controller.getBoundPositions().isEmpty()) context.overrideComponentPositions(controller.getBoundPositions());
 
-         
+        // THE TICK'S ONE RESOLVED REQUIREMENT LIST (PLAN 723.3). Built here, once, and handed to BOTH paths:
         // the start check consumes it, and the work path -- the finish gate, the emission, the input draw --
         // reads the SAME list instead of `recipe.requirements()`. That is what stops a modifier from changing
         // what the machine is ASKED for without changing what it MAKES, which is the defect 723.3 measured.
@@ -333,7 +336,7 @@ public final class MachineTicker {
             // canStart asks "may I begin", canFinish asks "can this run to completion". Both are
             // required before anything is taken: skipping canFinish is precisely the bug that would
             // destroy a player's items on an output-full machine.
-             
+            // THE MULTIPLIERS ARE RESET TO ONE BEFORE THE START CHECK (PLAN 683.2 fact 8, closed). The
             // requirement objects in `recipe.requirements()` are the DEFINITION's, shared by every machine
             // running it, and `effectiveParallelism` writes the granted value into them. A leftover from
             // another craft would make the room question below read `amount * <someone else's parallelism>`,
@@ -363,7 +366,7 @@ public final class MachineTicker {
             context.selectIsolationGroup(run.getSelectedIsolationGroupKey());
             List<Requirement> requirements = run.getRequirements();
 
-             
+            // THE EFFECTIVE PARALLELISM IS DECIDED **BEFORE ANYTHING IS TAKEN** (PLAN 597.3, 601, 497).
             //
             // THIS ORDER IS LOAD-BEARING AND IT WAS WRONG ONE ROUND EARLIER: the computation and its zero check
             // used to sit AFTER consumeInputs, so a craft whose requirements could not supply even one copy would
@@ -388,7 +391,7 @@ public final class MachineTicker {
                 continue;
             }
 
-             
+            // THE DURATION IS THE MODIFIED ONE (PLAN section 353.3's duration gap, closed here). Upstream writes
             // the recipe's own tickTime through the duration modifiers before the craft starts (MachineRecipe:250
             // and ActiveMachineRecipe:80/148 both call it `getRecipeTotalTickTime` after that), so a pack's
             // `"target": "modularmachinery:duration"` modifier is what decides how long this run takes. Until now
@@ -411,22 +414,22 @@ public final class MachineTicker {
         return MachineReloadListener.getLoader().findByName(controller.getMachineName());
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * <b>THE ACTIVE MODIFIERS FOR ONE EVALUATION, AND THE ONLY LIST THAT DECIDES WHETHER A MODIFIER APPLIES.</b>
+     *
+     * <p>A {@link hellfirepvp.modularmachinery.common.modifier.RecipeModifier} must not be applied without
+     * knowing whether it is ACTIVE: applying every declared modifier would grant the vent bonus whether or not
+     * the vent exists, which is worse than a documented bonus that silently fails (PLAN 234-236). The condition
+     * lives in {@link hellfirepvp.modularmachinery.common.modifier.ModifierReplacement#matches}, whose offset is
+     * rotated by {@code StructureMatcher.toWorldOffset} -- the SAME helper the pattern machinery uses, so a
+     * condition cannot disagree with the structure about where "one block above the controller" is.</p>
+     *
+     * <p><b>RULE B: IT IS ONE METHOD BECAUSE THERE MUST BE ONE ANSWER.</b> Both paths that need the list -- the
+     * start check and the work path -- call this, and both hand the result to
+     * {@code RecipeCraftingContext.withModifiers}, which is the one place requirements are scaled. A second
+     * scan written at a call site could see a different world (a vent placed or broken between the two reads in
+     * one tick) and the check and the emission would then disagree about the same craft.</p>
+     */
     private static List<hellfirepvp.modularmachinery.common.modifier.RecipeModifier> activeModifiers(
             DynamicMachine machine, MachineContext context) {
         List<hellfirepvp.modularmachinery.common.modifier.RecipeModifier> active = new ArrayList<>();
@@ -464,7 +467,7 @@ public final class MachineTicker {
         // row 37). Adding them here is the whole wiring: this method's own javadoc establishes that the list it
         // returns is the only thing that decides whether a modifier applies, and its callers hand the result to
         // `RecipeCraftingContext.withModifiers`. An upgrade's effect is therefore scaled by the SAME code as a
-         
+        // machine's declared modifier and inherits plan-723.3's invariant -- the start check and the write end read
         // one resolved list, so an upgrade cannot make the machine ask for room for two and place one.
         //
         // WHY THIS IS THE RIGHT PLACE AND NOT A NEW EVENT BUS: upstream reaches its upgrades through
@@ -565,27 +568,27 @@ public final class MachineTicker {
         return List.copyOf(merged);
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The ACTIVE recipe's requirements with the machine's active modifiers applied.
+     *
+     * <p><b>THIS IS THE TICK'S ONE RESOLVED LIST</b> (PLAN 723.3's fix), and {@code advance} is its consumer:
+     * the finish gate, the emission and the fluid field all read it instead of re-deriving anything. It is built
+     * once per tick, from the recipe the controller names, through the same two calls the start path uses
+     * ({@link #activeModifiers} and {@code RecipeCraftingContext.withModifiers}) -- so the two paths cannot
+     * resolve differently, and there is no second list to keep in step.</p>
+     *
+     * <p>WHY THE LIST MUST BE BUILT PER TICK RATHER THAN STORED WITH THE CRAFT: a modifier's condition is a
+     * STRUCTURE FACT. A player who breaks the vent mid-craft changes what the machine is, and the very next tick
+     * must ask again -- which is what this call is, and why {@code resolve} is not cached anywhere.</p>
+     *
+     * <p><b>THE FACTORY CALLS THIS PER RUN, AND THAT IS WHY IT IS PUBLIC (PLAN 723.3, the factory half).</b> A
+     * factory runs N recipes at once, so the resolution is PER RUN rather than per machine: each
+     * {@code FactoryRecipeThread} resolves its own recipe through this one method, keeping the factory on the
+     * ONE producer instead of re-deriving a modifier scan of its own. The machine context is already the
+     * factory's own, so a run and a single craft resolve the same way about the same structure.</p>
+     *
+     * @return the running recipe's resolved requirements, or {@code null} when no recipe is running
+     */
     public static RecipeCraftingContext resolvedRun(DynamicMachine machine, MachineRecipe activeRecipe,
                                                     MachineContext context) {
         if (activeRecipe == null) return null;
@@ -639,34 +642,34 @@ public final class MachineTicker {
         return updated;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The duration a recipe runs for on THIS machine, its active duration modifiers included.
+     *
+     * <p><b>THE SECOND HALF OF THE ONE MODIFIER LIST (PLAN section 353.3's duration gap).</b>
+     * {@code "target": "modularmachinery:duration"} names a type that cannot be instantiated into a requirement
+     * (upstream {@code RequirementDuration:27} throws), so it can never be applied by
+     * {@code RecipeCraftingContext.withModifiers}, which walks requirements. Upstream applies it to the RECIPE'S
+     * LENGTH instead — {@code MachineRecipe:250} (the per-machine recipe copy) and {@code ActiveMachineRecipe:80}
+     * / {@code :133} / {@code :148} (the running craft's total) — always against the SAME modifier collection the
+     * requirements were scaled with, which upstream assembles from the controller's found (structure-conditional)
+     * modifiers plus its custom ones (TileMultiblockMachineController:603-604).</p>
+     *
+     * <p><b>SO THIS USES {@link #activeModifiers} AND NOT A SECOND SCAN</b> (rule B): the duration a craft is
+     * granted and the amounts its requirements were scaled to come from ONE evaluation of the structure, which is
+     * the same argument {@link #resolvedRun} makes for the requirements. Writing a second scan here could see a
+     * different world — a vent broken between two reads in one tick — and the run would then be, say, a
+     * double-length craft at single amounts.</p>
+     *
+     * <p>Both starting paths call it: the single craft in {@code tryStart} and each factory run in
+     * {@code FactoryTicker.startOneRecipe}, so a factory run and a single craft of the same recipe on the same
+     * structure cannot disagree about how long it takes.</p>
+     *
+     * @param machine the machine bound to the controller, or {@code null} when it cannot be resolved — an unknown
+     *                machine has no modifiers and the recipe's own duration is the answer
+     * @param recipe  the recipe about to start
+     * @param context the machine as it stands right now
+     * @return the duration in ticks, never below one
+     */
     public static int effectiveRecipeDuration(DynamicMachine machine, MachineRecipe recipe,
                                               MachineContext context) {
         return recipe == null ? 0 : resolvedRun(machine, recipe, context).effectiveDuration();
@@ -725,21 +728,21 @@ public final class MachineTicker {
      *   <li><b>a zero duration cannot run</b> —it would hot-loop for the same reason.</li>
      * </ul>
      */
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Re-walks a formed machine's dynamic patterns and unforms it when one no longer holds (PLAN section 339).
+     *
+     * <p>Upstream does this in the controller's own update -- {@code T690}'s
+     * {@code !matchesDynamicPattern(foundMachine)} -- so a machine whose line is broken AFTER formation stops
+     * working. The port had only the formation gate (section 335), which refuses a wrong line at build time but
+     * leaves an already-formed machine running when a section is later removed.
+     *
+     * <p><b>Public so the self-test can call it directly.</b> The tick calls it once a second, and a check that
+     * depended on {@code level.getGameTime() % 20} landing at the right moment could not be written at all --
+     * the world's clock does not move inside a self-test. Extracting the decision from its cadence is what makes
+     * it observable, and the cadence is the caller's business rather than this method's.
+     *
+     * @return true when every declared pattern still holds, false when the machine has been unformed
+     */
     public static boolean dynamicPatternsStillHold(DynamicMachine machine, Level level, BlockPos pos,
                                                    Direction facing, MachineLoader loader,
                                                    TileController controller) {
@@ -759,7 +762,7 @@ public final class MachineTicker {
     }
 
     // ------------------------------------------------------------------
-     
+    // The periodic structure re-check (PLAN 683, DEFECT A)
     // ------------------------------------------------------------------
     //
     // UPSTREAM'S MECHANISM, read in full before anything was written:
@@ -923,18 +926,18 @@ public final class MachineTicker {
     // Advancing
     // ------------------------------------------------------------------
 
-    
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Advances the running craft one tick: pays for it, gates its completion, and emits.
+     *
+     * <p><b>EVERY REQUIREMENT IT READS IS THE TICK'S RESOLVED LIST, NOT {@code recipe.requirements()}.</b> The
+     * list arrives as a parameter rather than being built here, so the start check and this method cannot end up
+     * with two lists that disagree -- the defect PLAN 723.3 measured, where a machine's modifier doubled what
+     * {@code canStart} demanded and the emission still placed the definition's own single item.</p>
+     *
+     * @param requirements the tick's resolved requirements for this recipe, from
+     *                     {@link #resolvedRun(hellfirepvp.modularmachinery.common.machine.DynamicMachine,
+     *                     MachineRecipe, MachineContext)} -- never null while a recipe is active
+     */
     private static void advance(TileController controller, MachineContext context,
                                 List<MachineRecipe> candidates, RecipeCraftingContext run) {
         context.selectIsolationGroup(controller.getIsolationGroupKey());
@@ -971,12 +974,19 @@ public final class MachineTicker {
         // in NBT. The claim sent a diagnosis after an arithmetic ceiling that does not exist (§118.2), so it
         // is corrected rather than left standing.
         int currentTick = controller.getRecipeTicks();
-        String tickFailure = processTriggeredInputs(requirements, run, context, controller.getParallelism(), currentTick,
-                controller::hasTriggeredRequirement, controller::markTriggeredRequirement);
         List<Requirement> activeRequirements = activeRequirementsAtTick(run, requirements, currentTick);
+        var computation = controller.getRecipeTicks() >= controller.getRecipeDuration() ? null
+                : hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.workPlan(context, activeRequirements, controller.getParallelism(), controller.computationTicket());
+        String tickFailure = computation == null ? null : computation.failure();
+        if (tickFailure == null) tickFailure = processTriggeredInputs(requirements, run, context, controller.getParallelism(), currentTick,
+                controller::hasTriggeredRequirement, controller::markTriggeredRequirement);
         if (tickFailure == null) tickFailure = processPerTick(recipe, activeRequirements, context, controller.getParallelism(),
-                controller.getRecipeTicks() >= controller.getRecipeDuration());
+                controller.getRecipeTicks() >= controller.getRecipeDuration(), computation);
         if (tickFailure != null) {
+            if (computation != null && !hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.QUEUED.equals(tickFailure)) computation.abandon();
+            if (hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.pauses(activeRequirements, tickFailure)) {
+                controller.setStatusMessage(tickFailure); return;
+            }
             // Upstream ActiveMachineRecipe applies the formed machine's failure-action before publishing
             // the failure status. Preserve that progress policy independently from the recipe event's
             // destruct flag: STILL holds, DECREASE rewinds one tick, RESET restarts the run.
@@ -1002,7 +1012,7 @@ public final class MachineTicker {
                     controller.getBlockPos(), tickFailure, controller.getRecipeTicks(), controller.getRecipeDuration());
             // NAME THE MACHINE AND PRINT THE NUMBERS *AT THE STALL* —not once per JVM (§120.2).
             if (energyFailureKey(recipe).equals(tickFailure)) traceEnergyRefusal(recipe, context, controller);
-             
+            // RECIPE FAILURE EVENT (PLAN 529, 531). Upstream fires it from isNotWorking, which runs when
             // the machine is NOT crafting, and IT ACTS ON THE RETURN VALUE: true tears the active recipe down
             // (TileMachineController U211-U214). THE PORT EQUIVALENT OF NOT CRAFTING IS THIS BRANCH --
             // the energy shortfall -- and the port own comment above says exactly what upstream false means:
@@ -1010,7 +1020,7 @@ public final class MachineTicker {
             // returns." So the default is false, the stall is kept, and ONLY A HANDLER ASKING FOR
             // DESTRUCTION changes that.
             //
-             
+            // THE REASON IS WRITTEN (PLAN 712, closing the gap PLAN 711.9 recorded). Upstream returns
             // CraftingStatus.failure("craftcheck.failure.energy.input") from ActiveMachineRecipe.tick U88-U98
             // WITHOUT reaching its own this.tick++, so upstream's status.isCrafting() is false on exactly this
             // hold and MMInfoProvider U246-U252 paints the machine red with that message. The port's
@@ -1018,11 +1028,11 @@ public final class MachineTicker {
             // hasActiveRecipe() && statusMessage == null, so writing the key here IS that restoration -- the
             // derived key is energyFailureKey's, whose own record carries the lines. NOTHING ABOUT THE HOLD
             // CHANGES: the write is display only, the craft keeps its progress, and it resumes when the power
-             
+            // does (PLAN 534.3).
             controller.setStatusMessage(tickFailure);
             //
             // THE CAUSE COMES FROM THE PORT OWN DIAGNOSTICS: upstream passes status.getUnlocMessage(),
-             
+            // and describeBlockers is the port answer to the same question (PLAN 521.2). Nothing here needs
             // the CraftingStatus class.
             hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext failureContext =
                     run;
@@ -1030,7 +1040,7 @@ public final class MachineTicker {
                     new hellfirepvp.modularmachinery.common.event.recipe.RecipeFailureEvent(controller,
                             failureContext,
                             // describeBlockers TAKES A MachineContext -- exactly what advance was given,
-                             
+                            // so no extra plumbing is needed (PLAN 521.2).
                             tickFailure,
                             recipe.cancelOnPerTickFailure());
             failureEvent.postEvent();
@@ -1043,7 +1053,7 @@ public final class MachineTicker {
 
         recipe.commands().runTickCommands(controller, controller.getRecipeTicks());
 
-         
+        // THE REASON IS CLEARED ON THE TICK THE ENERGY ARRIVES (PLAN 712). Upstream does not clear separately
         // -- ActiveMachineRecipe.tick OVERWRITES its status every tick, returning CraftingStatus.working()
         // (type CRAFTING, U84/U102) on the success path and failure(...) on the stall -- so a machine that was
         // stalled and now is not answers isCrafting() == true again. This is that overwrite on this port's
@@ -1051,6 +1061,9 @@ public final class MachineTicker {
         // reason some other hold wrote (the output-room hold below runs later in the same tick and re-writes
         // its own, but a future writer earlier in the tick would be silently eaten).
         if (energyFailureKey(recipe).equals(controller.getStatusMessage())
+                || hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.SHORTFALL.equals(controller.getStatusMessage())
+                || hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.DISCONNECTED.equals(controller.getStatusMessage())
+                || hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.QUEUED.equals(controller.getStatusMessage())
                 || "craftcheck.failure.fluid.input".equals(controller.getStatusMessage())
                 || "craftcheck.failure.fluid.output.space".equals(controller.getStatusMessage())) {
             controller.setStatusMessage(null);
@@ -1060,7 +1073,7 @@ public final class MachineTicker {
                 controller.getRecipeTicks(), controller.getRecipeDuration());
 
         if (controller.getRecipeTicks() >= controller.getRecipeDuration()) {
-             
+            // ASK THE OUTPUTS ONLY, BEFORE PLACING ANYTHING (PLAN section 346).
             //
             // This is upstream's intent -- `RecipeThread.onFinished` (73-78) checks `canFinishCrafting()` and, on
             // failure, holds the craft at 100% until there is room -- implemented for a port whose tick order is
@@ -1083,19 +1096,19 @@ public final class MachineTicker {
             // Completion mirrors upstream finishCrafting: delayed trigger metadata controls start-time IO,
             // but every output requirement is still considered by the final placement pass.
             setParallelism(requirements, controller.getParallelism());
-             
+            // RULE A0 -- THE DEVIATION THIS GATE CARRIES (PLAN 704): upstream asks each output requirement
             // the room question ON ITS OWN and then writes them one after another (RequirementItem.doItemIO
             // U286-U292 / RequirementFluid.doFluidIO U166-U177, then RecipeCraftingContext.finishCrafting
             // U386-U421), so the first output eats the room the others were each promised and the tail is
             // destroyed. Asked the WHOLE output set here instead: see outputAllocationFailure, which is the
-             
+            // multi-output half of PLAN 683.2 fact 8 (the multiplier half) and reads the SAME granted
             // multiplier emitOutputs reads.
             String allocationFailure = outputAllocationFailure(context, requirements,
                     controller.getParallelism());
             if (allocationFailure != null) {
                 trace("'{}' at {} is complete but its outputs have no room together; holding",
                         recipe.registryName(), controller.getBlockPos());
-                 
+                // THE REASON REACHES THE PLAYER (PLAN 683, DEFECT B, key derivation in outputSpaceKey). The
                 // hold was already correct and already upstream; what was missing was any channel from here
                 // to a screen, so a player watched a counter climb past its own duration with nothing saying
                 // why. The controller now carries the unlocalized key and the screen renders it -- see
@@ -1109,6 +1122,11 @@ public final class MachineTicker {
                 // reading "item output space" also knows it is an OUTPUT and not an input.
                 controller.setStatusMessage(allocationFailure);
                 return;     // hold the WHOLE craft: nothing is placed, so the retry places it once
+            }
+            var maintenance=hellfirepvp.modularmachinery.common.hypernet.HyperNetMaintenance.plan(context,requirements,controller.getParallelism(),false);
+            if(!maintenance.valid()||!maintenance.execute()) {
+                controller.setStatusMessage(maintenance.failure()==null?hellfirepvp.modularmachinery.common.hypernet.HyperNetMaintenance.INVALID:maintenance.failure());
+                return;
             }
             emitOutputs(recipe, run, context, controller.getParallelism());
             recipe.commands().runFinishCommands(controller);
@@ -1198,28 +1216,28 @@ public final class MachineTicker {
         return failureKey(requirement, requirement.getIOType() == null ? "output" : null);
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * <b>RULE B -- THE ONE DERIVATION, WITH {@code .space} AS THE PART THAT DEPENDS ON THE DIRECTION AND NOT
+     * ON THE KEY.</b> Upstream's failure keys are {@code craftcheck.failure.<path>.<io>} for a SHORTFALL and
+     * {@code craftcheck.failure.<path>.<io>.space} for a FULL-FOR-OUTPUT, and the two shipped examples read
+     * exactly that way:
+     *
+     * <pre>
+     * upstream RequirementEnergy U140  CraftCheck.failure("craftcheck.failure.energy.input")
+     * upstream RequirementEnergy U145  CraftCheck.failure("craftcheck.failure.energy.output.space")
+     * upstream RequirementItem   U291  CraftCheck.failure("craftcheck.failure.item.output.space")
+     * </pre>
+     *
+     * <p>So the suffix is <b>part of the OUTPUT-FULL key and not of the key family</b>: an input shortfall has
+     * no room to run out of, which is why upstream writes {@code .energy.input} with no {@code .space}. Both
+     * files already ship {@code craftcheck.failure.energy.input} ({@code "Not enough energy!"} /
+     * {@code "缺少能量输入！"}), so the energy stall's reason is an EXISTING key reached through the existing
+     * derivation -- not a second convention and not a new string.</p>
+     *
+     * <p>{@code ioOverride} exists because the output-room hold must keep answering {@code output} for a
+     * requirement whose own direction is unset, which is the behaviour {@link #outputSpaceKey} documented and
+     * this round did not change. Passing {@code null} asks the requirement.</p>
+     */
     private static String failureKey(Requirement requirement, String ioOverride) {
         String typeId = requirement.typeId();               // "modularmachinery:item" / ":fluid" / ":energy"
         int colon = typeId.indexOf(':');
@@ -1234,41 +1252,41 @@ public final class MachineTicker {
         return "output".equals(io) ? key + ".space" : key;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * <b>RULE A0 -- UPSTREAM WRITES A FAILURE ON THE ENERGY-SHORTFALL PATH, SO THIS IS A RESTORATION AND NOT A
+     * NEW SIGNAL.</b> The chain was read end to end before this method was added:
+     *
+     * <ol>
+     *   <li><b>upstream {@code ActiveMachineRecipe.tick} U88-U98</b> -- {@code if ((check =
+     *       context.ioTick(tick)).isFailure())} fires the machine's failure action and then
+     *       {@code return CraftingStatus.failure(check.getFirstErrorMessage(""));} <b>WITHOUT reaching its own
+     *       {@code this.tick++} (U101)</b>. The craft is therefore HELD, not destroyed: the counter does not
+     *       move and the active recipe survives for the next tick.</li>
+     *   <li><b>upstream {@code CraftingStatus.failure} U31-U33</b> -- returns a status of type
+     *       {@code NO_RECIPE}, and {@code isCrafting()} (U53-U55) is true ONLY for type {@code CRAFTING}. So
+     *       on that path upstream answers <b>false</b> -- which is exactly what {@code MMInfoProvider}
+     *       U246-U252 turns into {@code TextFormatting.RED} and the three FAILURE bar colours.</li>
+     *   <li><b>the message upstream carries</b> -- {@code ioTick} returns the first failing requirement's own
+     *       unlocalized key ({@code RecipeCraftingContext} U253-U256 / U286-U291), and for a per-tick energy
+     *       input that is {@code craftcheck.failure.energy.input}
+     *       ({@code RequirementEnergy.doEnergyIO} U138-U140).</li>
+     *   <li><b>the port's equivalent</b> -- {@code TileController#statusMessage} is the port's field for
+     *       upstream's {@code unlocMessage}, and {@code TileController.isCrafting()} is
+     *       {@code hasActiveRecipe() && statusMessage == null}. WRITING THIS KEY ON THE STALL IS THEREFORE
+     *       WHAT MAKES THE RED APPEAR: nothing else has to change, and the earlier reading of this branch as
+     *       "a signal the engine does not make" was wrong.</li>
+     * </ol>
+     *
+     * <p><b>DISPLAY ONLY -- the UPS SEMANTICS ARE UNTOUCHED.</b> This writes a string and returns; it does not
+     * call {@code abandonRecipe}, does not touch {@code recipeTicks}, and does not change the return value
+     * that keeps the craft alive. A starved machine still holds its progress and still resumes when power
+     * returns (PLAN 534.3), which the suite's own
+     * {@code "shortfall stalls without destroying the recipe"} check asserts on the same tick this method is
+     * called from.</p>
+     *
+     * @param recipe the recipe whose tick could not be paid for
+     * @return the shipped unlocalized key for an input shortfall, e.g. {@code craftcheck.failure.energy.input}
+     */
     public static String energyFailureKey(MachineRecipe recipe) {
         for (Requirement requirement : recipe.requirements()) {
             if (requirement instanceof RequirementEnergy energy && energy.getIOType() == IOType.INPUT) {
@@ -1303,7 +1321,7 @@ public final class MachineTicker {
         }
 
         // PASS 1 -- FLUIDS, the order emitOutputs places them in. THE ROOM IS THE TANKS' SUM, WALKED THE WAY THE
-         
+        // WRITER WALKS THEM (PLAN §714): RequirementFluid.outputRoomFor asks each output tank for the REMAINDER
         // of this batch in turn -- the shape upstream's HybridFluidUtils.doSimulateDrainOrFill (U31-U47) and
         // RequirementFluid.produce both use -- and charges what earlier fluid outputs of this same emission
         // already reserved against it. Before §714 this pass asked whether ONE tank would accept the whole batch
@@ -1354,7 +1372,7 @@ public final class MachineTicker {
      */
     public static boolean satisfies(MachineRecipe recipe, DynamicMachine machine, MachineContext context,
                                     boolean checkFinish) {
-         
+        // STAGE 2 of the crafting rework (PLAN section 228-229): the loop moved to RecipeCraftingContext.
         //
         // The semantics are IDENTICAL -- canStart always, canFinish when asked, nothing taken until both
         // agree -- and that is the point: this is the same evaluation, given an object that a thread can own.
@@ -1363,30 +1381,30 @@ public final class MachineTicker {
         // "helper with no callers" this port has already shipped twice (section 199, section 224).
         //
         // So the context is exercised on every evaluation the ticker performs, rather than existing beside it.
-         
+        // STAGE 4b/ii (PLAN section 235): only the modifiers whose STRUCTURE CONDITION HOLDS are applied --
         // through activeModifiers, so the condition is tested in ONE place for every caller.
         return satisfies(recipe, resolvedRun(machine, recipe, context), context, checkFinish);
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Whether every requirement is satisfied, over an <b>ALREADY RESOLVED</b> requirement list.
+     *
+     * <p><b>RULE B -- ONE EVALUATION, AND THE CALLER SUPPLIES THE LIST SO THERE IS ONLY ONE OF IT.</b> The list
+     * is produced by {@code RecipeCraftingContext.withModifiers} from the machine's active modifiers, and this
+     * overload does not invent a second way to decide what a requirement is: it asks the very objects the
+     * emission will write (PLAN 723.3). A modifier that doubles an output therefore doubles BOTH the room the
+     * check demands and the amount the emitter places, which is the whole point.</p>
+     *
+     * <p><b>AND THE EVENT CARRIES THAT SAME CONTEXT</b>, which is not convenience: upstream handlers can act on
+     * it ({@code setParallelism} writes to it), so a second context built at the call site would look identical
+     * and be a DIFFERENT object, silently breaking the linkage (PLAN 570).</p>
+     *
+     * @param run         this tick's resolved requirements for {@code recipe}
+     * @param checkFinish when true, also require every requirement's {@link Requirement#canFinish}
+     */
     public static boolean satisfies(MachineRecipe recipe, RecipeCraftingContext run, MachineContext context,
                                     boolean checkFinish) {
-         
+        // RECIPE CHECK EVENT (PLAN 568, 570). Upstream brackets checkStartResult with it (U1022 and U1039) and READS
         // THE RESULT BACK (U1042-U1046): a handler can REFUSE a craft, which is what setFailed is for.
         //
         // THE CONTROLLER IS RESOLVED BY POSITION (570): MachineContext carries level and controllerPos and NOT the
@@ -1413,24 +1431,24 @@ public final class MachineTicker {
         return endCheck.isFailure() ? false : satisfied;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Pushes a granted multiplier into a requirement list, through the requirement's own setter.
+     *
+     * <p><b>ONE METHOD FOR BOTH VIEWS OF A RUN.</b> A recipe has its DEFINITION list
+     * ({@code recipe.requirements()}) and -- once a modifier applies -- the RESOLVED copies
+     * {@code RecipeCraftingContext.withModifiers} built for it. Both are walked by something: the reduction
+     * (which computes the grant) walks the definitions, while the emission's FLUID half reads its requirement's
+     * own field ({@code RequirementFluid.produce} multiplies by {@code parallelism}). A resolved copy is a fresh
+     * object whose field is still one, so without this call a modifier plus a parallel craft would reserve
+     * {@code amount * granted} room and place {@code amount} -- two lists disagreeing, which is the defect this
+     * round exists to remove. THE VALUE IS WRITTEN BY ONE METHOD so the two views cannot be set by two rules
+     * (PLAN 629).</p>
+     *
+     * <p><b>AND IT IS PUBLIC BECAUSE THE FACTORY NEEDS THE SAME WRITE (PLAN 723.3).</b> {@code FactoryTicker}
+     * resolves a FRESH list per run per tick, and a fresh list's fluid requirements carry the field at one, so
+     * the factory has exactly the exposure this call closes on the machine path -- a run granted N would
+     * reserve {@code amount * N} room and place {@code amount}. Same value, same rule, one method.</p>
+     */
     public static void setParallelism(List<Requirement> requirements, int parallelism) {
         for (Requirement requirement : requirements) {
             if (requirement instanceof Requirement.Parallelizable parallelizable) {
@@ -1482,16 +1500,16 @@ public final class MachineTicker {
                 : net.minecraft.core.Direction.NORTH;
     }
 
-    
-
-
-
-
-
-
-
-
- 
+    /**
+     * The machine's parallelism ceiling, BEFORE any requirement has reduced it (upstream
+     * {@code TileMultiblockMachineController.getMaxParallelism()}, whose body is K601-K611 below / PLAN 599).
+     *
+     * <p>Split out of {@code effectiveParallelism} for the FACTORY (PLAN 662, rule B): upstream's factory asks
+     * this same question to compute how much of the machine's parallelism is still unspent
+     * ({@code TileFactoryController.getAvailableParallelism}, U400-U418), so the factory must be able to reach
+     * the number the single-craft path starts from rather than recompute it and risk disagreeing. Behaviour is
+     * unchanged: the 3-argument {@code effectiveParallelism} below now starts from exactly this value.</p>
+     */
     public static int machineParallelism(DynamicMachine machine, MachineContext context) {
         if (machine == null || !machine.isParallelizable()) {
             return 1;
@@ -1509,19 +1527,19 @@ public final class MachineTicker {
         return (int) Math.max(1L, parallelism);
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * The parallelism this craft may ACTUALLY run at, given a starting point.
+     *
+     * @param requirements        the list the reduction WALKS and the list the granted value is written into:
+     *                            the tick's RESOLVED requirements (PLAN 723.3). It is the same list the work path
+     *                            consumes and emits, so the value that governs the work is decided over the
+     *                            requirements the work will actually use -- a scaled input is reduced against its
+     *                            scaled amount, not against the definition's.
+     * @param startingParallelism the ceiling to reduce: the machine's own for a single craft, or the factory's
+     *                            remaining budget for a factory run (upstream's
+     *                            {@code FactoryRecipeSearchTask} is constructed with
+     *                            {@code factory.getAvailableParallelism()}, L465-U470)
+     */
     public static int effectiveParallelism(MachineRecipe recipe, List<Requirement> requirements,
                                            MachineContext context, int startingParallelism) {
         // Upstream RecipePrimer.setParallelized(false) disables the recipe-level batch expansion while
@@ -1529,7 +1547,7 @@ public final class MachineTicker {
         // go through the normal reduction path, but their ceiling starts at one so no input/output is
         // multiplied for this recipe.
         int parallelism = recipe.parallelized() ? startingParallelism : 1;
-         
+        // THE MIN REDUCTION AND THE DISTRIBUTION (PLAN 597.2, upstream M434-M447 and U457-U462), which is what turns
         // the value above INTO the effective parallelism rather than merely its starting point.
         //
         // UPSTREAM: getMaxParallelism(parallelizable) starts from the recipe ceiling and calls Math.min against each
@@ -1541,17 +1559,16 @@ public final class MachineTicker {
         // That is upstream own behaviour (M485-M492 reduces and retries) and it is the reason this is a reduction
         // rather than a multiplication: a machine asked for eight copies with supplies for three runs THREE.
         int resolved = parallelism;
-         
+        // WHY THE FIRST VERSION OF THIS DIAGNOSTIC COULD NOT ANSWER THE QUESTION IT WAS ADDED FOR (PLAN 651).
         //
         // IT LOGGED ONLY WHEN `resolved < before && before > 1` -- SO IT STAYED SILENT EXACTLY WHEN `before` WAS
         // ALREADY 1, WHICH IS THE CASE A PLAYER REPORTS: "parallelism is only 1". That is the same shape as 471
         // (the self-test forcing roll to 0 and making the probabilistic path unreachable) FOR THE FIFTH TIME: AN
         // INSTRUMENT THAT DOES NOT FIRE IN THE CASE THAT MATTERS IS NOT AN INSTRUMENT.
         //
-        // SO THE SOURCE IS REPORTED NOW, NOT ONLY THE REDUCTION. It costs one line per craft start, and a craft
-        // start is rare -- WHEREAS NOT KNOWING WHY THE ANSWER IS 1 COSTS A ROUND TRIP THROUGH THE USER.
+        // Keep the diagnostic at DEBUG: short core recipes can restart every tick.
         if (parallelism <= 1) {
-            hellfirepvp.modularmachinery.Modularmachinery.LOG.info(
+            hellfirepvp.modularmachinery.Modularmachinery.LOG.debug(
                     "[MMCE] parallelism {} for recipe {} (no parallel controller, or the machine declares none)",
                     parallelism, recipe.registryName());
         }
@@ -1561,7 +1578,7 @@ public final class MachineTicker {
             }
             int before = resolved;
             resolved = parallelizable.getMaxParallelism(context, resolved, requirements);
-             
+            // A DIAGNOSTIC THAT NAMES THE REDUCING REQUIREMENT (PLAN 631). "Parallelism did not happen" has at
             // least two causes -- the ceiling arrived as one, or a requirement reduced it -- and they need
             // different fixes. THIS LINE MAKES THE SECOND ONE VISIBLE BY NAME AND BY NUMBER, which is the same
             // shape as the energy shortfall check at 540: report the value that decided, not that a decision was
@@ -1587,15 +1604,15 @@ public final class MachineTicker {
         return Math.max(1, resolved);
     }
 
-    
-
-
-
-
-
-
-
- 
+    /**
+     * Removes the INPUT requirements' items and fluids from the machine's input components.
+     *
+     * @param requirements the tick's RESOLVED requirements (PLAN 723.3): the machine takes what the check
+     *                     demanded, so a modifier that scales an input is paid for at the scaled amount rather
+     *                     than at the definition's
+     * @return false when the inputs could not all be taken, in which case the caller must not start —
+     *         a partially consumed recipe is worse than one that never began
+     */
     public static boolean consumeInputs(List<Requirement> requirements, MachineContext context, int parallelism) {
         var batchPlans = new java.util.LinkedHashMap<String, hellfirepvp.modularmachinery.common.crafting.BatchIORequirement.Plan>();
         for (Requirement r : requirements) {
@@ -1616,7 +1633,7 @@ public final class MachineTicker {
                     context, requirements, parallelism, true);
             if (!planned.valid() || !planned.execute()) return false;
         }
-         
+        // THE MULTIPLIER IS PASSED DOWN RATHER THAN LOOKED UP (PLAN 597.2, 498). The value was decided once,
 
         // before anything was taken, and a second lookup here could disagree with it -- which is the whole reason
 
@@ -1724,7 +1741,14 @@ public final class MachineTicker {
     /** Pays one advancing tick; a completed recipe waiting for outputs must not pay its rate again. */
     public static String processPerTick(MachineRecipe recipe, List<Requirement> requirements,
                                        MachineContext context, int parallelism, boolean complete) {
+        return processPerTick(recipe, requirements, context, parallelism, complete,
+                complete ? null : hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.plan(context, requirements, parallelism));
+    }
+    public static String processPerTick(MachineRecipe recipe, List<Requirement> requirements,
+                                       MachineContext context, int parallelism, boolean complete,
+                                       hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.Plan computation) {
         if (complete) return null;
+        if (!computation.valid()) return computation.failure();
         List<hellfirepvp.modularmachinery.common.crafting.Requirement.PerTick> perTick = requirements.stream()
                 .filter(hellfirepvp.modularmachinery.common.crafting.Requirement.PerTick.class::isInstance)
                 .map(hellfirepvp.modularmachinery.common.crafting.Requirement.PerTick.class::cast).toList();
@@ -1810,6 +1834,7 @@ public final class MachineTicker {
             }
         }
         // Simulation and commit run together on the server thread, with no event callback in between.
+        if (!computation.execute()) { resetPerTick(perTick, context); return hellfirepvp.modularmachinery.common.hypernet.ComputationTickIO.SHORTFALL; }
         for (var storage : drawOrder) {
             int amount = energyDraws.get(storage);
             if (storage.extractEnergy(amount, false) != amount) {
@@ -1874,30 +1899,30 @@ public final class MachineTicker {
         return processPerTick(recipe, recipe.requirements(), context, parallelism, false) == null;
     }
 
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+    /**
+     * Places a completed recipe's outputs (PLAN section 344).
+     *
+     * <p><b>RECONSTRUCTED from the compiled class in {@code build/recover/}</b>, whose bytecode was the only
+     * surviving copy after section 342's `-replace` deleted this method. Every structure here is derived from
+     * that dump and cross-checked against two verbatim reads taken before the loss; the fluid branch, the
+     * chance roll, the handler lookup and the slot loop all match statement for statement.
+     *
+     * <p><b>AND IT PLACES THE TICK'S RESOLVED REQUIREMENTS</b> (PLAN 723.3), which is the whole point of the
+     * {@code requirements} parameter: upstream hands the write path the SAME context its checks used
+     * ({@code RecipeCraftingContext.finishCrafting(components, context, chance)}, U386-U411, whose requirements
+     * recompute their modifiers at write time), and this port carries that value in the resolved copies instead.
+     * Emitting {@code recipe.requirements()} here is what made a machine modifier change what the machine was
+     * ASKED for and not what it MADE: the check demanded room for two items and one was placed. NOT ONE BYTE of
+     * the write below changed -- only the list it walks.
+     *
+     * <p>Fluids go first, so a recipe producing both into one hatch has a chance to fit the fluid rather than
+     * being squeezed out by items. Items follow, each with its own chance roll and its own sweep over the
+     * OUTPUT item handlers.
+     *
+     * @param recipe       the definition the run belongs to; read for its name in the trace lines and for the
+     *                     result-chance event below, NOT for its requirements
+     * @param requirements the run's resolved requirements, from {@code RecipeCraftingContext.getRequirements()}
+     */
     public static void emitOutputs(MachineRecipe recipe, List<Requirement> requirements,
                                    MachineContext context, int parallelism) {
         emitOutputs(recipe, requirements, new RecipeCraftingContext(recipe), context, parallelism);
@@ -1911,7 +1936,7 @@ public final class MachineTicker {
     private static void emitOutputs(MachineRecipe recipe, List<Requirement> requirements, RecipeCraftingContext run,
                                     MachineContext context, int parallelism) {
 
-         
+        // RESULT CHANCE EVENT (PLAN 588, 590.2, 595.2). Upstream fires it ONCE at the top of finishCrafting (U390-U394)
         // and READS THE RESULT BACK, then hands that roller to every requirement. THIS PORT HAS NO ROLLER -- its odds
         // live per requirement as floats -- SO THE EVENT CARRIES A FLAG INSTEAD, which is the same capability without
         // a value that would have no upstream counterpart to mean: "make every probabilistic output of this craft
@@ -1938,7 +1963,7 @@ public final class MachineTicker {
             guaranteedOutput = chanceEvent.isGuaranteed();
         }
         // THE TWO LOOPS BELOW WALK THE RUN'S RESOLVED LIST, NOT THE DEFINITION'S -- AND THAT WAS THE HALF OF
-         
+        // PLAN 723.3's FIX THAT WAS STILL MISSING (both loops read `recipe.requirements()` while the signature
         // above promises the resolved list and outputAllocationFailure already asked ITS room question of it).
         // SO AN ACTIVE MODIFIER DOUBLED WHAT `satisfies` DEMANDED AND THE EMISSION STILL PLACED THE
         // DEFINITION'S OWN AMOUNT: the two lists disagreed about one craft, which is the drift this parameter
@@ -2031,7 +2056,7 @@ public final class MachineTicker {
             long remainingLong = item.outputAmount(context) * (item.isParallelizeUnaffected() ? 1 : Math.max(1, parallelism));
             int remaining = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, remainingLong));
             if (remaining <= 0) continue;
-             
+            // N COPIES ARE PRODUCED, not one (PLAN 597.2, 598): the craft was granted a parallelism by the min
 
             // reduction, it CONSUMED N times its inputs for it, and it must therefore emit N times its outputs or
 

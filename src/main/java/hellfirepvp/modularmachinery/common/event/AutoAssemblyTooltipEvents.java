@@ -21,5 +21,10 @@ public final class AutoAssemblyTooltipEvents {
                 .withStyle(ChatFormatting.GOLD));
         event.getToolTip().add(Component.translatable("tooltip.modularmachinery.auto_assembly.materials")
                 .withStyle(ChatFormatting.GRAY));
+        if (net.minecraftforge.fml.ModList.get().isLoaded("ae2"))
+            event.getToolTip().add(Component.translatable("tooltip.modularmachinery.auto_assembly.wireless")
+                    .withStyle(ChatFormatting.GRAY));
+        event.getToolTip().add(Component.translatable("tooltip.modularmachinery.auto_assembly.cancel")
+                .withStyle(ChatFormatting.GRAY));
     }
 }

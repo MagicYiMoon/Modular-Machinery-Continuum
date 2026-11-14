@@ -21,7 +21,22 @@ import net.minecraftforge.common.util.FakePlayerFactory;
 
 /** Actual menu packets must preserve high capacity values and subsequent energy changes. */
 public final class EnergyHatchCapacityRegressionChecks {
-    public static void run(ServerLevel level, BlockPos origin) {
+    public static void run(ServerLevel level, BlockPos origin) throws Exception {
+        // Avoid asynchronous reloads of Forge's autosaving config during rapid per-tier mutations.
+        var backingField = net.minecraftforge.common.ForgeConfigSpec.class.getDeclaredField("childConfig");
+        backingField.setAccessible(true);
+        var original = (com.electronwill.nightconfig.core.CommentedConfig) backingField.get(Config.SPEC);
+        var isolated = com.electronwill.nightconfig.core.CommentedConfig.inMemory();
+        Config.SPEC.correct(isolated);
+        Config.SPEC.setConfig(isolated);
+        try {
+            runWithIsolatedConfig(level, origin);
+        } finally {
+            Config.SPEC.setConfig(original);
+        }
+    }
+
+    private static void runWithIsolatedConfig(ServerLevel level, BlockPos origin) {
         checkTransferLimits(level, origin.offset(0, 0, 4));
         var setting = Config.entryForEnergyCapacity(EnergyHatchData.ULTIMATE);
         long previous = setting.get();

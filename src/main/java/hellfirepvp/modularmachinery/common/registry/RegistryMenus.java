@@ -65,6 +65,15 @@ public final class RegistryMenus {
 
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(ForgeRegistries.MENU_TYPES, Modularmachinery.MODID);
+    public static final RegistryObject<MenuType<hellfirepvp.modularmachinery.common.menu.MenuHyperNetMonitor>> HYPERNET_MONITOR =
+            MENUS.register("hypernet_monitor",()->IForgeMenuType.create((id,inventory,data)->
+                    new hellfirepvp.modularmachinery.common.menu.MenuHyperNetMonitor(id,inventory,data.readBlockPos(),data.readUUID())));
+    public static final RegistryObject<MenuType<hellfirepvp.modularmachinery.common.menu.MenuHyperNetResearch>> HYPERNET_RESEARCH =
+            MENUS.register("hypernet_research",()->IForgeMenuType.create((id,inventory,data)->
+                    new hellfirepvp.modularmachinery.common.menu.MenuHyperNetResearch(id,inventory,data.readBlockPos(),data.readUUID())));
+    public static final RegistryObject<MenuType<hellfirepvp.modularmachinery.common.menu.MenuEStorageController>> ESTORAGE_CONTROLLER =
+            MENUS.register("estorage_controller", () -> IForgeMenuType.create(
+                    (id, inventory, data) -> new hellfirepvp.modularmachinery.common.menu.MenuEStorageController(id, inventory, data.readBlockPos())));
 
     /**
      * The machine controller's GUI.
@@ -158,6 +167,21 @@ public final class RegistryMenus {
             MENUS.register("smart_interface", () -> IForgeMenuType.create(
                     (windowId, inventory, data) ->
                             new MenuSmartInterface(windowId, inventory, data.readBlockPos())));
+
+    public static final RegistryObject<MenuType<hellfirepvp.modularmachinery.common.menu.MenuECalculatorController>> ECALCULATOR_CONTROLLER =
+            MENUS.register("ecalculator_controller", () -> IForgeMenuType.create((id, inventory, data) ->
+                    new hellfirepvp.modularmachinery.common.menu.MenuECalculatorController(id, inventory, data.readBlockPos(), data.readUUID())));
+
+    public static final RegistryObject<MenuType<hellfirepvp.modularmachinery.common.menu.MenuEFabricatorController>> EFABRICATOR_CONTROLLER =
+            MENUS.register("efabricator_controller", () -> IForgeMenuType.create((id, inventory, data) ->
+                    new hellfirepvp.modularmachinery.common.menu.MenuEFabricatorController(id, inventory, data.readBlockPos(), data.readUUID())));
+
+    public static final RegistryObject<MenuType<hellfirepvp.modularmachinery.common.menu.MenuEFabricatorPatternBus>> EFABRICATOR_PATTERN_BUS =
+            MENUS.register("efabricator_pattern_bus", () -> IForgeMenuType.create((id, inventory, data) ->
+                    new hellfirepvp.modularmachinery.common.menu.MenuEFabricatorPatternBus(id, inventory, data.readBlockPos())));
+    public static final RegistryObject<MenuType<hellfirepvp.modularmachinery.common.menu.MenuEFabricatorPatternSearch>> EFABRICATOR_PATTERN_SEARCH =
+            MENUS.register("efabricator_pattern_search", () -> IForgeMenuType.create((id, inventory, data) ->
+                    new hellfirepvp.modularmachinery.common.menu.MenuEFabricatorPatternSearch(id, inventory, data.readBlockPos(), data.readUUID())));
 
     /** Pack-author recipe editor opened by {@code /modularmachinery gui}. */
     public static final RegistryObject<MenuType<MenuMachineEditor>> MACHINE_EDITOR =
