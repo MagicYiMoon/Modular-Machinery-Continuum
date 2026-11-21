@@ -188,6 +188,10 @@ minecraft {
             if (project.hasProperty('hypernetFairTest')) jvmArgs '-Dmodularmachinery.hypernetFairTest=true'
             if (project.hasProperty('hypernetStationTest')) jvmArgs '-Dmodularmachinery.hypernetStationTest=true'
             if(project.hasProperty('researchEditorTest')) { jvmArgs '-Dmodularmachinery.researchEditorTest=true'; arg '--nogui' }
+            if (project.hasProperty('componentFeedbackTest')) {
+                jvmArgs '-Dmodularmachinery.componentFeedbackTest=true'
+                arg '--nogui'
+            }
             if(project.hasProperty('serverAssemblyTest')) { jvmArgs '-Dmodularmachinery.serverAssemblyTest=true'; arg '--nogui' }
             if (project.hasProperty('hypernetTerminalTest')) jvmArgs '-Dmodularmachinery.hypernetTerminalTest=true'
             if (project.hasProperty('hypernetStationResumeTest')) jvmArgs '-Dmodularmachinery.hypernetStationResumeTest=true'

@@ -8183,7 +8183,7 @@ private static ParsedClass parseClassBytes(byte[] classBytes) {
         // inventory at 131.
         var tier = hellfirepvp.modularmachinery.common.block.prop.UpgradeBusData.ULTIMATE;
         var menu = new hellfirepvp.modularmachinery.common.menu.MenuUpgradeBus(
-                0, null, origin, tier, new net.minecraftforge.items.ItemStackHandler(tier.getUpgradeSlots()));
+                0, null, origin, tier.ordinal(), tier.getUpgradeSlots());
 
         boolean layoutOk = true;
         StringBuilder worst = new StringBuilder();

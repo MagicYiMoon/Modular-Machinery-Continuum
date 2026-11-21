@@ -134,12 +134,12 @@ public final class RegistryMenus {
                             new MenuParallelController(windowId, inventory, data.readBlockPos(),
                                     data.readVarInt(), data.readVarInt())));
 
-    /** The upgrade bus GUI. The TIER is sent, since it carries both the slot count and the 3-wide grid. */
+    /** The actual server slot count is sent independently of the tier. */
     public static final RegistryObject<MenuType<MenuUpgradeBus>> UPGRADE_BUS =
             MENUS.register("upgrade_bus", () -> IForgeMenuType.create(
                     (windowId, inventory, data) ->
                             new MenuUpgradeBus(windowId, inventory, data.readBlockPos(),
-                                    data.readVarInt())));
+                                    data.readVarInt(), data.readVarInt())));
 
     /** The factory controller GUI. Its panel is 280 wide because the blueprint slot sits at x=255. */
     public static final RegistryObject<MenuType<MenuFactoryController>> FACTORY_CONTROLLER =

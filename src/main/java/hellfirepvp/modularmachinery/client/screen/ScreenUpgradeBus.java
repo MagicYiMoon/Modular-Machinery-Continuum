@@ -19,7 +19,6 @@ package hellfirepvp.modularmachinery.client.screen;
 
 import hellfirepvp.modularmachinery.Modularmachinery;
 import hellfirepvp.modularmachinery.common.menu.MenuUpgradeBus;
-import hellfirepvp.modularmachinery.common.tiles.TileUpgradeBus;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -30,29 +29,21 @@ import net.minecraft.util.FormattedCharSequence;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The upgrade bus screen.
- *
- * <p>Blits the texture the jar's own {@code GuiContainerUpgradeBus} names — {@code guiupgradebus.png} —
- * read out of that class's constant pool rather than guessed. Nothing is drawn in code: the frame, the
- * upgrade-slot wells and the player-inventory area all come from the mod's own art, which is authored
- * against the same 3-column layout at (8,17) that {@link MenuUpgradeBus} places its slots from.
- *
- * <p>The panel is <b>176x213</b>, taller than the 176x166 used elsewhere in this mod, because the upgrade
- * grid pushes the player inventory down to y=131 and the hotbar to y=189. Taking the standard height here
- * would clip both.
- */
+/** Source-style slot grid and a scrollable view of the installed modules. */
 public class ScreenUpgradeBus extends AbstractContainerScreen<MenuUpgradeBus> {
 
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(Modularmachinery.MODID, "textures/gui/guiupgradebus.png");
-    private static final int DESCRIPTION_X = 92;
-    private static final int DESCRIPTION_Y = 23;
-    private static final int DESCRIPTION_WIDTH = 80;
+    private static final int DESCRIPTION_X = 66;
+    private static final int DESCRIPTION_Y = 17;
+    private static final int DESCRIPTION_WIDTH = 120;
     private static final int DESCRIPTION_LINES = 15;
-    private static final int SCROLLBAR_X = 156;
+    private static final int SCROLLBAR_X = 162;
     private static final int SCROLLBAR_Y = 17;
     private static final int SCROLLBAR_HEIGHT = 106;
+    private static final float DESCRIPTION_SCALE = 0.72F;
+    private List<Component> lastDescription;
+    private List<FormattedCharSequence> wrappedDescription = List.of();
     private int scrollOffset;
     private int maxScroll;
     private boolean draggingScrollbar;
@@ -69,56 +60,59 @@ public class ScreenUpgradeBus extends AbstractContainerScreen<MenuUpgradeBus> {
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        for (int index = 0; index < MenuUpgradeBus.GRID_SIZE; index++) {
+            int x = leftPos + MenuUpgradeBus.upgradeX(index) - 1;
+            int y = topPos + MenuUpgradeBus.upgradeY(index) - 1;
+            graphics.blit(TEXTURE, x, y, 7, 130, 18, 18, 256, 256);
+            if (index >= menu.getUpgradeSlotCount()) graphics.fill(x, y, x + 18, y + 18, 0x94000000);
+        }
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         super.renderLabels(graphics, mouseX, mouseY);
-        if (minecraft == null || minecraft.level == null) return;
-        if (!(minecraft.level.getBlockEntity(menu.getBusPos()) instanceof TileUpgradeBus bus)) return;
-        List<FormattedCharSequence> lines = descriptionLines(bus);
-        maxScroll = Math.max(0, lines.size() - DESCRIPTION_LINES);
-        scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
-
-        int y = DESCRIPTION_Y;
-        for (int index = scrollOffset; index < Math.min(lines.size(), scrollOffset + DESCRIPTION_LINES); index++) {
-            graphics.drawString(font, lines.get(index), DESCRIPTION_X, y, 0xFFFFFF, true);
-            y += 10;
+        List<Component> description = menu.descriptions();
+        if (lastDescription != description) {
+            lastDescription = description;
+            var lines = new ArrayList<FormattedCharSequence>();
+            for (Component line : description) {
+                if (line.getString().isEmpty()) lines.add(FormattedCharSequence.EMPTY);
+                else lines.addAll(font.split(line, DESCRIPTION_WIDTH));
+            }
+            wrappedDescription = List.copyOf(lines);
+            maxScroll = Math.max(0, lines.size() - DESCRIPTION_LINES);
+            scrollOffset = Math.min(scrollOffset, maxScroll);
         }
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(DESCRIPTION_X, DESCRIPTION_Y, 0);
+        graphics.pose().scale(DESCRIPTION_SCALE, DESCRIPTION_SCALE, 1);
+        for (int index = 0; index < DESCRIPTION_LINES && scrollOffset + index < wrappedDescription.size(); index++) {
+            graphics.drawString(font, wrappedDescription.get(scrollOffset + index), 0, index * 10, 0xFFFFFF, true);
+        }
+        graphics.pose().popPose();
         drawScrollbar(graphics);
     }
 
-    /** Builds the same bounded-machine section and per-upgrade section as the source GUI. */
-    private List<FormattedCharSequence> descriptionLines(TileUpgradeBus bus) {
-        List<FormattedCharSequence> result = new ArrayList<>();
-        String machineName = bus.getBoundMachineName();
-        if (machineName == null || machineName.isBlank()) {
-            addWrapped(result, Component.translatable("gui.upgradebus.bounded.empty"));
-        } else {
-            addWrapped(result, Component.translatable("gui.upgradebus.bounded", machineName));
-            addWrapped(result, Component.literal("  " + bus.getControllerPos().toShortString()));
-            for (var upgrade : bus.getInstalledUpgrades()) {
-                if (!upgrade.getType().isCompatible(machineName)) {
-                    addWrapped(result, Component.translatable("gui.upgradebus.incompatible",
-                            upgrade.getType().getLocalizedName()));
-                }
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
+        for (int index = menu.getUpgradeSlotCount(); index < MenuUpgradeBus.GRID_SIZE; index++) {
+            if (isHovering(MenuUpgradeBus.upgradeX(index), MenuUpgradeBus.upgradeY(index), 16, 16, mouseX, mouseY)) {
+                graphics.renderTooltip(font, Component.translatable("gui.modularmachinery.upgrade_bus.locked"), mouseX, mouseY);
+                break;
             }
-            result.add(FormattedCharSequence.EMPTY);
         }
-
-        // The source GUI still lists every installed upgrade; incompatibility is a warning in the bounded-machine
-        // section, not a filter that hides the item from the bus screen.
-        for (var upgrade : bus.getInstalledUpgrades()) {
-            addWrapped(result, Component.literal(upgrade.getStackSize() + "x ")
-                    .append(upgrade.getType().getLocalizedName()));
-            for (String line : upgrade.getBusGUIDescriptions()) addWrapped(result, Component.literal(line));
-            if (!upgrade.getBusGUIDescriptions().isEmpty()) result.add(FormattedCharSequence.EMPTY);
-        }
-        return result;
     }
 
-    private void addWrapped(List<FormattedCharSequence> lines, Component text) {
-        lines.addAll(font.split(text, DESCRIPTION_WIDTH));
+    public static void receive(hellfirepvp.modularmachinery.common.network.UpgradeBusInfoPacket packet) {
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        if (player != null && player.containerMenu instanceof MenuUpgradeBus menu
+                && menu.containerId == packet.window() && menu.getBusPos().equals(packet.pos())) {
+            menu.setDescriptions(packet.lines());
+        }
     }
 
     private void drawScrollbar(GuiGraphics graphics) {

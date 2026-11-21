@@ -694,6 +694,12 @@ public class TileController extends TileEntityBase implements GeoBlockEntity,
         return formedPattern != null ? formedPattern : fallback.getPattern();
     }
 
+    /** Only usable after this session has verified the structure (including dynamic sections). */
+    @org.jetbrains.annotations.Nullable
+    public hellfirepvp.modularmachinery.common.machine.MachinePattern getRecordedFormedPattern() {
+        return formedPattern;
+    }
+
     public int getBoundPositionCount() {
         return boundPositions.size();
     }

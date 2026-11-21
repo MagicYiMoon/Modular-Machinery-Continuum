@@ -21,6 +21,14 @@ import hellfirepvp.modularmachinery.common.block.prop.UpgradeBusData;
 import hellfirepvp.modularmachinery.common.registry.RegistryMenus;
 import hellfirepvp.modularmachinery.common.tiles.TileUpgradeBus;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import hellfirepvp.modularmachinery.common.machine.MachineReloadListener;
+import hellfirepvp.modularmachinery.common.network.UpgradeBusInfoPacket;
+import hellfirepvp.modularmachinery.common.network.ModularmachineryNetwork;
+import net.minecraftforge.network.PacketDistributor;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -56,30 +64,30 @@ import net.minecraftforge.items.SlotItemHandler;
  */
 public class MenuUpgradeBus extends AbstractContainerMenu {
 
-    /** Panel size, taken from the jar's {@code GuiContainerUpgradeBus}. */
     public static final int PANEL_WIDTH = 176;
     public static final int PANEL_HEIGHT = 213;
+    public static final int GRID_SIZE = 18;
+    public static int upgradeX(int slot) { return 8 + slot % 3 * 18; }
+    public static int upgradeY(int slot) { return 17 + slot / 3 * 18; }
 
-    /** Upgrade grid origin and wrap width, from the jar's {@code addInventorySlots}. */
-    private static final int SLOT_START_X = 8;
-    private static final int SLOT_START_Y = 17;
-    private static final int COLUMNS = 3;
-
-    // Player inventory, from the jar's overridden {@code addPlayerSlots}. PUBLIC so the self-test can check them
-    // against guiupgradebus.png: as private they threw IllegalAccessException inside the wells check, which then
-    // skipped this screen and still printed PASS -- the run before that change sampled 2 of its 4 entries (§677).
     public static final int PLAYER_INV_X = 8;
     public static final int PLAYER_INV_Y = 131;
     public static final int PLAYER_HOTBAR_Y = 189;
 
     private final BlockPos busPos;
     private final UpgradeBusData tier;
+    private final int upgradeSlots;
+    private final ServerPlayer viewer;
+    private final TileUpgradeBus bus;
+    private long nextInfoUpdate;
+    private List<Component> descriptions = List.of();
 
-    /** Client-side constructor, invoked from the menu type's factory. */
-    public MenuUpgradeBus(int windowId, Inventory playerInventory, BlockPos busPos, int tierOrdinal) {
+    public MenuUpgradeBus(int windowId, Inventory playerInventory, BlockPos busPos, int tierOrdinal, int slotCount) {
         this(windowId, playerInventory, busPos, tierFromOrdinal(tierOrdinal),
-                new ItemStackHandler(tierFromOrdinal(tierOrdinal).getUpgradeSlots()));
+                new ItemStackHandler(clampSlots(slotCount)), null);
     }
+
+    private static int clampSlots(int count) { return Math.max(1, Math.min(GRID_SIZE, count)); }
 
     /**
      * Resolves a tier from its on-wire ordinal, clamping rather than throwing.
@@ -95,23 +103,17 @@ public class MenuUpgradeBus extends AbstractContainerMenu {
         return values[ordinal];
     }
 
-    public MenuUpgradeBus(int windowId, Inventory playerInventory, BlockPos busPos, UpgradeBusData tier,
-                          IItemHandler inventory) {
+    private MenuUpgradeBus(int windowId, Inventory playerInventory, BlockPos busPos, UpgradeBusData tier,
+                           IItemHandler inventory, TileUpgradeBus bus) {
         super(RegistryMenus.UPGRADE_BUS.get(), windowId);
         this.busPos = busPos;
         this.tier = tier;
+        this.bus = bus;
+        this.viewer = bus != null && playerInventory != null && playerInventory.player instanceof ServerPlayer server ? server : null;
+        this.upgradeSlots = clampSlots(inventory.getSlots());
 
-        // The upgrade grid: 3 columns, wrapping every third slot. See the class javadoc -- this is the
-        // jar's layout, not a chest grid.
-        int x = SLOT_START_X;
-        int y = SLOT_START_Y;
-        for (int index = 0; index < tier.getUpgradeSlots(); index++) {
-            addSlot(new SlotItemHandler(inventory, index, x, y));
-            x += 18;
-            if ((index + 1) % COLUMNS == 0) {
-                x = SLOT_START_X;
-                y += 18;
-            }
+        for (int index = 0; index < upgradeSlots; index++) {
+            addSlot(new SlotItemHandler(inventory, index, upgradeX(index), upgradeY(index)));
         }
 
         for (int row = 0; row < 3; row++) {
@@ -125,69 +127,74 @@ public class MenuUpgradeBus extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Builds the server-side menu for a bus, using the bus's real inventory and tier.
-     *
-     * <h2>THE DERIVATION DIRECTION WAS REVERSED (defect B)</h2>
-     *
-     * <p>This read {@code UpgradeBusData.forSlotCount(handler.getSlots())}, i.e. it asked the HANDLER how many
-     * slots it had and then looked a tier up from that. PLAN 275 wrote it that way to keep the menu from
-     * overflowing its handler, and it is the right shape for {@code MenuItemBus}, whose handler is rebuilt from
-     * the block state on every read ({@code TileItemBus.getInventory}, L243-L284).</p>
-     *
-     * <p><b>It is the wrong direction here, and the report is what that cost:</b> "升级总线默认全栏位可用，没有按
-     * 说明给栏位" — a bus exposing eighteen slots where its tooltip says three. The slot count travelled
-     * {@code handler -> forSlotCount -> tier} and the handler's size is not a function of the tier: Forge's
-     * {@code ItemStackHandler.deserializeNBT} resizes the handler from the saved {@code Size} (L188), so a bus
-     * restored from a world whose saved grid was larger came back larger, and the menu faithfully displayed it.
-     * See {@link TileUpgradeBus} — the tier is now read from the block and the inventory is reconciled to it, so
-     * the two cannot disagree, and the menu takes the tier from the BLOCK the way
-     * {@link #MenuUpgradeBus(int, Inventory, BlockPos, UpgradeBusData, IItemHandler)}'s own geometry already
-     * assumes.</p>
-     *
-     * <p>The handler passed on is the tile's own instance, read through the reconciling getter, so the slot
-     * indices the menu builds are always inside it — the crash PLAN 275 was guarding against ({@code Slot 6 not
-     * in valid range - [0,6)}) is prevented by the reconciliation rather than by deriving the tier from the
-     * thing that needs to fit.</p>
-     */
     public static MenuUpgradeBus forBus(int windowId, Inventory playerInventory, TileUpgradeBus bus) {
-        // ONE SOURCE FOR THE TIER: THE BLOCK, via the tile's own state-derived accessor. The handler is read
-        // through the same accessor's repair, so "the menu exposes exactly the tier's count" and "the handler
-        // has exactly that many slots" are the same statement rather than two that can drift.
         return new MenuUpgradeBus(windowId, playerInventory, bus.getBlockPos(), bus.getTier(),
-                bus.getUpgradeInventory());
+                bus.getUpgradeInventory(), bus);
     }
 
-    /**
-     * Writes a bus into an open-screen payload, for {@code BlockUpgradeBus.use} and for the check that decodes
-     * it back through this menu's own registered factory.
-     *
-     * <p>ONE WRITER, TWO CALLERS — the shape {@code RegistryCreativeTabs#variantStacks}/{@code tabVariantStacks}
-     * already uses: a payload a check re-derives for itself would agree with the block only by luck, and the
-     * client half of this family is exactly where the report came from.</p>
-     */
     public static void writeOpenData(net.minecraft.network.FriendlyByteBuf buffer, TileUpgradeBus bus) {
         buffer.writeBlockPos(bus.getBlockPos());
-        // The tier, not the slot count: it carries the count AND the 3-wide grid geometry.
         buffer.writeVarInt(bus.getTier().ordinal());
+        buffer.writeVarInt(bus.getSlots());
     }
 
-    public UpgradeBusData getTier() {
-        return tier;
+    public UpgradeBusData getTier() { return tier; }
+    public int getUpgradeSlotCount() { return upgradeSlots; }
+    public BlockPos getBusPos() { return busPos; }
+
+    public List<Component> descriptions() { return descriptions; }
+    public void setDescriptions(List<Component> lines) { descriptions = List.copyOf(lines); }
+
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        if (viewer == null || viewer.connection == null || viewer.containerMenu != this || !stillValid(viewer)) return;
+        long now = viewer.serverLevel().getGameTime();
+        if (now < nextInfoUpdate) return;
+        nextInfoUpdate = now + 10;
+        var updated = describe(bus);
+        if (!updated.equals(descriptions)) {
+            descriptions = updated;
+            ModularmachineryNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> viewer),
+                    new UpgradeBusInfoPacket(containerId, busPos, updated));
+        }
     }
 
-    /** @return the number of upgrade slots, i.e. excluding the player inventory */
-    public int getUpgradeSlotCount() {
-        return tier.getUpgradeSlots();
-    }
-
-    public BlockPos getBusPos() {
-        return busPos;
+    public static List<Component> describe(TileUpgradeBus bus) {
+        List<Component> lines = new ArrayList<>();
+        var upgrades = bus.getInstalledUpgrades();
+        var machineName = bus.getBoundMachineName();
+        if (machineName == null || machineName.isBlank() || bus.getControllerPos() == null) {
+            lines.add(Component.translatable("gui.upgradebus.bounded.empty"));
+        } else {
+            var machine = MachineReloadListener.serverDefinitions().machines().findByName(machineName);
+            lines.add(Component.translatable("gui.modularmachinery.upgrade_bus.bound_machine",
+                    machine == null ? machineName : machine.getLocalizedName()));
+            lines.add(Component.literal(bus.getControllerPos().toShortString()));
+            for (var upgrade : upgrades) {
+                if (!upgrade.getType().isCompatible(machineName)) {
+                    lines.add(Component.translatable("gui.upgradebus.incompatible", upgrade.getType().getLocalizedName()));
+                }
+            }
+        }
+        lines.add(Component.empty());
+        if (upgrades.isEmpty()) lines.add(Component.translatable("gui.modularmachinery.upgrade_bus.no_modules"));
+        for (var upgrade : upgrades) {
+            if (lines.size() >= UpgradeBusInfoPacket.MAX_LINES) break;
+            lines.add(Component.literal(upgrade.getStackSize() + "x ").append(upgrade.getType().getLocalizedName()));
+            for (String line : upgrade.getBusGUIDescriptions()) {
+                if (lines.size() >= UpgradeBusInfoPacket.MAX_LINES) break;
+                lines.add(Component.literal(line.substring(0, Math.min(256, line.length()))));
+            }
+            if (lines.size() < UpgradeBusInfoPacket.MAX_LINES) lines.add(Component.empty());
+        }
+        return List.copyOf(lines.subList(0, Math.min(lines.size(), UpgradeBusInfoPacket.MAX_LINES)));
     }
 
     /** {@inheritDoc} Moves stacks between the upgrade grid and the player inventory in either direction. */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= slots.size()) return ItemStack.EMPTY;
         Slot slot = slots.get(index);
         if (!slot.hasItem()) {
             return ItemStack.EMPTY;
@@ -214,7 +221,8 @@ public class MenuUpgradeBus extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return player.level().getBlockEntity(busPos) instanceof TileUpgradeBus
+        return player.level().getBlockEntity(busPos) instanceof TileUpgradeBus current
+                && (bus == null || current == bus && current.getTier() == tier && current.getSlots() == upgradeSlots)
                 && player.distanceToSqr(busPos.getX() + 0.5, busPos.getY() + 0.5, busPos.getZ() + 0.5)
                         <= 64.0;
     }

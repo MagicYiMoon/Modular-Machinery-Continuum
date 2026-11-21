@@ -18,6 +18,9 @@
 package hellfirepvp.modularmachinery.common.tiles.base;
 
 import hellfirepvp.modularmachinery.common.machine.IOType;
+import hellfirepvp.modularmachinery.common.block.BlockEnergyHatch;
+import hellfirepvp.modularmachinery.common.block.prop.EnergyHatchData;
+import net.minecraft.nbt.Tag;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -52,51 +55,65 @@ import org.jetbrains.annotations.Nullable;
 public abstract class TileEnergyHatch extends TileMachineComponent {
 
     private final IOType ioType;
-    private final EnergyStorage energy;
-    private final int machineTransferLimit;
+    private final HatchStorage energy;
 
     protected TileEnergyHatch(java.util.function.Supplier<? extends BlockEntityType<?>> type,
                               BlockPos pos, BlockState state, IOType ioType,
                               int capacity, int maxTransfer) {
         super(type, pos, state);
         this.ioType = ioType;
-        this.machineTransferLimit = maxTransfer;
-        this.energy = createStorage(capacity, maxTransfer);
+        this.energy = new HatchStorage(capacity, maxTransfer);
     }
 
-    private EnergyStorage createStorage(int capacity, int maxTransfer) {
-        // The backing store allows movement in BOTH directions, and the direction rule is enforced in
-        // the capability wrapper returned by getCapability instead.
-        //
-        // This split is the fix for a bug that stalled every recipe at 0 progress against a completely
-        // full buffer. The store was originally built with maxExtract = 0 for an input hatch, which
-        // looked like the right way to say "neighbours may not drain me" -- but
-        // EnergyStorage#extractEnergy returns 0 whenever maxExtract == 0, and that is the store's own
-        // arithmetic, not a capability-layer guard. So the rule silently applied to EVERY caller,
-        // including the machine that owned the buffer, and no code path -- internal or external --
-        // could ever draw from an input hatch.
-        //
-        // A rate limit physically cannot express a caller-dependent rule. Access rules belong on the
-        // boundary the machine presents to the world, so that is where they now live.
-        return new EnergyStorage(capacity, maxTransfer, maxTransfer) {
-            @Override
-            public int receiveEnergy(int toReceive, boolean simulate) {
-                int accepted = super.receiveEnergy(toReceive, simulate);
-                if (accepted > 0 && !simulate) {
-                    setChanged();
-                }
-                return accepted;
-            }
+    @Override
+    public void setBlockState(BlockState state) {
+        BlockState previous = getBlockState();
+        super.setBlockState(state);
+        if (energy == null || !(state.getBlock() instanceof BlockEnergyHatch)
+                || !state.hasProperty(BlockEnergyHatch.SIZE)) return;
+        EnergyHatchData size = state.getValue(BlockEnergyHatch.SIZE);
+        if (!previous.hasProperty(BlockEnergyHatch.SIZE) || previous.getValue(BlockEnergyHatch.SIZE) != size) {
+            // Same-block state changes reuse this tile. Keep existing capability wrappers and update
+            // their backing storage in place; neither callers nor saved FE can exceed the new tier.
+            energy.resize(size.getMaxEnergy(), size.getMaxTransfer());
+            setChanged();
+        }
+    }
 
-            @Override
-            public int extractEnergy(int toExtract, boolean simulate) {
-                int extracted = super.extractEnergy(toExtract, simulate);
-                if (extracted > 0 && !simulate) {
-                    setChanged();
-                }
-                return extracted;
-            }
-        };
+    private final class HatchStorage extends EnergyStorage {
+        private HatchStorage(int capacity, int transfer) {
+            super(capacity, transfer, transfer);
+        }
+
+        private int transferLimit() { return maxReceive; }
+
+        private void resize(int capacity, int transfer) {
+            this.capacity = capacity;
+            maxReceive = maxExtract = transfer;
+            energy = Math.max(0, Math.min(energy, capacity));
+        }
+
+        @Override
+        public void deserializeNBT(Tag tag) {
+            super.deserializeNBT(tag);
+            energy = Math.max(0, Math.min(energy, capacity));
+        }
+
+        @Override
+        public int receiveEnergy(int amount, boolean simulate) {
+            if (amount <= 0) return 0;
+            int accepted = super.receiveEnergy(amount, simulate);
+            if (accepted > 0 && !simulate) setChanged();
+            return accepted;
+        }
+
+        @Override
+        public int extractEnergy(int amount, boolean simulate) {
+            if (amount <= 0) return 0;
+            int extracted = super.extractEnergy(amount, simulate);
+            if (extracted > 0 && !simulate) setChanged();
+            return extracted;
+        }
     }
 
     /**
@@ -105,7 +122,7 @@ public abstract class TileEnergyHatch extends TileMachineComponent {
      * <p>This is where the direction rule lives: an input hatch refuses extraction (so a neighbour
      * cannot drain the buffer its owner is filling) and an output hatch refuses insertion. The
      * underlying store stays bidirectional so the owning machine can work with it — see
-     * {@link #createStorage}.
+     * {@link HatchStorage}.
      *
      * <p>Only the four guard methods are overridden; storage/capacity are read straight through, so the
      * externally visible energy figure always matches what the machine actually holds.
@@ -153,7 +170,7 @@ public abstract class TileEnergyHatch extends TileMachineComponent {
     /**
      * @return the energy currently held, for display
      *
-     * <p>Needed because the store is an anonymous subclass created in {@link #createStorage}, so the tile
+     * <p>Needed because the store is a separate {@link HatchStorage}, so the tile
      * itself has no {@code getEnergyStored} to call. Reading through the capability instead would go via
      * {@link #externalView}, which reports the same figures — but it would also construct a wrapper per
      * call, and a GUI reads this every frame.
@@ -168,7 +185,7 @@ public abstract class TileEnergyHatch extends TileMachineComponent {
     }
 
     /** Actual limit of this loaded backing store, including configuration at construction time. */
-    public final int getMachineTransferLimit() { return machineTransferLimit; }
+    public final int getMachineTransferLimit() { return energy.transferLimit(); }
 
     /**
      * Draws energy for the machine's own recipe consumption.

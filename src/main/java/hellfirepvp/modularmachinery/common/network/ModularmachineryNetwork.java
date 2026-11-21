@@ -126,7 +126,7 @@ public final class ModularmachineryNetwork {
     // Version 46 adds a player-targeted research completion notice independent of terminal menus.
     // Version 47 adds bounded completed-tick network statistics to research terminal snapshots.
     // 49 carries bounded full preview stacks in research pages and completion notices.
-    private static final String PROTOCOL = "49";
+    private static final String PROTOCOL = "50";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(Modularmachinery.MODID, "main"),
@@ -272,6 +272,9 @@ public final class ModularmachineryNetwork {
         CHANNEL.registerMessage(id++, HyperNetResearchUpload.class,HyperNetResearchUpload::encode,HyperNetResearchUpload::decode,HyperNetResearchUpload::handle,
                 java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, HyperNetResearchPackets.Complete.class,HyperNetResearchPackets.Complete::encode,HyperNetResearchPackets.Complete::decode,HyperNetResearchPackets.Complete::handle,
+                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, UpgradeBusInfoPacket.class,
+                UpgradeBusInfoPacket::encode, UpgradeBusInfoPacket::decode, UpgradeBusInfoPacket::handle,
                 java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
         Modularmachinery.LOG.info("[MMCE] network channel registered ({} packet type(s))", id);
     }

@@ -29,6 +29,6 @@ chmod +x gradlew
 ./gradlew build jarJar reobfJarJar -Pforge_version=47.4.23
 ```
 
-使用 `build/libs/modularmachinerycontinuum-2.0.0-1.20.1-all.jar`，该文件经过 Forge 重映射并内嵌 GeckoLib 4.8.4。不要将开发类文件或无 `-all` JAR 当作完整发布文件。依赖缓存完整后可以追加 `--offline`。ZIP 时间戳与上游元数据可能导致重建哈希不同。
+使用 `build/libs/modularmachinerycontinuum-2.0.3-1.20.1-all.jar`，该文件经过 Forge 重映射并内嵌 GeckoLib 4.8.4。不要将开发类文件或无 `-all` JAR 当作完整发布文件。依赖缓存完整后可以追加 `--offline`。ZIP 时间戳与上游元数据可能导致重建哈希不同。
 
 默认 Forge 版本由 `gradle.properties` 指定，上述命令显式使用 47.4.23。日常开发可以运行 `runClient`／`runServer`，可选联动开关及测试边界见 [TESTING](TESTING.md)。

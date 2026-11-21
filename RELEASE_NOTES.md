@@ -1,3 +1,57 @@
+# Modular Machinery: Continuum 2.0.3 — Minecraft 1.20.1
+
+## 中文
+
+- 修复木棍自动搭建替换能源仓后沿用旧档位容量和传输上限的问题。修复流体仓放置后未应用对应档位容量的问题。
+- 修正仓室配方的档位数据。内置微型／小型配方现在产出正确档位，更高档仍可由整合包自定义配方。
+- 升级总线界面显示已装模块的信息，并将当前档位不可用的槽位暗化。
+- 新增模块化拆卸工具。用铁锭、木棍和模块化锭无序合成，主手持工具潜行右键已成型且空闲的控制器。控制器、蓝图、共享结构和受保护方块保留；掉落优先进入可用的无线 ME 网络，其次是玩家背包，放不下的落地。
+
+网络协议更新至 **50**，联机时客户端和服务端须同时更新至 **2.0.3**。
+
+## English
+
+- Fixes energy hatches retaining the previous tier's capacity and transfer limit when replaced by stick assembly. Fluid hatches now apply their tier's capacity when placed.
+- Fixes tier data in hatch recipes. Built-in tiny and small recipes now produce the correct tier. Modpacks can define recipes for higher tiers.
+- Upgrade buses show installed module information and dim slots unavailable at the current tier.
+- Adds the Modular Disassembler. Craft it from an iron ingot, a stick and a Modularium Ingot in any arrangement. Hold it in your main hand and sneak-right-click a formed, idle controller. The controller, blueprint, shared structure blocks and protected blocks stay in place. Drops go to available wireless ME storage, then your inventory, with any overflow dropped in the world.
+
+Network protocol updated to **50**. Update both the client and server to **2.0.3** for multiplayer.
+
+---
+
+# Modular Machinery: Continuum 2.0.2 — Minecraft 1.20.1
+
+## 中文
+
+- 修复可视化编辑器中输入 E 会关闭界面，以及其他常规界面快捷键抢占编辑器的问题。
+- 保留文字编辑、Tab 焦点切换、Enter 按钮操作和 Esc 逐层返回；修改背包按键后同样生效。
+
+## English
+
+- Fixes E closing the visual editor and prevents normal screen shortcuts from taking over the editor.
+- Preserves text editing, Tab navigation, Enter button activation and layered Escape behavior, including when the inventory key is rebound.
+
+---
+
+# Modular Machinery: Continuum 2.0.1 — Minecraft 1.20.1
+
+## 中文
+
+- 修复与 AdvancedAE 同时安装时，AE2 合成服务的 Mixin 注入冲突导致的启动崩溃。
+- 调整 EC 产物接收前的 CPU 有效性检查，保留跨 ME 网络的产物隔离。
+
+已使用 AdvancedAE **1.3.6** 与 AE2 **15.4.11** 验证服务端启动、EC 合成、网络拆分及区块卸载后的任务恢复。建议客户端与服务端一并更新至 **2.0.1**。
+
+## English
+
+- Fixes a startup crash when installed alongside AdvancedAE, caused by conflicting Mixins in AE2's crafting service.
+- Adjusts EC CPU validation before accepting crafting outputs, preserving output isolation between ME networks.
+
+Verified with AdvancedAE **1.3.6** and AE2 **15.4.11**: server startup, EC crafting, network splits and task recovery after chunk unloading. Updating both client and server to **2.0.1** is recommended.
+
+---
+
 # Modular Machinery: Continuum 2.0.0 — Minecraft 1.20.1
 
 ## 中文

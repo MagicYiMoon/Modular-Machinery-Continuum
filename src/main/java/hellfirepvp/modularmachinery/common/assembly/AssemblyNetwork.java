@@ -19,6 +19,8 @@ public interface AssemblyNetwork extends AutoCloseable {
     boolean canExtract(ItemStack item, FluidStack fluid);
     Payment extract(ItemStack item, FluidStack fluid);
     boolean request(ItemStack item, FluidStack fluid);
+    /** Inserts physical drops and returns the exact remainder. */
+    ItemStack insert(ItemStack stack);
     void tick();
     boolean available();
     boolean waiting();

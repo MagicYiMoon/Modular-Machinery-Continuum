@@ -119,7 +119,7 @@ The card's reusable/overwrite instructions and empty/valid/invalid terminal
 states also adapt HyperNetClientEventHandler and GuiHyperNetTerminal.
 NECO selects the physical card item through scripts; the port's dedicated
 hypernet_connect_card registration and single-stack default are new port code.
-The card texture is copied byte-for-byte from the
+At the user's request, the card texture is copied byte-for-byte from their
 NovaEng-CleanroomMC modpack resources/contenttweaker/textures/items/
 hypernet_connect_card.png into assets/modularmachinery/textures/item/.
 Its SHA-256 is 1019132da73bfe16fdaa4dbc4e9ca3efe3f4409b0319e2b958ffffbd652f6bd8.

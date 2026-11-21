@@ -63,6 +63,20 @@ public final class MachineStructureChanges {
         }
     }
 
+    /** A cell may be a shared casing even when it has no component tile to record a controller. */
+    public static boolean watchedByOtherController(ServerLevel level, BlockPos pos, TileController owner) {
+        Index index = LEVELS.get(level);
+        if (index == null) return false;
+        var controllers = index.chunks.get(ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4));
+        if (controllers == null) return false;
+        for (var controller : controllers) {
+            Watch watch = index.controllers.get(controller);
+            if (controller != owner && !controller.isRemoved() && controller.isFormed()
+                    && watch != null && watch.positions.contains(pos.asLong())) return true;
+        }
+        return false;
+    }
+
     public static void blockChanged(ServerLevel level, BlockPos pos) {
         Index index = LEVELS.get(level);
         if (index == null) return;

@@ -1,5 +1,6 @@
 {
     "result": {
+        "nbt": "{BlockStateTag:{size:\"tiny\"}}",
         "item": "modularmachinery:blockfluidoutputhatch"
     },
     "pattern": [

@@ -70,6 +70,17 @@ public final class ServerSelfTestTrigger {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
+        if (Boolean.getBoolean("modularmachinery.componentFeedbackTest")) {
+            try {
+                hellfirepvp.modularmachinery.common.machine.ComponentFeedbackRegressionChecks.run(
+                        event.getServer().overworld(), new BlockPos(4, 100, 4));
+            } catch (Throwable failure) {
+                Modularmachinery.LOG.error("[MMC][component-feedback] OVERALL: FAIL", failure);
+            } finally {
+                stopAfterSuite(event);
+            }
+            return;
+        }
         if (!MachineSelfTest.isEnabled()) {
             return;
         }

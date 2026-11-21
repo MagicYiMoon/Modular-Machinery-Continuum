@@ -1039,5 +1039,19 @@
   "gui.modularmachinery.research.card_invalid": "无效的密钥卡",
   "tooltip.modularmachinery.hypernet.reusable": "可重复使用；右键计算中心可覆写绑定。",
   "tooltip.modularmachinery.hypernet.online_hint": "连接时需保持计算中心在线；支持同维度连接，不会强制加载目标区块。",
-  "gui.modularmachinery.research.creative_hint": "中键快速研究（仅创造模式且 OP 2 级）：填满点数，仍须满足前置、等级和机器运行条件。"
+  "gui.modularmachinery.research.creative_hint": "中键快速研究（仅创造模式且 OP 2 级）：填满点数，仍须满足前置、等级和机器运行条件。",
+  "gui.modularmachinery.upgrade_bus.bound_machine": "绑定机器：%s",
+  "gui.modularmachinery.upgrade_bus.no_modules": "未安装有效模块",
+  "gui.modularmachinery.upgrade_bus.locked": "此档位未开放此槽位",
+  "item.modularmachinery.machine_disassembler": "模块化拆卸工具",
+  "tooltip.modularmachinery.disassembler.use": "主手持有，潜行右键已成型的空闲控制器，拆卸结构并保留控制器。",
+  "tooltip.modularmachinery.disassembler.destination": "物品优先存入已连接的 AE 无线网络，其次进入背包；放不下的留在地上。",
+  "message.modularmachinery.disassembler.owner": "只有机器所有者或管理员可以拆卸这台机器。",
+  "message.modularmachinery.disassembler.unformed": "请等机器完成结构检查并成型后再拆卸。",
+  "message.modularmachinery.disassembler.busy": "机器仍有配方或自动搭建任务，暂不能拆卸。",
+  "message.modularmachinery.disassembler.large": "此工具一次最多检查 %s 个结构位置。",
+  "message.modularmachinery.disassembler.unloaded": "结构所在区块未加载：%s。",
+  "message.modularmachinery.disassembler.changed": "结构在 %s 已发生变化，未开始拆卸。",
+  "message.modularmachinery.disassembler.nothing": "没有可拆卸的结构方块。",
+  "message.modularmachinery.disassembler.result": "拆卸完成：移除 %s 个方块，保留 %s 个结构方块。"
 }

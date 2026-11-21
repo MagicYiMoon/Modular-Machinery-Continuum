@@ -174,6 +174,16 @@ public final class WirelessAssemblySource implements AssemblyNetwork {
         return null;
     }
 
+    @Override
+    public ItemStack insert(ItemStack stack) {
+        if (stack.isEmpty() || !connected()) return stack;
+        long inserted = StorageHelper.poweredInsert(host, grid.getStorageService().getInventory(),
+                AEItemKey.of(stack), stack.getCount(), source);
+        if (inserted <= 0) return stack;
+        player.getInventory().setChanged();
+        return inserted >= stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - (int) inserted);
+    }
+
     private void refund(AEKey key, long amount) {
         long inserted = grid.getStorageService().getInventory().insert(key, amount, Actionable.MODULATE, source);
         long remainder = amount - inserted;

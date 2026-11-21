@@ -22,4 +22,4 @@ MMC 自有界面统一使用 TrueType 平滑字体，包括标题、按钮、输
 python tools/prepare_ui_font.py --source path/to/NotoSansSC-VF.ttf
 ```
 
-正常 Gradle 构建使用仓库内已生成的 TTF，不依赖 Python、FontTools 或联网。字体更换后需要资源重载，并检查目标窗口下的文字与控件布局。
+正常 Gradle 构建使用仓库内已生成的 TTF，不依赖 Python、FontTools 或联网。字体更换后需要资源重载，具体布局验证记录见 `VERIFY.md`。

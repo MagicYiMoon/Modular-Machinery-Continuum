@@ -86,6 +86,10 @@ public final class RegistryItems {
             ITEMS.register("itemconstructtool",
                     hellfirepvp.modularmachinery.common.item.ItemConstructTool::new);
 
+    public static final RegistryObject<Item> DISASSEMBLY_TOOL =
+            ITEMS.register("machine_disassembler",
+                    hellfirepvp.modularmachinery.common.item.ItemMachineDisassembler::new);
+
     /**
      * Builds one blueprint stack per loaded machine, for the creative tab.
      *

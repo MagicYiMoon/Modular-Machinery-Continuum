@@ -1,4 +1,4 @@
-# MMC 2.0.0 教程目录
+# MMC 2.0.3 教程目录
 
 Minecraft Forge 1.20.1，Java 17。玩家先读玩家教程，整合包作者先读基础与 GeckoLib 教程，再按需要查阅联动。
 
@@ -10,7 +10,7 @@ Minecraft Forge 1.20.1，Java 17。玩家先读玩家教程，整合包作者先
 | 第三方部件代理扩展（Forge 1.20.1） | [COMPONENT_PROXIES_ZH.md](COMPONENT_PROXIES_ZH.md) |
 | MMC 1.1.0：独立控制器与颜色编辑 | [DEDICATED_CONTROLLERS_ZH.md](DEDICATED_CONTROLLERS_ZH.md) |
 | 服务端机器定义与控制器注册同步 | [SERVER_DEFINITION_SYNC_ZH.md](SERVER_DEFINITION_SYNC_ZH.md) |
-| AE 无线取料与缺料自动合成 | [WIRELESS_ASSEMBLY_ZH.md](WIRELESS_ASSEMBLY_ZH.md) |
+| AE 无线取料、缺料自动合成与拆卸回收 | [WIRELESS_ASSEMBLY_ZH.md](WIRELESS_ASSEMBLY_ZH.md) |
 | NECO ES／EC／EF、HyperNet 算力与研究 | [NECO_GUIDE_ZH.md](NECO_GUIDE_ZH.md) |
 | MMC 界面平滑字体与资源包替换 | [UI_FONTS_ZH.md](UI_FONTS_ZH.md) |
 | Embers Rekindled 余烬联动 | [EMBERS_ZH.md](EMBERS_ZH.md) |
@@ -26,4 +26,4 @@ Minecraft Forge 1.20.1，Java 17。玩家先读玩家教程，整合包作者先
 | PneumaticCraft 压缩空气联动 | [PNEUMATICCRAFT_ZH.md](PNEUMATICCRAFT_ZH.md) |
 | Modular Machinery: Continuum 使用教程（Forge 1.20.1） | [USER_GUIDE_ZH.md](USER_GUIDE_ZH.md) |
 
-[构建说明](../BUILDING.md) · [开发测试方法](../TESTING.md) · [更新说明](../RELEASE_NOTES.md)
+[构建说明](../BUILDING.md) · [功能与测试范围](../TESTING.md) · [更新说明](../RELEASE_NOTES.md)

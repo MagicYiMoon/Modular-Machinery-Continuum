@@ -2509,13 +2509,14 @@ public final class ScreenMachineEditor extends AbstractContainerScreen<MenuMachi
             if (pickerOpen) { closePicker(); return true; }
             if (editorOpen) { closeEditor(); return true; }
         }
-        // Multiline editing must consume inventory/hotbar shortcuts while typing NBT.
         if(resourceOpen&&researchGate&&(keyCode==257||keyCode==335)&&researchGatePanel.enter())return true;
-        if ((resourceOpen&&researchGate || hypernetOpen || nbtOpen || adapterOpen || environmentOpen) && keyCode != 258) {
-            if (getFocused() != null) getFocused().keyPressed(keyCode, scanCode, modifiers);
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        // Character input arrives separately through charTyped. EditBox.keyPressed returns false
+        // for letters, which must not fall through to container inventory/hotbar shortcuts.
+        // Keep vanilla Escape and Tab navigation, but give every other key only to our widgets.
+        if (keyCode == 256 || keyCode == 258) return super.keyPressed(keyCode, scanCode, modifiers);
+        if (getFocused() instanceof AbstractWidget widget && widget.visible && widget.active)
+            widget.keyPressed(keyCode, scanCode, modifiers);
+        return true;
     }
 
     private void drawScrollHint(GuiGraphics graphics, int size, int rows, int scroll, int x, int y) {

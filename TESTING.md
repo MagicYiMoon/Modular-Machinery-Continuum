@@ -22,4 +22,15 @@
 
 实际 ME 下单、跨进程恢复、客户端界面及资源包组合需要相应专项，不能用普通启动代替。运行属性及夹具源码见 build.gradle。测试后恢复普通构建参数。
 
+## 2.0.3 仓室、升级总线与拆卸专项
+
+使用独立的测试目录，不要使用玩家存档。联动组需准备可选依赖。
+
+```powershell
+.\gradlew.bat runServer '-PcomponentFeedbackTest' '-PselfTestRunDir=run-component-feedback' '-PverificationLowMemory' '-Pforge_version=47.4.23'
+.\gradlew.bat runServer '-PcomponentFeedbackTest' '-PwirelessAssemblyTest' '-PwithIntegrations' '-PselfTestRunDir=run-component-feedback-ae' '-PverificationLowMemory' '-Pforge_version=47.4.23'
+```
+
+两组均须出现 `[component-feedback] OVERALL: PASS`，联动组还须出现 `[wireless-assembly] OVERALL: PASS`。实际覆盖见 [2.0.3 测试记录](TEST-RESULTS-2.0.3.md)。
+
 提交问题时提供版本、复现步骤和必要错误信息，先移除账户、本机路径及其他个人信息。测试存档、截图、账户数据和原始日志不提交到源码仓库。

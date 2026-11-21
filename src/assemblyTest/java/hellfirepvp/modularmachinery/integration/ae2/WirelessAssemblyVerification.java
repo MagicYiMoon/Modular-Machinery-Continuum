@@ -68,6 +68,7 @@ public final class WirelessAssemblyVerification {
         if (!Boolean.getBoolean("modularmachinery.wirelessAssemblyTest")) return;
         server = event.getServer(); level = server.overworld();
         try {
+            ComponentFeedbackRegressionChecks.run(level, new BlockPos(4, 135, 4));
             for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) level.setChunkForced(x, z, true);
             for (int x = -4; x <= 14; x++) for (int z = -1; z <= 2; z++)
                 level.setBlock(BASE.offset(x, 0, z), Blocks.AIR.defaultBlockState(), 3);
@@ -111,6 +112,7 @@ public final class WirelessAssemblyVerification {
                 grid = wap.getGrid();
                 grid.getStorageService().addGlobalStorageProvider(mounts -> mounts.mount(storage));
                 checkAccessAndRollback();
+                checkDisassemblyReturns();
                 storage.set(AEItemKey.of(Items.OAK_LOG),1);
                 storage.set(AEItemKey.of(Items.STONE),1);
                 storage.set(AEFluidKey.of(Fluids.WATER),1000);
@@ -228,6 +230,47 @@ public final class WirelessAssemblyVerification {
         Modularmachinery.LOG.info("[MMC][wireless-assembly] PASS: range, battery, terminal removal, reservations, charged extraction and Forge rollback");
     }
 
+    private static void checkDisassemblyReturns() {
+        var origin = BASE.offset(5, 0, 1);
+        var loader = MachineReloadListener.serverDefinitions().machines();
+        var id = new net.minecraft.resources.ResourceLocation("modularmachinery", "wireless_disassembly_test");
+        var pattern = new MachinePattern();
+        pattern.addPart(new MachinePattern.Part(1, 0, 0, "minecraft:obsidian"));
+        pattern.addPart(new MachinePattern.Part(2, 0, 0, "minecraft:gold_block"));
+        var machine = new DynamicMachine(id.getPath(), "Wireless disassembly", pattern);
+        loader.getMachines().put(id, machine);
+        var gold = AEItemKey.of(Items.GOLD_BLOCK);
+        var obsidian = AEItemKey.of(Items.OBSIDIAN);
+        try {
+            level.setBlock(origin, RegistryBlocks.blockController.get().defaultBlockState()
+                    .setValue(hellfirepvp.modularmachinery.common.block.BlockController.FACING, Direction.NORTH), 3);
+            level.setBlock(origin.east(), Blocks.OBSIDIAN.defaultBlockState(), 3);
+            level.setBlock(origin.east(2), Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+            var controller = (hellfirepvp.modularmachinery.common.tiles.TileController) level.getBlockEntity(origin);
+            controller.setMachineName(machine.getRegistryName());
+            controller.recordFormedStructure(machine, pattern, Map.of(), Direction.NORTH);
+            controller.setFormed(true);
+            storage.rejectedItem = gold;
+            var tool = hellfirepvp.modularmachinery.common.registry.RegistryItems.DISASSEMBLY_TOOL.get();
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(tool));
+            hellfirepvp.modularmachinery.common.assembly.MachineDisassembly.run(player, controller);
+            require(level.getBlockState(origin.east()).isAir() && level.getBlockState(origin.east(2)).isAir()
+                            && storage.count(obsidian) == 1 && storage.count(gold) == 0
+                            && player.getInventory().countItem(Items.OBSIDIAN) == 0
+                            && player.getInventory().countItem(Items.GOLD_BLOCK) == 1,
+                    "dismantled drops did not follow AE-first routing and rejected-drop fallback");
+            Modularmachinery.LOG.info("[MMC][wireless-assembly] PASS: real wireless ME disassembly insertion and backpack fallback");
+        } finally {
+            storage.rejectedItem = null;
+            storage.set(obsidian, 0);
+            player.getInventory().items.stream().filter(stack -> stack.is(Items.GOLD_BLOCK))
+                    .findFirst().ifPresent(stack -> stack.shrink(1));
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
+            level.setBlock(origin, Blocks.AIR.defaultBlockState(), 3);
+            loader.getMachines().remove(id);
+        }
+    }
+
     private static void checkTimeout() throws Exception {
         var timeout=timeout();oldTimeout=timeout.get();timeout.set(200);
         storage.set(AEItemKey.of(Items.OAK_PLANKS),0);storage.set(AEItemKey.of(Items.OAK_LOG),1);
@@ -270,9 +313,10 @@ public final class WirelessAssemblyVerification {
     private static final class CounterStorage implements MEStorage {
         final Map<AEKey,Long> values=new LinkedHashMap<>();
         boolean partialFluid;
+        AEKey rejectedItem;
         void set(AEKey key,long amount){values.put(key,amount);if(grid!=null)grid.getStorageService().invalidateCache();}
         long count(AEKey key){return values.getOrDefault(key,0L);}
-        @Override public long insert(AEKey key,long amount,Actionable mode,IActionSource src){if(partialFluid && key instanceof AEFluidKey)return 0;if(mode==Actionable.MODULATE)set(key,count(key)+amount);return amount;}
+        @Override public long insert(AEKey key,long amount,Actionable mode,IActionSource src){if(key.equals(rejectedItem) || partialFluid && key instanceof AEFluidKey)return 0;if(mode==Actionable.MODULATE)set(key,count(key)+amount);return amount;}
         @Override public long extract(AEKey key,long amount,Actionable mode,IActionSource src){long taken=Math.min(count(key),amount);if(mode==Actionable.MODULATE){if(partialFluid && key instanceof AEFluidKey)taken=Math.min(taken,500);set(key,count(key)-taken);}return taken;}
         @Override public void getAvailableStacks(KeyCounter out){values.forEach(out::add);}
         @Override public Component getDescription(){return Component.literal("Assembly fixture storage");}

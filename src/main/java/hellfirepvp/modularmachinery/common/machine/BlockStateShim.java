@@ -67,6 +67,13 @@ public final class BlockStateShim {
     private static final Map<String, Function<Block, BlockState>> METADATA = new HashMap<>();
 
     static {
+        // Original BlockEnergyHatch stores the ordinal as metadata, including 0 for TINY.
+        for (var tier : hellfirepvp.modularmachinery.common.block.prop.EnergyHatchData.values()) {
+            for (String id : List.of("modularmachinery:blockenergyinputhatch", "modularmachinery:blockenergyoutputhatch")) {
+                metadata(id, tier.ordinal(), block -> block.defaultBlockState().setValue(
+                        hellfirepvp.modularmachinery.common.block.BlockEnergyHatch.SIZE, tier));
+            }
+        }
         // The new optional hatch uses the extension's eight-tier declaration order.
         for (var tier : hellfirepvp.modularmachinery.common.block.prop.EmberHatchSize.values()) {
             metadata("modularmachinery:blockemberinputhatch", tier.ordinal(),

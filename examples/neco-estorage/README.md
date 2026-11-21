@@ -1,6 +1,6 @@
 # ES 结构演示（MMC 2.0.0）
 
-这三份 JSON 演示 ES 矩阵、ME 通道与内部能源单元的最小绑定结构，不是新星工程原结构。源版控制器依赖整合包提供同名机器定义，因此没有自动安装默认结构或生存配方。
+这三份 JSON 是 MMC 为验证宿主绑定编写的最小演示，不是新星工程原结构；仅用于 ES 矩阵、ME 通道与内部能源单元的开发验证。源版控制器依赖整合包提供同名机器定义，因此没有自动安装默认结构或生存配方。
 
 需要时将 `machinery/` 内 JSON 复制到测试实例的 `config/modularmachinery/machinery/` 后重载机器定义。不要覆盖已有同名机器。分别使用 `modularmachinery:extendable_digital_storage_subsystem_l4`、`_l6`、`_l9` 对应的 ES 控制器，不使用通用／自动生成的普通控制器。
 
@@ -20,11 +20,11 @@
 
 没有 AE2 时方块与矩阵仍保留，可物理插拔和保存，存储后端不开启；矩阵不能装进普通 ME 驱动器或 ME 箱子。内部能源单元仍保存电量，但没有 ME 网络接口可用；主机统计界面可查看结构与能源数据；驱动器支持漏斗／管道从各面插拔整枚矩阵，只有一格、容量一枚，不是矩阵内部物品槽。源版输入／输出总线为空占位，优先级固定 0，未增加编辑入口。当前只是开发阶段的 ME 通道流程，不建议直接替换真实整合包的存储系统。
 
-模型和纹理来自 NovaEngineering Core（GPLv3），署名及固定源码版本见项目根目录 `THIRD-PARTY-NOTICES.md`。使用说明见[NECO 指南](../../docs/NECO_GUIDE_ZH.md)。
+模型和纹理来自 NovaEngineering Core（GPLv3），署名及固定源码版本见项目根目录 `THIRD-PARTY-NOTICES.md`。阶段进度见 `docs/NECO_GUIDE_ZH.md`。
 
 开发版外观：驱动器显示矩阵类型／等级，上灯绿／橙／红表示有空间／类型已满／容量已满，下灯在实际存取后蓝色闪动约 40 tick。源版 ES 成型模型会占用并隐藏控制器周围固定的 11 个邻格；最小演示只用于部件流程，设计正式结构时应为该模型预留空间。隐藏只影响显示，不取消碰撞或结构要求。
 
-## 气体矩阵
+## 气体矩阵（开发版）
 
 安装 AE2、Mekanism 和 Applied Mekanistics 后，可用 `modularmachinery:estorage_cell_gas_16m`、`estorage_cell_gas_64m`、`estorage_cell_gas_256m`。将气体矩阵插入相应等级的 ES 主机驱动器，接上前述 ME 通道，通过 Applied Mekanistics 支持的气体终端／总线存取。不能用流体操作入口代替气体入口。
 

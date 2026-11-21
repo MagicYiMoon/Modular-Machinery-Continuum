@@ -61,6 +61,26 @@ public abstract class TileFluidTank extends TileMachineComponent implements GasT
         this.tank = createTank(capacity);
     }
 
+    @Override
+    public void setBlockState(BlockState state) {
+        BlockState previous = getBlockState();
+        super.setBlockState(state);
+        var property = hellfirepvp.modularmachinery.common.block.BlockFluidHatch.SIZE;
+        if (tank != null && state.hasProperty(property)
+                && (!previous.hasProperty(property) || previous.getValue(property) != state.getValue(property))) {
+            // BlockItem applies BlockStateTag after the first tile was created at the default tier.
+            tank.setCapacity(state.getValue(property).getCapacity());
+            clampContents();
+            setChanged();
+        }
+    }
+
+    private void clampContents() {
+        if (tank.getFluidAmount() > tank.getCapacity())
+            tank.setFluid(new FluidStack(tank.getFluid(), tank.getCapacity()));
+        if (gasTag.getLong("amount") > tank.getCapacity()) gasTag.putLong("amount", tank.getCapacity());
+    }
+
     private FluidTank createTank(int capacity) {
         return new FluidTank(capacity) {
             @Override
@@ -279,6 +299,7 @@ public abstract class TileFluidTank extends TileMachineComponent implements GasT
         }
         gasTag = tag.contains("gas") ? tag.getCompound("gas").copy() : new CompoundTag();
         if (hasGas()) tank.setFluid(FluidStack.EMPTY);
+        clampContents();
     }
 
     @Override

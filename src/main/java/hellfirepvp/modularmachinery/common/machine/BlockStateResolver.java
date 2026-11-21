@@ -44,8 +44,8 @@ import java.util.Set;
  *       {@code casing=reinforced}. A plain casing must <b>not</b> satisfy it.</li>
  *   <li>{@code modularmachinery:blockcasing} — no metadata, so any casing variant will do. This is the
  *       form the variables use, and it is what makes one definition accept every tier of a hatch.</li>
- *   <li>{@code modularmachinery:blockenergyinputhatch@0} — metadata 0 is the <i>default</i> variant, so
- *       it means the default state specifically rather than "any".</li>
+ *   <li>{@code modularmachinery:blockenergyinputhatch@0} — metadata 0 is the tiny hatch in MMCE,
+ *       so it pins that tier rather than "any".</li>
  * </ul>
  *
  * <p>Collapsing the unconstrained case to {@code defaultBlockState()} would be a real bug: a machine

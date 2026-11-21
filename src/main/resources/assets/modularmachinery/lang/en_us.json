@@ -1039,5 +1039,19 @@
   "gui.modularmachinery.research.card_invalid": "Invalid key card",
   "tooltip.modularmachinery.hypernet.reusable": "Reusable; right-click a computation center to overwrite its binding.",
   "tooltip.modularmachinery.hypernet.online_hint": "Keep the center online when connecting. Same dimension only; target chunks are not force-loaded.",
-  "gui.modularmachinery.research.creative_hint": "Middle-click: fill research points (creative mode and OP level 2). Prerequisites, tier and machine operation still apply."
+  "gui.modularmachinery.research.creative_hint": "Middle-click: fill research points (creative mode and OP level 2). Prerequisites, tier and machine operation still apply.",
+  "gui.modularmachinery.upgrade_bus.bound_machine": "Bound machine: %s",
+  "gui.modularmachinery.upgrade_bus.no_modules": "No recognized modules installed",
+  "gui.modularmachinery.upgrade_bus.locked": "Slot unavailable at this tier",
+  "item.modularmachinery.machine_disassembler": "Modular Disassembler",
+  "tooltip.modularmachinery.disassembler.use": "Sneak-right-click an idle, formed controller with this tool in your main hand. The controller stays in place.",
+  "tooltip.modularmachinery.disassembler.destination": "Drops go to wireless ME storage, then your inventory. Anything left is dropped.",
+  "message.modularmachinery.disassembler.owner": "Only the machine owner or an operator can dismantle this machine.",
+  "message.modularmachinery.disassembler.unformed": "Wait for the machine to form and finish checking its structure before dismantling.",
+  "message.modularmachinery.disassembler.busy": "This machine still has an active recipe or assembly job.",
+  "message.modularmachinery.disassembler.large": "The tool can check up to %s structure positions at once.",
+  "message.modularmachinery.disassembler.unloaded": "Structure position %s is not loaded.",
+  "message.modularmachinery.disassembler.changed": "The structure changed at %s. Nothing was dismantled.",
+  "message.modularmachinery.disassembler.nothing": "No structure blocks to dismantle.",
+  "message.modularmachinery.disassembler.result": "Dismantled %s blocks; left %s structure blocks in place."
 }

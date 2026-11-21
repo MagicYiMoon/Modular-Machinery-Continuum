@@ -86,7 +86,8 @@ import java.util.Map;
  * slots are lost — the same tradeoff the item bus already makes, recorded here rather than silently
  * different.</p>
  */
-public class TileUpgradeBus extends TileMachineComponent {
+public class TileUpgradeBus extends TileMachineComponent
+        implements hellfirepvp.modularmachinery.common.tiles.base.BreakInventoryProvider {
 
     private int slots;
     private ItemStackHandler upgradeInventory;
@@ -167,6 +168,12 @@ public class TileUpgradeBus extends TileMachineComponent {
      * the wrong {@code Size} (see the class javadoc) or one left behind by a block whose tier changed is
      * corrected before any slot index — the menu's, a hopper's, or the capability's — is resolved against it.
      */
+    @Override
+    public IItemHandler getBreakInventory() {
+        // Player destruction reads this after removal, when the live world state is already air.
+        return upgradeInventory;
+    }
+
     public IItemHandler getUpgradeInventory() {
         int expected = getSlots();
         if (upgradeInventory == null || upgradeInventory.getSlots() != expected) {
@@ -407,7 +414,7 @@ public class TileUpgradeBus extends TileMachineComponent {
      */
     @Nullable
     public hellfirepvp.modularmachinery.common.tiles.TileController getBoundController() {
-        if (level == null || getControllerPos() == null) return null;
+        if (level == null || getControllerPos() == null || !level.hasChunkAt(getControllerPos())) return null;
         return level.getBlockEntity(getControllerPos()) instanceof TileController controller ? controller : null;
     }
 
@@ -415,7 +422,7 @@ public class TileUpgradeBus extends TileMachineComponent {
     @Nullable
     public String getBoundMachineName() {
         TileController controller = getBoundController();
-        return controller == null ? null : controller.getMachineName();
+        return controller == null || !controller.isFormed() ? null : controller.getMachineName();
     }
 
     /** Returns the installed type's custom data, or an empty compound when no such upgrade is installed. */

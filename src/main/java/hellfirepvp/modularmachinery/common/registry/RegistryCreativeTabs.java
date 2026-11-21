@@ -90,6 +90,7 @@ public final class RegistryCreativeTabs {
                     RegistryItems.parallelController,
                     RegistryItems.upgradeBus,
                     RegistryItems.CONSTRUCT_TOOL,
+                    RegistryItems.DISASSEMBLY_TOOL,
                     // THE FOUR UPGRADE ITEMS (audit row 37). They are in this list because the suite asks a real
                     // question about it -- "every registered item is declared reachable" (MachineSelfTest) -- and an
                     // item a player cannot obtain is an item that cannot be put in an upgrade bus slot, which would

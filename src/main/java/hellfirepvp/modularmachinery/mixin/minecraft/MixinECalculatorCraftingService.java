@@ -14,6 +14,7 @@ import net.minecraft.nbt.CompoundTag;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.Set;
 
 @Pseudo
@@ -36,16 +37,21 @@ public abstract class MixinECalculatorCraftingService {
     private void mmc$removeUnavailableCpus(CallbackInfo ci) {
         // A border chunk may keep the channel loaded without ticking it after a neighbouring core unloads.
         // Do not wait for that channel's block tick to remove a retired CPU from AE's link-liveness roster.
+        mmc$pruneUnavailableCpus();
+    }
+    @Unique
+    private void mmc$pruneUnavailableCpus() {
         if (craftingCPUClusters.removeIf(cpu -> {
             var host = ((ECalculatorCpuBridge)(Object)cpu).mmc$ecHost();
             return host != null && !host.belongsTo(grid);
         })) updateList = true;
     }
-    @Redirect(method = "insertIntoCpus", at = @At(value = "INVOKE", target = "Lappeng/crafting/execution/CraftingCpuLogic;insert(Lappeng/api/stacks/AEKey;JLappeng/api/config/Actionable;)J"))
-    private long mmc$rejectOtherGridOutput(CraftingCpuLogic logic, AEKey key, long amount, Actionable mode) {
-        var host = ((ECalculatorLogicBridge)(Object)logic).mmc$ecLogicHost();
-        if (host != null && !host.belongsTo(grid)) return 0;
-        return logic.insert(key, amount, mode);
+    @Inject(method = "insertIntoCpus", at = @At("HEAD"))
+    private void mmc$rejectOtherGridOutput(AEKey key, long amount, Actionable mode, CallbackInfoReturnable<Long> ci) {
+        // AdvancedAE overwrites this method to visit its own CPUs as well. A HEAD injection can
+        // coexist with that overwrite; redirecting calls inside it cannot at the same priority.
+        // Remove only foreign/retired EC hosts before either implementation iterates AE's roster.
+        mmc$pruneUnavailableCpus();
     }
     @Inject(method = "updateCPUClusters", at = @At("TAIL"))
     private void mmc$publishCpus(CallbackInfo ci) {
